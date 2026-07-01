@@ -223,24 +223,25 @@ export default function MapScreen() {
 
         const { latitude, longitude } = currentLocation.coords;
 
-        const geoLocation = userParams?.user?.geoLocation
-          ? {
-              ...userParams.user.geoLocation,
-              latitudeDelta: 0.1,
-              longitudeDelta: 0.1,
-            }
-          : {
-              latitude: 37.0902,
-              longitude: -95.7129,
-              latitudeDelta: 30.0,
-              longitudeDelta: 50.0,
-            };
-
         const myLocation = { latitude, longitude };
 
-        const region = {
-          ...geoLocation,
-        };
+        // Rebuild fix (P1 map): open the map ON the user's actual location with a
+        // tight, city-level zoom — NOT the whole continental US. Priority order:
+        //   1) live device GPS (tight delta)
+        //   2) the user's saved profile geoLocation (tight delta)
+        //   3) whole-US ONLY as a last resort when we truly have no location
+        const TIGHT_DELTA = { latitudeDelta: 0.15, longitudeDelta: 0.15 };
+
+        const region: Region = latitude && longitude
+          ? { ...myLocation, ...TIGHT_DELTA }
+          : userParams?.user?.geoLocation
+            ? { ...userParams.user.geoLocation, ...TIGHT_DELTA }
+            : {
+                latitude: 37.0902,
+                longitude: -95.7129,
+                latitudeDelta: 30.0,
+                longitudeDelta: 50.0,
+              };
 
         const myRegion = {
           ...myLocation,
@@ -426,16 +427,15 @@ export default function MapScreen() {
   }, [isShowMarkers]);
 
   useEffect(() => {
+    // Rebuild fix (P1 map): previously Android re-zoomed to the WHOLE US every
+    // time the map tab was focused. Instead, return to the user's own location
+    // (their current location if we have it, otherwise the already-correct
+    // initialRegion). Never force the whole-US view.
     if (isFocused && mapRef.current && Platform.OS === 'android') {
-      mapRef.current.animateToRegion(
-        {
-          latitude: 37.0902,
-          longitude: -95.7129,
-          latitudeDelta: 30.0,
-          longitudeDelta: 50.0,
-        },
-        1000,
-      );
+      const target = currentLocation ?? initialRegion;
+      if (target) {
+        mapRef.current.animateToRegion(target, 1000);
+      }
     }
 
     setTracksView(true);

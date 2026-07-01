@@ -15,14 +15,14 @@ Every item traces to the audit. Checked = done in this repo.
 - [ ] Orphaned-Cognito repair path on login
 
 ## P1 — Map (app)
-- [ ] `initialRegion` seeded from user location, tight delta (not whole-US)
-- [ ] Delete Android focus US-reset effect
+- [x] `initialRegion` seeded from user location, tight delta (not whole-US)
+- [x] Delete Android focus US-reset effect (now returns to user location)
 - [ ] `tracksViewChanges={false}` after first paint; remove per-marker onLayout timers; memoize markers
 - [ ] Marker clustering
 - [ ] Backend `/users/nearby` endpoint + client uses it
 
 ## P1 — Performance quick wins (app)
-- [ ] React Query global `defaultOptions` (staleTime, gcTime, refetchOnWindowFocus:false)
+- [x] React Query global `defaultOptions` (staleTime, gcTime, refetchOnWindowFocus:false)
 - [ ] Memoize context values across providers; split UserDBProvider hot state
 - [ ] Stop fetching whole users table on 4 screens
 

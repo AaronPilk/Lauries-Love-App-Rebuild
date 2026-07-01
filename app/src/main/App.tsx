@@ -64,7 +64,21 @@ Notifications.setNotificationHandler({
   }),
 });
 
-const queryClient = new QueryClient();
+// Rebuild fix (P1 perf): the app previously used `new QueryClient()` with no
+// defaults, so every query was stale immediately and refetched on mount/focus/
+// reconnect — a major driver of general slowness. Set conservative mobile defaults.
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      staleTime: 5 * 60 * 1000, // 5 min — data considered fresh, no needless refetch
+      gcTime: 10 * 60 * 1000, // keep cache 10 min
+      refetchOnWindowFocus: false, // don't refetch every time the app is foregrounded
+      refetchOnMount: 'stale', // only refetch on mount if actually stale
+      refetchOnReconnect: 'stale',
+      retry: 1,
+    },
+  },
+});
 
 export default function App() {
   const [currentRouteName, setCurrentRouteName] = useState<string | null>(null);

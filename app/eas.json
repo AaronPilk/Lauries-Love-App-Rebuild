@@ -1,0 +1,21 @@
+{
+  "cli": {
+    "appVersionSource": "local"
+  },
+  "build": {
+    "production": {
+      "channel": "production",
+      "environment": "production",
+      "android": {
+        "resourceClass": "large"
+      }
+    },
+    "staging": {
+      "channel": "staging",
+      "environment": "development",
+      "android": {
+        "resourceClass": "large"
+      }
+    }
+  }
+}

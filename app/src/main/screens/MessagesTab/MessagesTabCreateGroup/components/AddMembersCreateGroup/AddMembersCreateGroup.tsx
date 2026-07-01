@@ -1,0 +1,237 @@
+import React, { FunctionComponent, useEffect, useMemo, useState } from 'react';
+import {
+  Text,
+  View,
+  TouchableOpacity,
+  NativeSyntheticEvent,
+  NativeScrollEvent,
+  Image,
+  ScrollView,
+} from 'react-native';
+import { useSendbirdChat } from '@sendbird/uikit-react-native';
+
+// types
+import {
+  GroupChannelSendBirdType,
+  UserSendBirdType,
+} from 'providers/SendbirdChatProvider/SendbirdChatProvider.types';
+
+// components
+import ListFriendsMessageTab from 'main/screens/MessagesTab/components/ListFriendsMessageTab/ListFriendsMessageTab';
+import InputSearch from 'components/InputSearch/InputSearch';
+
+// icons
+import { IconClose } from 'assets/icons-auto/components';
+
+// styles
+import styles from './AddMembersCreateGroup.styles';
+import colors from 'styles/colors';
+import { z } from 'zod';
+import { useApiProvider } from 'providers/ApiProvider/ApiProvider';
+
+type AddMembersCreateGroupProps = {
+  selectUsers: UserSendBirdType[];
+  setSelectUsers: (selectUser: UserSendBirdType) => void;
+};
+
+type FriendWithStatus = UserSendBirdType & {
+  status?: 'pending' | 'accepted' | undefined;
+};
+
+const AddMembersCreateGroup: FunctionComponent<AddMembersCreateGroupProps> = ({
+  selectUsers,
+  setSelectUsers,
+}) => {
+  const { api } = useApiProvider();
+  const { sdk } = useSendbirdChat();
+  const [friends, setFriends] = useState<FriendWithStatus[]>([]);
+  const [limit, setLimit] = useState(20);
+  const [searchText, setSearchText] = useState('');
+  const [myChannels, setMyChannels] = useState<GroupChannelSendBirdType[]>([]);
+
+  const frequentlyContacted = useMemo(
+    () =>
+      friends
+        .filter(friend =>
+          myChannels.some(channel =>
+            channel.members.some(member => member.userId === friend.userId),
+          ),
+        )
+        .slice(0, 5),
+    [friends, myChannels],
+  );
+
+  const getMyChannels = async () => {
+    const query = sdk.groupChannel.createMyGroupChannelListQuery({
+      limit: 100,
+      includeEmpty: true,
+    });
+    try {
+      const channels = (await query.next()) as GroupChannelSendBirdType[];
+      setMyChannels(channels);
+    } catch (error) {
+      if (__DEV__) console.warn('Error getting channels', error);
+    }
+  };
+
+  const getFriendStatus = async (friendId: string) => {
+    try {
+      const result = await api(`/users/${friendId}/friend-requests`, {
+        config: {
+          method: 'GET',
+        },
+        schema: z.array(z.object({ status: z.string() })),
+      });
+      if (!result || result.length === 0) {
+        return;
+      }
+
+      const { status } = result[0];
+
+      return status as 'pending' | 'accepted';
+    } catch (error) {
+      if (__DEV__) console.warn('Error getting requested friend', error);
+    }
+  };
+
+  const getFriends = async () => {
+    const friendListQuery = sdk.createFriendListQuery({
+      limit,
+    });
+    try {
+      const resultFriends =
+        (await friendListQuery.next()) as UserSendBirdType[];
+
+      const friendsWithStatus = await Promise.all(
+        resultFriends.map(async friend => {
+          const friendId = friend?.metaData?.id as string;
+          const status = await getFriendStatus(friendId);
+          return { ...friend, status } as FriendWithStatus;
+        }),
+      );
+
+      const filteredFriends = friendsWithStatus.filter(
+        friend =>
+          friend.nickname.toLowerCase().includes(searchText.toLowerCase()) &&
+          friend.status !== 'pending',
+      );
+
+      if (filteredFriends.length > 0) return setFriends(filteredFriends);
+
+      setFriends([]);
+    } catch (error) {
+      if (__DEV__) console.warn('Error getting friends', error);
+    }
+  };
+
+  const handleScrollDown = ({
+    nativeEvent: { layoutMeasurement, contentOffset, contentSize },
+  }: NativeSyntheticEvent<NativeScrollEvent>) => {
+    const paddingToBottom = 20;
+    const isEnd =
+      layoutMeasurement.height + contentOffset.y >=
+      contentSize.height - paddingToBottom;
+    if (friends.length >= limit && isEnd) setLimit(limit + 20);
+  };
+
+  useEffect(() => {
+    getFriends();
+    getMyChannels();
+  }, [searchText, limit]);
+
+  return (
+    <View style={styles.container}>
+      <View style={styles.searchContainer}>
+        <InputSearch
+          placeholder={'Search name'}
+          search={searchText}
+          setSearch={setSearchText}
+          styleContainer={styles.search}
+          onClear={() => setSearchText('')}
+        />
+        {searchText.length > 0 && (
+          <TouchableOpacity
+            onPress={() => setSearchText('')}
+            style={styles.cancel}
+          >
+            <Text style={styles.cancelText}>Cancel</Text>
+          </TouchableOpacity>
+        )}
+      </View>
+      {selectUsers.length > 0 && (
+        <View style={styles.selectedMembersContainer}>
+          <View style={styles.groupNameContainer}>
+            <View style={styles.background} />
+            <View style={styles.listMembers}>
+              {selectUsers.map(selectFriend => (
+                <View
+                  key={`selected-member-${selectFriend.userId}`}
+                  style={styles.member}
+                >
+                  <View style={styles.memberImageContainer}>
+                    {selectFriend.plainProfileUrl &&
+                    selectFriend.plainProfileUrl.length > 0 ? (
+                      <Image
+                        source={{
+                          uri: selectFriend.plainProfileUrl,
+                        }}
+                        style={styles.memberImage}
+                      />
+                    ) : (
+                      <View style={styles.avatarLetterContainer}>
+                        <Text style={styles.avatarLetter}>
+                          {selectFriend.nickname.split(' ')[0][0] ||
+                            selectFriend.userId[0]}
+                          {selectFriend.nickname.split(' ')[1]?.[0] || ''}
+                        </Text>
+                      </View>
+                    )}
+                  </View>
+                  <TouchableOpacity
+                    style={styles.removeMember}
+                    onPress={() => setSelectUsers(selectFriend)}
+                  >
+                    <IconClose
+                      width={14}
+                      height={14}
+                      stroke={colors.white}
+                      strokeWidth={2}
+                    />
+                  </TouchableOpacity>
+                  <Text numberOfLines={1} style={styles.memberName}>
+                    {selectFriend.nickname}
+                  </Text>
+                </View>
+              ))}
+            </View>
+          </View>
+        </View>
+      )}
+      <ScrollView
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={styles.lists}
+        onScroll={handleScrollDown}
+      >
+        {frequentlyContacted.length > 0 && (
+          <ListFriendsMessageTab
+            title={'Frequently contacted'}
+            friends={frequentlyContacted}
+            onSelect={setSelectUsers}
+            isFullHeight
+            selectedUsers={selectUsers}
+          />
+        )}
+        <ListFriendsMessageTab
+          title={'All friends'}
+          titleEmptyList={'No friends found'}
+          friends={friends}
+          onSelect={setSelectUsers}
+          selectedUsers={selectUsers}
+          isFullHeight
+        />
+      </ScrollView>
+    </View>
+  );
+};
+
+export default AddMembersCreateGroup;

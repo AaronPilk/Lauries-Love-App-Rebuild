@@ -1,0 +1,33 @@
+{
+  "title": "Settings",
+  "sections": {
+    "policy": "Privacy Policy",
+    "terms": "Terms and Conditions",
+    "confidential": "Confidentiality Page",
+    "history": "View History",
+    "password": {
+      "label": "Change Password",
+      "inputs": {
+        "oldPassword": {
+          "label": "Old Password",
+          "placeholder": "Enter Password"
+        },
+        "newPassword": {
+          "label": "New Password",
+          "placeholder": "Enter Password"
+        },
+        "confirmPassword": {
+          "label": "Confirm New Password",
+          "placeholder": "Confirm Password"
+        }
+      },
+      "submit": {
+        "label": "Save Changes"
+      }
+    },
+    "cache": "Clear Cache",
+    "delete": "Delete Account",
+    "deleteAcount": "This will remove all data relating with you. This action cannot be reversed. Deleted data cannot be recovered.",
+    "logout": "Logout"
+  }
+}

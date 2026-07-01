@@ -1,0 +1,54 @@
+services:
+  mysql:
+    image: mysql
+    container_name: project_db
+    ports:
+      - '${FORWARD_DB_PORT:-3306}:3306'
+    environment:
+      MYSQL_ROOT_PASSWORD: '${DB_PASSWORD}'
+      MYSQL_DATABASE: '${DB_DATABASE}'
+      MYSQL_USER: '${DB_USERNAME}'
+      MYSQL_PASSWORD: '${DB_PASSWORD}'
+      MYSQL_ALLOW_EMPTY_PASSWORD: 'yes'
+    command:
+      [
+        '--max_connections=170',
+        '--interactive_timeout=180',
+        '--wait_timeout=180',
+      ]
+    healthcheck:
+      test: ['CMD', 'mysqladmin', 'ping']
+      interval: 10s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
+    # volumes:
+    #   - laurieslove-vm:/var/lib/mysql
+    networks:
+      - app-tier
+  api:
+    build:
+      dockerfile: Dockerfile
+      context: .
+      # Only will build development stage from our dockerfile
+      target: development
+    volumes:
+      - .:/usr/src/app
+    environment:
+      DB_PASSWORD: '${DB_PASSWORD}'
+      DB_DATABASE: '${DB_DATABASE}'
+      DB_USERNAME: '${DB_USERNAME}'
+      DB_HOST: project_db
+      DB_PORT: 3306
+    command: npm run start:dev
+    depends_on:
+      - mysql
+    ports:
+      - 3000:3000
+    networks:
+      - app-tier
+# volumes:
+#   laurieslove-vm:
+networks:
+  app-tier:
+    driver: bridge

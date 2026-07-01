@@ -1,0 +1,72 @@
+{
+  "button": "SKIP TUTORIAL",
+  "button2": "Finish Tutorial",
+  "pages": [
+    {
+      "image": "mapImage1.png",
+      "title": "Navigating the Map",
+      "icon": "moveHand.png",
+      "content": "Drag all around the screen to view where you are relative to fellow Laurie’s Love users to grow your circle!"
+    },
+    {
+      "image": "mapMenu.png",
+      "title": "Understanding the Options",
+      "icon": "touchHand.png",
+      "content": "There are 4 options you have when viewing the map and they are as follows"
+    },
+    {
+      "image": "listView.png",
+      "title": "All Members",
+      "icon": "allUsers.png",
+      "content": "Switch between the interactive map view and a list with additional actions such as viewing their profile"
+    },
+    {
+      "image": "filters.png",
+      "title": "Filter by Member",
+      "icon": "allFilters.png",
+      "content": "Slides in a screen where you can filter your selection to narrow down to specific information you know"
+    },
+    {
+      "image": "mapImage2.png",
+      "title": "My Location",
+      "icon": "myLocation.png",
+      "content": "Focuses on your current location with the same dragging functionality as the normal map view screen"
+    },
+    {
+      "image": "mapInfo.png",
+      "title": "Map Info",
+      "icon": "mapInfoButton.png",
+      "content": "Slides in a screen where you can view additional information about the map and the benefits and reasons behind this feature from Laurie’s Love"
+    },
+    {
+      "image": "addFriendView.png",
+      "title": "Adding Friends",
+      "icon": "addFriend.png",
+      "content": "Whenever you navigate to a user's profile, you will be able to take several actions; one of them being to add a friend which will enable you view more information about them!"
+    },
+    {
+      "image": "addFriendView.png",
+      "title": "Adding Friends",
+      "icon": "sendMessage.png",
+      "content": "Whenever you navigate to a user's profile, you will be able to take several actions; another one being to Send a Message where  you can start a conversation with them!"
+    },
+    {
+      "image": "donateView.png",
+      "title": "Donate Screen",
+      "icon": "donateButton.png",
+      "content": "When viewing the donate screen, you are given the option to donate a preset amount or a specific amount, but also you can change the occurrence with this handy switch"
+    },
+    {
+      "image": "donateDetailsView.png",
+      "title": "Donation Details",
+      "icon": "textInput.png",
+      "content": "When you select the amount you would like to donate you will be brought to the screen where you can input manual payment details or proceed with Google Pay or Apple Pay"
+    },
+    {
+      "image": "behindDonate.png",
+      "title": "Behind Donate",
+      "icon": "readMore.png",
+      "content": "On the top of the donate page if you click “Read More” a screen will slide up with a brief history on Laurie’s Love's mission"
+    }
+  ]
+}

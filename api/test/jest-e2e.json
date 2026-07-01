@@ -1,0 +1,29 @@
+{
+  "moduleFileExtensions": [
+    "js",
+    "json",
+    "ts"
+  ],
+  "rootDir": ".",
+  "testEnvironment": "node",
+  "testRegex": ".e2e-spec.ts$",
+  "transform": {
+    "^.+\\.(t|j)s$": "ts-jest"
+  },
+  "moduleNameMapper": {
+    "@app/shufflrr/(.*)": "<rootDir>/../libs/shufflrr/src/$1",
+    "@app/shufflrr": "<rootDir>/../libs/shufflrr/src",
+    "@app/share-point/(.*)": "<rootDir>/../libs/share-point/src/$1",
+    "@app/share-point": "<rootDir>/../libs/share-point/src",
+    "@app/database/(.*)": "<rootDir>/../libs/database/src/$1",
+    "@app/database": "<rootDir>/../libs/database/src",
+    "@app/one-drive/(.*)": "<rootDir>/../libs/one-drive/src/$1",
+    "@app/one-drive": "<rootDir>/../libs/one-drive/src",
+    "@app/dropbox/(.*)": "<rootDir>/../libs/dropbox/src/$1",
+    "@app/dropbox": "<rootDir>/../libs/dropbox/src",
+    "@app/google-drive/(.*)": "<rootDir>/../libs/google-drive/src/$1",
+    "@app/google-drive": "<rootDir>/../libs/google-drive/src",
+    "@app/auth/(.*)": "<rootDir>/../libs/auth/src/$1",
+    "@app/auth": "<rootDir>/../libs/auth/src"
+  }
+}

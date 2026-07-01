@@ -1,0 +1,69 @@
+import { StyleSheet } from 'react-native';
+
+import colors from 'styles/colors';
+import {
+  FONT_BEHIND_THE_NINETIES_500,
+  FONT_RALEWAY_400,
+  FONT_RALEWAY_500,
+} from 'styles/fonts';
+
+export const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+  },
+  linearGradient: {
+    flex: 1,
+  },
+  contentContainer: {
+    flex: 1,
+    gap: 24,
+    paddingHorizontal: 16,
+  },
+  topSection: {
+    gap: 21,
+    marginTop: 23,
+  },
+  progressContainer: {
+    gap: 21,
+  },
+  chevronIcon: {
+    marginTop: 23,
+  },
+  title: {
+    fontFamily: FONT_BEHIND_THE_NINETIES_500,
+    fontSize: 36,
+    lineHeight: 48,
+    color: colors.primary[600],
+  },
+  buttonGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'space-between',
+    gap: 12,
+  },
+  button: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 12,
+    width: '48%',
+    height: 152,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: 'transparent',
+    backgroundColor: colors.quaternary[200],
+  },
+  buttonSelected: {
+    borderColor: colors.primary[600],
+    backgroundColor: colors.primary[100],
+  },
+  image: { width: 54, height: 54 },
+  buttonText: {
+    fontFamily: FONT_RALEWAY_400,
+    fontSize: 16,
+    color: colors.primary[600],
+  },
+  buttonContainer: {
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+  },
+});

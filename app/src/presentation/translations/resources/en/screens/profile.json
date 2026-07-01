@@ -1,0 +1,130 @@
+{
+  "general": {
+    "title": "General",
+    "updatedAt": "Last updated",
+    "inputs": {
+      "name": {
+        "title": "Name"
+      },
+      "role": {
+        "title": "Role",
+        "required": true
+      },
+      "phone": {
+        "title": "Phone Number Location"
+      },
+      "cancerType": {
+        "title": "Type of Cancer",
+        "required": true
+      },
+      "cancerSubType": {
+        "title": "Sub Type",
+        "required": false
+      },
+      "diagnosisDate": {
+        "title": "Diagnosis Date",
+        "required": false
+      },
+      "timeline": {
+        "title": "Timeline"
+      }
+    },
+    "submit": {
+      "reset": {
+        "title": "Reset"
+      },
+      "save": {
+        "title": "Save Changes"
+      }
+    }
+  },
+  "personal": {
+    "title": "Personal",
+    "updatedAt": "Last updated",
+    "input": {
+      "firstName": {
+        "title": "First name"
+      },
+      "lastName": {
+        "title": "Last name"
+      },
+      "displayName": {
+        "label": "Displayed Name",
+        "placeholder": "How your name will be displayed"
+      },
+      "phoneNumber": {
+        "label": "Phone Number",
+        "placeholder": "Enter Phone Number"
+      },
+      "phoneLocation": {
+        "title": "Phone Number Location"
+      },
+      "diagnosedYear": {
+        "label": "Diagnosed Year",
+        "placeholder": "Enter Year"
+      },
+      "zipCode": {
+        "label": "ZIP Code",
+        "placeholder": "Enter ZIP Code"
+      },
+      "country": {
+        "label": "Country",
+        "placeholder": "Enter Country"
+      },
+      "typeCancer": {
+        "label": "Type of Cancer",
+        "placeholder": "Select"
+      },
+      "subTypeCancer": {
+        "label": "Sub Type of Cancer",
+        "placeholder": "Select"
+      },
+      "gender": {
+        "label": "Gender",
+        "placeholder": "Select"
+      },
+      "email": {
+        "label": "Email",
+        "placeholder": "Enter Email"
+      },
+      "role": {
+        "label": "Role",
+        "placeholder": "Select"
+      },
+      "dob": {
+        "label": "Date of birth",
+        "placeholder": "Select date of birth"
+      },
+      "diagnosisDate": {
+        "label": "Diagnosis date",
+        "placeholder": "Select diagnosis date"
+      },
+      "city": {
+        "label": "City",
+        "placeholder": "Enter City"
+      },
+      "state": {
+        "label": "State",
+        "placeholder": "Enter State"
+      },
+      "timeline": {
+        "title": "Timeline"
+      },
+      "description": {
+        "label": "Description",
+        "placeholder": "Enter description of timeline"
+      }
+    },
+    "submit": {
+      "label": "Save Changes"
+    },
+    "reset": {
+      "label": "Reset"
+    }
+  },
+  "donations": {
+    "title": "Donations",
+    "updatedAt": "Last updated",
+    "input": {}
+  }
+}

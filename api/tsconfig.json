@@ -1,0 +1,73 @@
+{
+  "compilerOptions": {
+    "module": "commonjs",
+    "declaration": true,
+    "removeComments": true,
+    "emitDecoratorMetadata": true,
+    "experimentalDecorators": true,
+    "allowSyntheticDefaultImports": true,
+    "target": "es2017",
+    "sourceMap": true,
+    "outDir": "./dist",
+    "baseUrl": "./",
+    "incremental": true,
+    "skipLibCheck": true,
+    "strictNullChecks": false,
+    "noImplicitAny": false,
+    "strictBindCallApply": false,
+    "forceConsistentCasingInFileNames": false,
+    "noFallthroughCasesInSwitch": false,
+
+    "paths": {
+      "@app/shufflrr": [
+        "libs/shufflrr/src"
+      ],
+      "@app/shufflrr/*": [
+        "libs/shufflrr/src/*"
+      ],
+      "@app/share-point": [
+        "libs/share-point/src"
+      ],
+      "@app/share-point/*": [
+        "libs/share-point/src/*"
+      ],
+      "@app/database": [
+        "libs/database/src"
+      ],
+      "@app/database/*": [
+        "libs/database/src/*"
+      ],
+      "@app/one-drive": [
+        "libs/one-drive/src"
+      ],
+      "@app/one-drive/*": [
+        "libs/one-drive/src/*"
+      ],
+      "@app/dropbox": [
+        "libs/dropbox/src"
+      ],
+      "@app/dropbox/*": [
+        "libs/dropbox/src/*"
+      ],
+      "@app/google-drive": [
+        "libs/google-drive/src"
+      ],
+      "@app/google-drive/*": [
+        "libs/google-drive/src/*"
+      ],
+      "@app/auth": [
+        "libs/auth/src"
+      ],
+      "@app/auth/*": [
+        "libs/auth/src/*"
+      ]
+    },
+
+    "inlineSources": true,
+
+    // Set `sourceRoot` to  "/" to strip the build path prefix
+    // from generated source code references.
+    // This improves issue grouping in Sentry.
+    "sourceRoot": "/"
+  }
+}

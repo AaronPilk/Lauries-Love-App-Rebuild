@@ -1,0 +1,81 @@
+{
+  "auth": {
+    "title": "Connect. Empower. Inspire."
+  },
+  "login": {
+    "title": "Login",
+    "inputs": {
+      "email": {
+        "label": "Email",
+        "placeholder": "Enter Email"
+      },
+      "password": {
+        "label": "Password",
+        "placeholder": "Enter Password"
+      },
+      "remember": {
+        "label": "Remember Me"
+      },
+      "forgot": {
+        "label": "Forgot Password?"
+      }
+    },
+    "submit": {
+      "label": "Login"
+    }
+  },
+  "onboarding": {
+    "pages": [
+      {
+        "title": "Laurie's Story",
+        "description": "Laurie's Love was created from the personal experience of two women, battling two different types of cancer yet searching for one common goal. The goal was to create a place where people around the world, battling the same diagnosis, could go and Connect, Empower, and Inspire one another. A place to share stories, send words of encouragement or simply reach out to talk with someone who understands the journey they are enduring.",
+        "hasBG": false
+      },
+      {
+        "title": "Mission Statement",
+        "description": "Laurie's Love's mission is to connect, empower, and inspire every member who joins so that no warrior goes through their cancer journey alone. The mission statement currently stated is the laurie's love story.",
+        "hasBG": false
+      },
+      {
+        "title": "Tara",
+        "description": "",
+        "hasBG": true,
+        "videoKey": "public-videos/video-onboarding-2.mov"
+      },
+      {
+        "title": "Application Tutorial",
+        "description": "",
+        "hasBG": true
+      }
+    ]
+  },
+  "forgot": {
+    "title": "Reset Password",
+    "inputs": {
+      "email": {
+        "label": "Email",
+        "placeholder": "Enter Email"
+      },
+      "password": {
+        "label": "Create Password",
+        "placeholder": "Enter Password"
+      },
+      "confirmPassword": {
+        "label": "Confirm Password",
+        "placeholder": "Confirm Password"
+      },
+      "otp": {
+        "title": "OTP",
+        "msg": "I didn't receive a code",
+        "description": "We have sent you a code to your email",
+        "resend": "Resend Code"
+      }
+    },
+    "submit": {
+      "label": "Reset"
+    },
+    "btnBack": {
+      "label": "Back to Login"
+    }
+  }
+}

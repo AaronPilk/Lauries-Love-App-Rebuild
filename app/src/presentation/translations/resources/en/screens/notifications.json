@@ -1,0 +1,34 @@
+{
+  "empty": "You don't have notifications yet.",
+  "notificationType": {
+    "NEW_MESSAGE": "New Message from",
+    "NEW_FRIEND_REQUEST": "New Friend Request"
+  },
+  "actions": {
+    "reply": "Reply",
+    "mark": "Mark as Read",
+    "delete": "Delete",
+    "accept": "Accept"
+  },
+  "filter": {
+    "title": "Filters",
+    "inputs": {
+      "sender": {
+        "label": "Sender",
+        "placeholder": "Filter by Name"
+      },
+      "type": {
+        "label": "Type",
+        "placeholder": "Filter by Type"
+      },
+      "date": {
+        "label": "Date",
+        "placeholder": "MM-DD-YYYY"
+      }
+    },
+    "actions": {
+      "submit": "Apply Filters",
+      "reset": "Clear Filters"
+    }
+  }
+}

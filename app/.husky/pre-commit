@@ -1,0 +1,5 @@
+#!/usr/bin/env sh
+. "$(dirname -- "$0")/_/husky.sh"
+
+# TODO: Dont need to run this command for good code
+# npx lint-staged

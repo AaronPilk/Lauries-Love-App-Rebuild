@@ -1,0 +1,55 @@
+{
+  "title": "Filters",
+  "filtersForm": {
+    "name": {
+      "label": "Name",
+      "placeholder": "Filter by Display Name"
+    },
+    "role": {
+      "label": "Role",
+      "placeholder": "Filter by Role"
+    },
+    "age": {
+      "label": "Age",
+      "placeholder": "Filter by Age"
+    },
+    "gender": {
+      "label": "Gender",
+      "placeholder": "Filter by Gender"
+    },
+    "diagnosis": {
+      "label": "Cancer",
+      "placeholder": "Filter by Cancer"
+    },
+    "diagnosisSubType": {
+      "label": "Cancer Sub Type",
+      "placeholder": "Filter by Cancer Sub Type"
+    },
+    "diagnosisMonth": {
+      "label": "Diagnosis Month",
+      "placeholder": "Select Month"
+    },
+    "diagnosisYear": {
+      "label": "Diagnosis Year",
+      "placeholder": "Select Year"
+    },
+    "state": {
+      "label": "State",
+      "placeholder": "Filter by State"
+    },
+    "city": {
+      "label": "City",
+      "placeholder": "Filter by City"
+    },
+    "zipCode": {
+      "label": "Zip Code",
+      "placeholder": "Filter by Zip Code"
+    }
+  },
+  "whyMap": {
+    "title": "Map Info",
+    "paragraph1": "Laurie’s Love is committed to providing each member affected by cancer with a personalized support team who understands exactly what they are experiencing during their journey. We accomplish this with our comprehensive mapping system.",
+    "paragraph2": "Our application connects each member with others in the United States who share similar demographics, including specific types of cancer, age range, and gender. Upon registration, users are placed on the map via their zip code in the U.S., which allows members in a general geographical location to connect with each other and share the details of their unique cancer experience. This allows members to connect not only with someone in their town, city or county, but also anyone across the United States.",
+    "paragraph3": "The mapping feature offers members a deepened sense of connection due to the ability to see where others are located. The map function is one of the most vital components of the application as it connects warriors who are enduring the same diagnosis or members caring for or related to those with that diagnosis, inspires them to share all aspects of their stories with each other, and empowers them with the knowledge that they are not alone in their journey."
+  }
+}

@@ -1,0 +1,96 @@
+{
+  "title": "Connect. Empower. Inspire.",
+  "step1": {
+    "inputs": {
+      "displayName": {
+        "label": "Display Name",
+        "placeholder": "How your name will be displayed"
+      },
+      "firstName": {
+        "label": "First Name",
+        "placeholder": "Enter First Name"
+      },
+      "lastName": {
+        "label": "Last Name",
+        "placeholder": "Enter Last Name"
+      },
+      "email": {
+        "label": "Email",
+        "placeholder": "Enter Email"
+      }
+    }
+  },
+  "step2": {
+    "inputs": {
+      "phoneNumber": {
+        "label": "Phone Number",
+        "placeholder": "Enter Phone Number"
+      },
+      "diagnosedYear": {
+        "label": "Diagnosed Year",
+        "placeholder": "Enter Year"
+      },
+      "zipCode": {
+        "label": "ZIP Code",
+        "placeholder": "Enter ZIP Code"
+      },
+      "country": {
+        "label": "Country",
+        "placeholder": "Enter Country"
+      }
+    }
+  },
+  "step3": {
+    "inputs": {
+      "password": {
+        "label": "Create Password",
+        "placeholder": "Enter Password"
+      },
+      "confirmPassword": {
+        "label": "Confirm Password",
+        "placeholder": "Confirm Password"
+      }
+    }
+  },
+  "step4": {
+    "inputs": {
+      "typeCancer": {
+        "label": "Type of Cancer",
+        "placeholder": "Select"
+      },
+      "diagnosisSubType": {
+        "label": "Sub Types",
+        "placeholder": "Select"
+      },
+      "age": {
+        "label": "User Age",
+        "placeholder": "Select"
+      },
+      "gender": {
+        "label": "Gender",
+        "placeholder": "Select"
+      },
+      "type": {
+        "label": "User Type",
+        "placeholder": "Select"
+      }
+    }
+  },
+  "step5": {
+    "termsOfUse": {
+      "title": "Terms Of Use",
+      "content": "Terms"
+    },
+    "privacyPolicy": {
+      "title": "Privacy Policy",
+      "content": "Privacy"
+    },
+    "btn": "Accept"
+  },
+  "confirmation": {
+    "title": "We sent you a code to your email",
+    "resendText": "I didn't receive a code",
+    "resendBtn": "Resend Code",
+    "btn": "Send Code"
+  }
+}

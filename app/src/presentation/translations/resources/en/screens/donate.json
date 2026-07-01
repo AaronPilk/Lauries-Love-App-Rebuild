@@ -1,0 +1,118 @@
+{
+  "description": "Join our fight dear friends, Laurie's Love was born in October 2021 from a realization that those in need must find a connection to share experiences, learn, and find comfort through their cancer journey. This has been a very fast-moving process to have an app created and tested in just 10 months. We could not have done this without your help and support.\n\nMy hope is that Laurie's Love members find the comfort throughout their cancer journey as I did through the support of friends, family, and other warriors experiencing the same journey. These are relationships that go deep and have left an indelible mark in my heart…. I am and will be forever grateful. \n\n So, what's next? The hard work of finding those who believe in what we are doing and want to share this message. We believe in this app and what it can do for those touched by cancer. To move forward, the search for donors has started. The costs associated with being able to grow Laurie's Love and share this tool are high, but we know we'll find the right supporters. \n\nWe have already raised $35,000 just within a short amount of time, but we'll need more to get the custom app created. We thank you again for your time. And please stay tuned, we hope to have more updates and good news as we navigate this process. \n\nMany thanks again, \n\nTara Zuzga and the Laurie's Love Board of Directors \n\nwww.laurieslove.org",
+  "footer": "100% of your gift ensures we can continue to support Warriors and members of our community through their cancer journey and connect with others when they need it most. No member of the organization receives compensation...",
+  "moreLabel": "Behind Donate",
+  "buttons": {
+    "more": "read more",
+    "share": "Share Donate Link",
+    "shareQR": "QR Code",
+    "other": "Other",
+    "donate": "Donate in Honor"
+  },
+  "tabs": {
+    "amount": "One Time",
+    "recurring": "Monthly",
+    "calculator": {
+      "title": "Cost Calculator",
+      "content": "Where your donation to Laurie's Love goes!",
+      "subtitle": "How your donation will help power Laurie's Love",
+      "support": "Supports Amazon Web Services hosting costs for:",
+      "people": "People",
+      "development": "Development of additional feature from our users:",
+      "users": "Days",
+      "footer": "*Friendly reminder to check with your employer regarding matching donations"
+    }
+  },
+  "checkout": {
+    "titles": {
+      "amount": "Donation Amount",
+      "inHonor": "Donation in Honor"
+    },
+    "inputs": {
+      "name": {
+        "label": "Name",
+        "placeholder": "Name"
+      },
+      "amount": {
+        "label": "Amount",
+        "placeholder": "Amount"
+      },
+      "cardName": {
+        "label": "Card Holder Name",
+        "placeholder": "John Doe"
+      },
+      "address": {
+        "label": "Address",
+        "placeholder": "Address"
+      },
+      "cardNumber": {
+        "label": "Card Number",
+        "placeholder": "XXXX - XXXX - XXXX - XXXX"
+      },
+      "expiration": {
+        "label": "Expiration Date",
+        "placeholder": "MM/YY"
+      },
+      "cvv": {
+        "label": "CVV",
+        "placeholder": "cvv digit code"
+      },
+      "remember": {
+        "label": "Remember My Card"
+      }
+    },
+    "submit": {
+      "primary": "Donate",
+      "secondary": "Pay"
+    }
+  },
+  "receipt": {
+    "alert": "Thank you for your donation!",
+    "nextPayment": "Next Payment",
+    "terms": {
+      "title": "Make sure you read our",
+      "privacy": "privacy policies",
+      "protection": "data protection"
+    },
+    "card": {
+      "title": "Donation Amount",
+      "details": {
+        "opened": "View Less",
+        "closed": "View All Details"
+      },
+      "footer": {
+        "date": "Donation Date",
+        "paymentType": "Payment Method"
+      }
+    },
+    "actions": {
+      "history": "Donation History",
+      "donate": "Donate Again",
+      "methods": "Payment Methods",
+      "contact": "Contact Support"
+    }
+  },
+  "history": {
+    "empty": "You don't have payments yet.",
+    "card": {
+      "actions": {
+        "view": "View Receipt",
+        "cancel": "Cancel"
+      }
+    },
+    "paymentMethods": {
+      "label": "Payment Methods",
+      "empty": "You don't have payment profiles yet.",
+      "cardDetails": {
+        "label": "Ending in",
+        "actions": {
+          "delete": {
+            "label": "Delete Payment Method",
+            "content": "This action cannot be reversed. Deleted data can not be recovered.",
+            "confirm": "Confirm"
+          }
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,150 @@
+import { StyleSheet } from 'react-native';
+import colors from 'styles/colors';
+import { FONT_RALEWAY_500, FONT_RALEWAY_600 } from 'styles/fonts';
+
+const styles = StyleSheet.create({
+  scroll: { flex: 1 },
+  container: {
+    position: 'relative',
+    flex: 1,
+    gap: 20,
+    paddingBottom: 200,
+    paddingTop: 20,
+  },
+  containerWithImage: {
+    paddingBottom: 281, // Increased padding to accommodate the image
+  },
+  header: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+  },
+  cancelButton: {
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+  },
+  cancelButtonText: {
+    fontFamily: FONT_RALEWAY_600,
+    color: colors.black,
+    fontSize: 16,
+    lineHeight: 20,
+  },
+  postButtonContainer: {
+    paddingHorizontal: 16,
+  },
+  postButton: {
+    backgroundColor: colors.neutral[500],
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 20,
+  },
+  postButtonActive: {
+    backgroundColor: colors.primary[500],
+  },
+  postButtonText: {
+    fontFamily: FONT_RALEWAY_600,
+    color: colors.neutral[100],
+    fontSize: 16,
+    lineHeight: 20,
+  },
+  postButtonTextActive: {
+    color: colors.neutral[100],
+  },
+  textInputContainer: {
+    flexDirection: 'row',
+    gap: 12,
+    paddingHorizontal: 16,
+  },
+  avatarContainer: {
+    justifyContent: 'flex-start',
+  },
+  textInput: {
+    flex: 1,
+    fontFamily: FONT_RALEWAY_500,
+    fontSize: 16,
+    lineHeight: 22,
+    color: colors.primary[600],
+    paddingVertical: 13,
+  },
+  footer: {
+    position: 'absolute',
+    bottom: 10,
+    left: 0,
+    right: 0,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 16,
+    paddingVertical: 13,
+    gap: 8,
+  },
+  footerVisibilityCont: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  footerText: {
+    fontFamily: FONT_RALEWAY_500,
+    fontSize: 16,
+    lineHeight: 22,
+    color: colors.neutral[600],
+  },
+  uploadButton: {
+    backgroundColor: colors.neutral[500],
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 20,
+  },
+  uploadActiveButton: {
+    backgroundColor: colors.primary[500],
+  },
+  imageButtonInner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  imageButtonText: {
+    fontFamily: FONT_RALEWAY_600,
+    color: colors.neutral[100],
+    fontSize: 14,
+    lineHeight: 20,
+  },
+  imageButtonTextActive: {
+    color: colors.neutral[100],
+  },
+  imageCont: {
+    backgroundColor: colors.white,
+    width: 81,
+    height: 81,
+    position: 'relative',
+    marginLeft: 77, // 16 + 49(avatarSize) + 12(gap between avatar and text input)
+    shadowColor: colors.black,
+    shadowOffset: {
+      width: 0,
+      height: 4,
+    },
+    shadowOpacity: 0.25,
+    elevation: 5,
+    borderRadius: 8,
+  },
+  imageShadow: {},
+  uploadedImage: {
+    width: 81,
+    height: 81,
+    borderRadius: 8,
+    overflow: 'hidden',
+  },
+  clearImageButton: {
+    position: 'absolute',
+    top: -8.5,
+    right: -11,
+    backgroundColor: '#999',
+    width: 22,
+    height: 22,
+    borderRadius: 11,
+    justifyContent: 'center',
+    alignItems: 'center',
+    zIndex: 10,
+  },
+});
+
+export default styles;

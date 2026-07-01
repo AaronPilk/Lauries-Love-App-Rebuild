@@ -1,0 +1,36 @@
+# Dependencies
+**/node_modules/
+.pnp
+.pnp.js
+
+# Env & secrets (do NOT commit — will be handled later)
+**/.env
+**/.env.*
+!**/.env.example
+api/firebase.json
+**/GoogleService-Info.plist
+**/google-services.json
+**/*.p8
+**/*.pem
+**/*.keystore
+
+# Builds
+**/dist/
+**/build/
+app/.expo/
+app/ios/Pods/
+app/ios/build/
+app/android/build/
+app/android/.gradle/
+app/android/app/build/
+**/coverage/
+
+# Native
+**/*.xcuserstate
+**/DerivedData/
+
+# Misc
+.DS_Store
+*.log
+npm-debug.*
+yarn-error.log

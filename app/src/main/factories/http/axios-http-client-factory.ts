@@ -16,10 +16,13 @@ export const makeAxiosCometChatClient = (): AxiosHttpClient => {
   return new AxiosHttpClient(cometChatClient);
 };
 
+// NOTE (rebuild): CometChat is legacy/dead (replaced by Sendbird) and is slated
+// for full removal. The hardcoded API key has been stripped — supply your own via
+// env if you ever need this client, otherwise delete it in the P3 cleanup pass.
 export const cometChatClient = axios.create({
   baseURL: `https://${appConfig.cometChatAppId}.api-us.cometchat.io/v3`,
   headers: {
-    apiKey: '731e95126c81034804d76316e5f84c52bd61fec4',
+    apiKey: process.env.EXPO_PUBLIC_COMETCHAT_API_KEY ?? '',
   },
 });
 

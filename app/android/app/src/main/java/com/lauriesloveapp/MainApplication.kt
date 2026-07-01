@@ -53,7 +53,7 @@ class MainApplication : Application(), ReactApplication {
       load()
     }
     ApplicationLifecycleDispatcher.onApplicationCreate(this)
-  IntercomModule.initialize(this, "android_sdk-ab6e9d9746e0aa534a822769aedcbf92e0d1cbcd", "mmgozfni")
+  IntercomModule.initialize(this, "YOUR_INTERCOM_ANDROID_API_KEY", "YOUR_INTERCOM_APP_ID")
 }
 
   override fun onConfigurationChanged(newConfig: Configuration) {

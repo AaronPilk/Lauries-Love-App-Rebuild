@@ -2,8 +2,9 @@
 
 Every item traces to the audit. Checked = done in this repo.
 
-## P0 — Security (rotate keys separately; here we stop re-committing them)
+## P0 — Security / clean-slate keys
 - [x] Gitignore committed secrets (Firebase key, GoogleService-Info, .env, .p8) so they don't enter this repo's history
+- [x] **Strip ALL agency keys/credentials for a clean rebuild** — deleted Firebase admin key + GoogleService/google-services configs; replaced Google Maps key, Facebook app ID/token, Intercom SDK keys, CometChat key, EAS project binding, Sentry org, and DB/Cognito example values with `YOUR_*` placeholders; removed agency Swimm docs. You plug in your own service keys later.
 - [ ] Move Sendbird from a shipped master token to per-user backend session tokens (`api` issues token, `app` consumes)
 - [ ] Remove hardcoded CometChat key + dead CometChat client
 - [ ] Lower Sentry/PostHog sampling from 1.0

@@ -47,7 +47,7 @@
         ]
       },
       "config": {
-        "googleMapsApiKey": "AIzaSyBiWDbiqcnQnpTdNNaeGmZDuVvip9I9yss",
+        "googleMapsApiKey": "YOUR_GOOGLE_MAPS_API_KEY",
         "usesNonExemptEncryption": false
       },
       "entitlements": {
@@ -82,7 +82,7 @@
       ],
       "config": {
         "googleMaps": {
-          "apiKey": "AIzaSyBiWDbiqcnQnpTdNNaeGmZDuVvip9I9yss"
+          "apiKey": "YOUR_GOOGLE_MAPS_API_KEY"
         }
       }
     },
@@ -142,7 +142,7 @@
         {
           "url": "https://sentry.io/",
           "project": "laurieslove-app",
-          "organization": "oneseventech"
+          "organization": "your-sentry-org"
         }
       ],
       [
@@ -158,10 +158,10 @@
       [
         "react-native-fbsdk-next",
         {
-          "appID": "1164280484687629",
+          "appID": "YOUR_FACEBOOK_APP_ID",
           "displayName": "Laurie's Love",
-          "clientToken": "f11b45c73744e8a0941ee052682bf761",
-          "scheme": "fb1164280484687629",
+          "clientToken": "YOUR_FACEBOOK_CLIENT_TOKEN",
+          "scheme": "fbYOUR_FACEBOOK_APP_ID",
           "advertiserIDCollectionEnabled": true,
           "autoLogAppEventsEnabled": true,
           "isAutoInitEnabled": true
@@ -171,22 +171,22 @@
       [
         "@intercom/intercom-react-native",
         {
-          "appId": "mmgozfni",
-          "androidApiKey": "android_sdk-ab6e9d9746e0aa534a822769aedcbf92e0d1cbcd",
-          "iosApiKey": "ios_sdk-30c882323a48205fb86e9276b3a5bb47599c9406",
+          "appId": "YOUR_INTERCOM_APP_ID",
+          "androidApiKey": "YOUR_INTERCOM_ANDROID_API_KEY",
+          "iosApiKey": "YOUR_INTERCOM_IOS_API_KEY",
           "intercomRegion": "US"
         }
       ]
     ],
     "extra": {
       "eas": {
-        "projectId": "87463815-e7cb-473c-9cf6-52dc563bf9c1"
+        "projectId": "YOUR_EAS_PROJECT_ID"
       }
     },
-    "owner": "oneseven",
+    "owner": "your-expo-account",
     "runtimeVersion": "1.0.0",
     "updates": {
-      "url": "https://u.expo.dev/87463815-e7cb-473c-9cf6-52dc563bf9c1"
+      "url": "https://u.expo.dev/YOUR_EAS_PROJECT_ID"
     }
   }
 }

@@ -77,7 +77,7 @@ jobs:
       - name: Inject and Upload Sentry Source Maps
         env:
           SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
-          SENTRY_ORG: oneseventech
+          SENTRY_ORG: your-sentry-org
           SENTRY_PROJECT: laurieslove-api
         run: |
           sentry-cli sourcemaps inject --org $SENTRY_ORG --project $SENTRY_PROJECT ./dist
@@ -86,7 +86,7 @@ jobs:
       - name: Set up Sentry Release
         env:
           SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
-          SENTRY_ORG: oneseventech
+          SENTRY_ORG: your-sentry-org
           SENTRY_PROJECT: laurieslove-api
         run: |
           sentry-cli releases new "$GITHUB_SHA"
@@ -95,7 +95,7 @@ jobs:
       - name: Notify Sentry Deployment
         env:
           SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
-          SENTRY_ORG: oneseventech
+          SENTRY_ORG: your-sentry-org
           SENTRY_PROJECT: laurieslove-api
         run: |
           sentry-cli releases deploys "$GITHUB_SHA" new -e production

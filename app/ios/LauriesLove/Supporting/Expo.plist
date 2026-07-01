@@ -11,6 +11,6 @@
     <key>EXUpdatesRuntimeVersion</key>
     <string>1.0.0</string>
     <key>EXUpdatesURL</key>
-    <string>https://u.expo.dev/87463815-e7cb-473c-9cf6-52dc563bf9c1</string>
+    <string>https://u.expo.dev/YOUR_EAS_PROJECT_ID</string>
   </dict>
 </plist>

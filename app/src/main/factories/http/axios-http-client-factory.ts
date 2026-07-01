@@ -3,9 +3,13 @@ import axios from 'axios';
 import { appConfig } from '../../config/app.config';
 import * as Auth from 'aws-amplify/auth';
 import { consoleCustom } from 'utils/other';
+import { MOCK_ENABLED } from 'mocks/mock.config';
+import { mockAxiosAdapter } from 'mocks/mock.adapter';
 
 export const client = axios.create({
   baseURL: appConfig.apiUrl,
+  // Mock mode: answer from fake data instead of the network.
+  ...(MOCK_ENABLED ? { adapter: mockAxiosAdapter as any } : {}),
 });
 
 export const makeAxiosHttpClient = (): AxiosHttpClient => {

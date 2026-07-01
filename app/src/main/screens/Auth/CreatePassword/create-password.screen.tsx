@@ -9,6 +9,8 @@ import {
   View,
 } from 'react-native';
 import { signUp, signIn, signOut } from 'aws-amplify/auth';
+import { MOCK_ENABLED } from 'mocks/mock.config';
+import { setMockSignedIn } from 'mocks/mock.auth';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import { LinearGradient } from 'expo-linear-gradient';
 
@@ -85,6 +87,11 @@ export default function CreatePasswordScreen() {
   }
 
   async function newAccount() {
+    if (MOCK_ENABLED) {
+      // Mock mode: skip Cognito signUp entirely; treat account as created.
+      setMockSignedIn(true);
+      return 'DONE';
+    }
     try {
       setLoading(true);
       const result = await signUp({
@@ -130,10 +137,11 @@ export default function CreatePasswordScreen() {
         },
       });
     if (result === 'DONE') {
-      await signIn({
-        username: userOnboarding.email,
-        password: account.password,
-      });
+      if (!MOCK_ENABLED)
+        await signIn({
+          username: userOnboarding.email,
+          password: account.password,
+        });
       const user = await checkCurrentUserAWS();
       if (user?.currentUser) {
         const token = user.authSession.tokens?.accessToken;

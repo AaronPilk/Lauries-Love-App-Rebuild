@@ -31,6 +31,17 @@ import React, {
 import { customShowError } from 'utils/other';
 import { useToastProvider } from 'providers/ToastProvider/ToastProvider';
 
+// mock mode (local UI testing without Cognito)
+import { MOCK_ENABLED } from 'mocks/mock.config';
+import {
+  MOCK_AUTH_SESSION,
+  MOCK_AUTH_USER,
+  MOCK_JWT,
+  MOCK_SIGN_IN_OUTPUT,
+  mockSignedIn,
+  setMockSignedIn,
+} from 'mocks/mock.auth';
+
 type UserAWSContext = {
   userAWS: AuthUser | null;
   jwtTokenUser: JWT | null;
@@ -77,6 +88,12 @@ const UserAWSProvider: FunctionComponent<UserAWSProviderProps> = ({
   const [jwtTokenUser, setJwtTokenUser] = useState<JWT | null>(null);
 
   const checkCurrentUserAWS = async () => {
+    if (MOCK_ENABLED) {
+      if (!mockSignedIn) return null;
+      setJwtTokenUser(MOCK_JWT);
+      setUserAWS(MOCK_AUTH_USER);
+      return { authSession: MOCK_AUTH_SESSION, currentUser: MOCK_AUTH_USER };
+    }
     try {
       console.log('👤 checkCurrentUserAWS: Fetching auth session...');
       const authSession = await fetchAuthSession();
@@ -104,6 +121,13 @@ const UserAWSProvider: FunctionComponent<UserAWSProviderProps> = ({
   };
 
   const authAWS = async (email: string, password: string, getUserDB = true) => {
+    if (MOCK_ENABLED) {
+      // Any credentials sign in as the mock user.
+      setMockSignedIn(true);
+      setJwtTokenUser(MOCK_JWT);
+      setUserAWS(MOCK_AUTH_USER);
+      return MOCK_SIGN_IN_OUTPUT;
+    }
     try {
       console.log('🔐 authAWS: Starting sign in...');
       const result = await signIn({
@@ -128,6 +152,7 @@ const UserAWSProvider: FunctionComponent<UserAWSProviderProps> = ({
   const forgotPassword = async ({
     email,
   }: Authentication.ForgotPasswordParams) => {
+    if (MOCK_ENABLED) return { isPasswordReset: true } as any;
     return resetPassword({
       username: email,
     });
@@ -148,6 +173,7 @@ const UserAWSProvider: FunctionComponent<UserAWSProviderProps> = ({
   const updateUserAttributesAWS = async (
     data: UpdateUserAttributesInput,
   ) => {
+    if (MOCK_ENABLED) return {} as any;
     try {
       const result = await updateUserAttributes(data);
       return result;
@@ -161,6 +187,7 @@ const UserAWSProvider: FunctionComponent<UserAWSProviderProps> = ({
   const handleConfirmUserAttribute = async (
     data: ConfirmUserAttributeInput,
   ) => {
+    if (MOCK_ENABLED) return true;
     try {
       await confirmUserAttribute(data);
       await checkCurrentUserAWS();
@@ -175,6 +202,7 @@ const UserAWSProvider: FunctionComponent<UserAWSProviderProps> = ({
   const handleSendUserAttributeVerificationCode = async (
     data: SendUserAttributeVerificationCodeInput,
   ) => {
+    if (MOCK_ENABLED) return true;
     try {
       await sendUserAttributeVerificationCode(data);
       return true;
@@ -189,6 +217,7 @@ const UserAWSProvider: FunctionComponent<UserAWSProviderProps> = ({
     oldPassword: string,
     newPassword: string,
   ) => {
+    if (MOCK_ENABLED) return true;
     try {
       await updatePasswordAuth({
         oldPassword,
@@ -202,6 +231,12 @@ const UserAWSProvider: FunctionComponent<UserAWSProviderProps> = ({
   };
 
   const signOutAWS = async () => {
+    if (MOCK_ENABLED) {
+      setMockSignedIn(false);
+      setUserAWS(null);
+      setJwtTokenUser(null);
+      return true;
+    }
     try {
       await signOut();
       setUserAWS(null);
@@ -215,6 +250,12 @@ const UserAWSProvider: FunctionComponent<UserAWSProviderProps> = ({
   };
 
   const deleteAWS = async () => {
+    if (MOCK_ENABLED) {
+      setMockSignedIn(false);
+      setUserAWS(null);
+      setJwtTokenUser(null);
+      return true;
+    }
     try {
       await deleteUser();
       setUserAWS(null);

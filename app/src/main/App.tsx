@@ -40,7 +40,12 @@ import { FONTS } from 'styles/fonts';
 import i18next from 'presentation/translations';
 import PosthogProvider from 'providers/PosthogProvider/PosthogProvider';
 
-Sentry.init(appConfig.DEFAULT_SENTRY_SETTINGS);
+// Only init Sentry when a DSN is configured; an empty DSN leaves the SDK in a
+// half-initialized state that logs a red "Transport disabled" error on every
+// captureException call.
+if (appConfig.DEFAULT_SENTRY_SETTINGS.dsn) {
+  Sentry.init(appConfig.DEFAULT_SENTRY_SETTINGS);
+}
 Amplify.configure({
   Auth: {
     Cognito: {

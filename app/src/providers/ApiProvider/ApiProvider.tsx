@@ -9,6 +9,10 @@ import { useUserAWSProvider } from 'providers/UserAWSProvider/UserAWSProvider';
 // constants
 import { DEFAULT_APP_CONFIG } from './ApiProvider.constants';
 
+// mock mode (local UI testing without a backend)
+import { MOCK_ENABLED } from 'mocks/mock.config';
+import { mockApi } from 'mocks/mock.api';
+
 type ApiType = <T>(
   url: string,
   configurations?: {
@@ -41,6 +45,13 @@ const ApiProvider: FunctionComponent<ApiProviderProps> = ({ children }) => {
     const currentUrl = url.includes('http')
       ? url
       : `${urlApi}${url}${url.includes('?') ? `&${queryParams}` : queryParams}`;
+
+    if (MOCK_ENABLED) {
+      return (await mockApi(currentUrl, {
+        method: config?.method,
+        data: config?.data,
+      })) as any;
+    }
 
     try {
       const response = await axios(currentUrl, {

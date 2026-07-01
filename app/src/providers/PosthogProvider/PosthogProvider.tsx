@@ -21,9 +21,10 @@ type PosthogProviderProps = {
 };
 
 export const posthogContext = createContext({} as PosthogContext);
-export const posthog = new PostHog(
-  process.env.EXPO_PUBLIC_POSTHOG_API_KEY || '',
-);
+
+// No key (local/mock dev) -> disable PostHog entirely instead of crashing.
+const POSTHOG_API_KEY = process.env.EXPO_PUBLIC_POSTHOG_API_KEY;
+export const posthog = POSTHOG_API_KEY ? new PostHog(POSTHOG_API_KEY) : null;
 
 const PosthogProvider: FunctionComponent<PosthogProviderProps> = ({
   children,
@@ -31,7 +32,7 @@ const PosthogProvider: FunctionComponent<PosthogProviderProps> = ({
   const { userDB } = useUserDBProvider();
 
   const identifyUser = async () => {
-    if (!userDB) return;
+    if (!userDB || !posthog) return;
 
     posthog.identify(userDB?.cognitoId, {
       loginId: userDB?.cognitoId,
@@ -41,6 +42,7 @@ const PosthogProvider: FunctionComponent<PosthogProviderProps> = ({
   };
 
   const onCapture = (values: PosthogEventType) => {
+    if (!posthog) return;
     const user_id = userDB?.cognitoId || values.properties?.userId;
     if (!user_id) return;
 
@@ -56,6 +58,15 @@ const PosthogProvider: FunctionComponent<PosthogProviderProps> = ({
   useEffect(() => {
     if (userDB?.cognitoId) identifyUser();
   }, [userDB?.cognitoId]);
+
+  if (!posthog) {
+    // Analytics disabled (no key): keep the context so consumers work, skip the SDK.
+    return (
+      <posthogContext.Provider value={{ onCapture }}>
+        {children}
+      </posthogContext.Provider>
+    );
+  }
 
   return (
     <posthogContext.Provider value={{ onCapture }}>

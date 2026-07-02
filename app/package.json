@@ -38,6 +38,7 @@
     "@sendbird/uikit-react-native": "^3.8.6",
     "@sentry/react-native": "~6.14.0",
     "@stripe/stripe-react-native": "0.45.0",
+    "@supabase/supabase-js": "^2.110.0",
     "@svgr/cli": "^8.1.0",
     "@tanstack/react-query": "^5.60.5",
     "@testing-library/jest-dom": "^6.6.3",

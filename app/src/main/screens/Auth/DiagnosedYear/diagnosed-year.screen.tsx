@@ -40,6 +40,11 @@ export default function DiagnosedYearScreen() {
   const [loading, setLoading] = useState(false);
 
   const isFriend = useMemo(() => {
+    // Rebuild fix (logic): only patients/survivors have a personal diagnosis
+    // year. This bypass previously applied ONLY to the "Friend" role —
+    // caregivers, family members, and supporters were still forced to enter
+    // a year that doesn't exist for them. Now ANY non-patient role gets the
+    // terms-only version of this screen (the year field is hidden).
     const selectRole = userDB
       ? designationTypes.find(item => {
           const roleId =
@@ -51,7 +56,15 @@ export default function DiagnosedYearScreen() {
         }) || null
       : null;
 
-    return selectRole?.description.toLowerCase().includes('friend') || false;
+    if (!selectRole?.description) return false; // unknown role -> ask (old behavior)
+
+    const roleName = selectRole.description.toLowerCase();
+    const hasOwnDiagnosis =
+      roleName.includes('warrior') ||
+      roleName.includes('patient') ||
+      roleName.includes('survivor');
+
+    return !hasOwnDiagnosis;
   }, [userDB, designationTypes]);
 
   const isDisabled = useMemo(
@@ -61,7 +74,7 @@ export default function DiagnosedYearScreen() {
       !privacyAccepted ||
       !!error ||
       loading,
-    [diagnosedYear, termsAccepted, privacyAccepted, error, loading],
+    [isFriend, diagnosedYear, termsAccepted, privacyAccepted, error, loading],
   );
 
   useEffect(() => {

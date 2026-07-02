@@ -35,6 +35,9 @@ export default function YourGenderScreen() {
     try {
       await updateUserDB({ gender });
 
+      // NOTE: DiagnosedYear doubles as the Terms & Privacy acceptance step,
+      // so everyone still passes through it — but non-patient roles no longer
+      // see or need the year field (fixed in diagnosed-year.screen.tsx).
       navigation.navigate('Authentication', {
         screen: 'DiagnosedYear',
       });

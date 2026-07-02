@@ -30,6 +30,7 @@ import { styles } from './recommended-groups.styles';
 import { GroupChannel } from '@sendbird/chat/groupChannel';
 import { useDBProvider } from 'providers/DBProvider/DBProvider';
 import { IconArrowLeft } from 'assets/icons-auto/components';
+import { MOCK_ENABLED } from 'mocks/mock.config';
 
 export default function RecommendedGroupsScreen() {
   const { sdk } = useSendbirdChat();
@@ -71,21 +72,19 @@ export default function RecommendedGroupsScreen() {
     setJoining(true);
     try {
       for (const ch of channels) {
-        if (selected[ch.url]) {
+        if (selected[ch.url] && !MOCK_ENABLED) {
           const channel = await sdk.groupChannel.getChannel(ch.url);
           await channel.join();
-          navigation.navigate('Authentication', {
-            screen: 'login',
-          });
         }
       }
-
+    } catch (e) {
+      // Rebuild fix: a failed join no longer strands the user on this screen —
+      // we log it and continue to the app either way.
+      if (__DEV__) console.warn('Join error', e);
+    } finally {
       navigation.navigate('Authentication', {
         screen: 'login',
       });
-    } catch (e) {
-      if (__DEV__) console.warn('Join error', e);
-    } finally {
       setJoining(false);
       trackIntercom('onboarding_completed');
     }
@@ -120,7 +119,8 @@ export default function RecommendedGroupsScreen() {
       <TouchableWithoutFeedback onPress={Keyboard.dismiss} accessible={false}>
         <SafeAreaView style={styles.container}>
           <ScrollView
-            scrollEnabled={false}
+            // Rebuild fix: was scrollEnabled={false} — with more than ~4
+            // recommended groups the list overflowed and couldn't scroll.
             contentContainerStyle={{ flexGrow: 1 }}
           >
             <View style={styles.contentContainer}>

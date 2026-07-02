@@ -211,12 +211,10 @@ export default function MapScreen() {
       try {
         const { status } = await Location.requestForegroundPermissionsAsync();
         if (status !== 'granted') {
-          Alert.alert(
-            'Permission Denied',
-            'Location permission is required to use this feature',
-          );
-          setIsLoading(false);
-          return;
+          // Rebuild fix: NO blocking alert — iOS queues these across mounts and
+          // they stack (users reported tapping through dozens). The map works
+          // fine from the profile location fallback; just skip GPS.
+          throw new Error('location-permission-not-granted');
         }
 
         const currentLocation = await Location.getCurrentPositionAsync({});

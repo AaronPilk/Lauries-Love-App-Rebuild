@@ -13,6 +13,12 @@ import React, {
 
 import { useDBProvider } from 'providers/DBProvider/DBProvider';
 import { useApiProvider } from 'providers/ApiProvider/ApiProvider';
+import { MOCK_ENABLED } from 'mocks/mock.config';
+import {
+  MOCK_COMMENTS,
+  MOCK_GROUPS,
+  MOCK_POSTS,
+} from 'mocks/mock.sendbird';
 import { useUserDBProvider } from 'providers/UserDBProvider/UserDBProvider';
 import { useSendbirdChatProvider } from 'providers/SendbirdChatProvider/SendbirdChatProvider';
 import { BaseMessageSendBirdType } from 'providers/SendbirdChatProvider/SendbirdChatProvider.types';
@@ -113,6 +119,21 @@ const SendBirdPostsProvider: FunctionComponent<SendBirdPostsProviderProps> = ({
   };
 
   const getFilteringUserInfo = async () => {
+    if (MOCK_ENABLED) {
+      // Return recommendation groups matching the user's role/diagnosis the
+      // same way the real Sendbird query would (name-contains, lowercase).
+      const roleName = userDB?.role?.description?.toLowerCase() || '';
+      const matches = MOCK_GROUPS.filter(
+        g =>
+          g.name.toLowerCase().includes(roleName) ||
+          (userDB?.diagnosisTypes || []).some((d: any) =>
+            g.name
+              .toLowerCase()
+              .includes((d?.description || '').toLowerCase().split(' ')[0]),
+          ),
+      );
+      return (matches.length > 0 ? matches : MOCK_GROUPS.slice(0, 4)) as any;
+    }
     try {
       const removeTrailingDots = (str: string) => {
         const index = str.indexOf('...');
@@ -194,6 +215,13 @@ const SendBirdPostsProvider: FunctionComponent<SendBirdPostsProviderProps> = ({
   };
 
   const getPosts = async () => {
+    if (MOCK_ENABLED) {
+      setPosts(MOCK_POSTS as any);
+      setComments(MOCK_COMMENTS as any);
+      setLoadingStorage(false);
+      setLoadingServer(false);
+      return;
+    }
     setLoadingServer(true);
     const query = sdk.groupChannel.createPublicGroupChannelListQuery({
       limit,
@@ -249,6 +277,7 @@ const SendBirdPostsProvider: FunctionComponent<SendBirdPostsProviderProps> = ({
     postUrl: string,
     messagePost: BaseMessageSendBirdType,
   ) => {
+    if (MOCK_ENABLED) return; // demo: reactions are local-only in components
     if (!postUrl || !userChat) return;
     setLoadingServer(true);
 
@@ -281,6 +310,12 @@ const SendBirdPostsProvider: FunctionComponent<SendBirdPostsProviderProps> = ({
   };
 
   const getPost = async (channelUrl: string) => {
+    if (MOCK_ENABLED) {
+      const mockMessages = (MOCK_COMMENTS[channelUrl] ??
+        []) as BaseMessageSendBirdType[];
+      setComments({ ...comments, [channelUrl]: mockMessages });
+      return mockMessages;
+    }
     try {
       const channel = await sdk.groupChannel.getChannel(channelUrl);
       const query = channel.createPreviousMessageListQuery({
@@ -337,6 +372,14 @@ const SendBirdPostsProvider: FunctionComponent<SendBirdPostsProviderProps> = ({
   };
 
   useEffect(() => {
+    if (MOCK_ENABLED) {
+      // Mock mode: inject fake posts/comments directly, skip storage + server.
+      setPosts(MOCK_POSTS as any);
+      setComments(MOCK_COMMENTS as any);
+      setLoadingStorage(false);
+      setLoadingServer(false);
+      return;
+    }
     if (userChat?.userId) storageDB().then(getPosts);
   }, [userChat?.userId, limit]);
 

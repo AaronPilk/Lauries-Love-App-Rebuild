@@ -22,6 +22,12 @@ import { appConfig } from 'main/config/app.config';
 import { getFileStorageAmplify } from 'utils/amplify-storage';
 import { platformServices } from './SendbirdChatProvider.config';
 import { MOCK_ENABLED } from 'mocks/mock.config';
+import {
+  MOCK_CHAT_CHANNELS,
+  MOCK_CHAT_MESSAGES,
+  MOCK_FRIENDS,
+  MOCK_USER_CHAT,
+} from 'mocks/mock.sendbird';
 import { useApiProvider } from 'providers/ApiProvider/ApiProvider';
 import { useToastProvider } from 'providers/ToastProvider/ToastProvider';
 import { useUserDBProvider } from 'providers/UserDBProvider/UserDBProvider';
@@ -85,6 +91,10 @@ const SendbirdChatProvider: FunctionComponent<SendbirdChatProviderProps> = ({
   const userID = useMemo(() => userDB?.cognitoId || null, [userDB?.cognitoId]);
 
   const getFriends = async () => {
+    if (MOCK_ENABLED) {
+      setFriends(MOCK_FRIENDS);
+      return MOCK_FRIENDS as UserSendBirdType[];
+    }
     const friendListQuery = sdk.createFriendListQuery({
       limit: 100,
     });
@@ -142,6 +152,22 @@ const SendbirdChatProvider: FunctionComponent<SendbirdChatProviderProps> = ({
   };
 
   const getChannels = async () => {
+    if (MOCK_ENABLED) {
+      // Fake chat + group channels; members map keyed by userId.
+      const mockMembers = MOCK_CHAT_CHANNELS.reduce<
+        Record<string, UserSendBirdType>
+      >((acc, channel) => {
+        (channel.members || []).forEach((m: UserSendBirdType) => {
+          if (m.userId !== MOCK_USER_CHAT.userId) acc[m.userId] = m;
+        });
+        return acc;
+      }, {});
+      setMembers(mockMembers);
+      setMessages(MOCK_CHAT_MESSAGES as any);
+      setGroupChannels(MOCK_CHAT_CHANNELS as any);
+      setFriends(MOCK_FRIENDS);
+      return;
+    }
     const query = sdk.groupChannel.createMyGroupChannelListQuery({
       includeEmpty: true,
       limit,
@@ -402,9 +428,12 @@ const SendbirdChatProvider: FunctionComponent<SendbirdChatProviderProps> = ({
       : undefined;
     if (!userID) return;
 
-    // Mock mode: no real Sendbird app — skip connect (avoids the error toast).
-    // Chat + feed screens render their empty states.
-    if (MOCK_ENABLED) return;
+    // Mock mode: no real Sendbird app — skip connect and use the fake chat
+    // user so chat/feed/groups screens render with mock data.
+    if (MOCK_ENABLED) {
+      setUserChat(MOCK_USER_CHAT);
+      return;
+    }
 
     try {
       const result =
@@ -433,6 +462,11 @@ const SendbirdChatProvider: FunctionComponent<SendbirdChatProviderProps> = ({
   };
 
   const loadMessages = async (channelUrl: string, limit = 50) => {
+    if (MOCK_ENABLED) {
+      const mockMsgs = (MOCK_CHAT_MESSAGES[channelUrl] ?? []) as BaseMessage[];
+      setMessages(prev => ({ ...prev, [channelUrl]: mockMsgs as any }));
+      return mockMsgs;
+    }
     try {
       const channel = await sdk.groupChannel.getChannel(channelUrl);
       const messageQuery = channel.createPreviousMessageListQuery({
@@ -453,6 +487,7 @@ const SendbirdChatProvider: FunctionComponent<SendbirdChatProviderProps> = ({
   };
 
   const getBlockedUsers = async () => {
+    if (MOCK_ENABLED) return [];
     if (!userChat) return;
 
     const query = sdk.createBlockedUserListQuery();
@@ -469,6 +504,7 @@ const SendbirdChatProvider: FunctionComponent<SendbirdChatProviderProps> = ({
   };
 
   const getMember = async (userId: string) => {
+    if (MOCK_ENABLED) return; // members already seeded by getChannels
     const query = sdk.createApplicationUserListQuery({
       userIdsFilter: [userId],
     });
@@ -511,6 +547,7 @@ const SendbirdChatProvider: FunctionComponent<SendbirdChatProviderProps> = ({
   };
 
   const addBlockedUser = async (userId: string) => {
+    if (MOCK_ENABLED) return true;
     if (!userChat) return false;
 
     try {
@@ -525,6 +562,7 @@ const SendbirdChatProvider: FunctionComponent<SendbirdChatProviderProps> = ({
   };
 
   const removeBlockedUser = async (userId: string) => {
+    if (MOCK_ENABLED) return true;
     if (!userChat) return false;
 
     try {
@@ -541,6 +579,10 @@ const SendbirdChatProvider: FunctionComponent<SendbirdChatProviderProps> = ({
 
   const logoutChat = async () => {
     if (!userChat) return;
+    if (MOCK_ENABLED) {
+      setUserChat(null);
+      return;
+    }
 
     try {
       await disconnect();
@@ -562,7 +604,7 @@ const SendbirdChatProvider: FunctionComponent<SendbirdChatProviderProps> = ({
   }, [userChat?.userId, limit]);
 
   useEffect(() => {
-    if (!userChat) return;
+    if (!userChat || MOCK_ENABLED) return;
 
     const channelHandler = new GroupChannelHandler();
     channelHandler.onChannelChanged = updatedChannel => {

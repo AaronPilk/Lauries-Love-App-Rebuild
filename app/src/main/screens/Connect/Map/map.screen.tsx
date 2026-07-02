@@ -254,7 +254,22 @@ export default function MapScreen() {
         setIsCurrentLocation(true);
         mapRef.current?.animateToRegion(region, 1000);
       } catch (error) {
-        Alert.alert('Error', 'Unable to fetch your location');
+        // Rebuild fix: GPS failure (timeout, airplane mode, simulator) should
+        // NOT block the user with an alert. Fall back to their profile
+        // location, then the US overview, and move on.
+        if (__DEV__) console.log('Location unavailable, using fallback', error);
+        const TIGHT_DELTA = { latitudeDelta: 0.15, longitudeDelta: 0.15 };
+        const fallback: Region = userParams?.user?.geoLocation
+          ? { ...userParams.user.geoLocation, ...TIGHT_DELTA }
+          : userDB?.geoLocation?.latitude
+            ? { ...userDB.geoLocation, ...TIGHT_DELTA }
+            : {
+                latitude: 37.0902,
+                longitude: -95.7129,
+                latitudeDelta: 30.0,
+                longitudeDelta: 50.0,
+              };
+        setInitialRegion(fallback);
         setIsLoading(false);
       }
     })();

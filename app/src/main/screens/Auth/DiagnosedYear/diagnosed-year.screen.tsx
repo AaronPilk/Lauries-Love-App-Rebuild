@@ -1,4 +1,6 @@
 import { getCurrentUser } from 'aws-amplify/auth';
+import { MOCK_ENABLED } from 'mocks/mock.config';
+import { MOCK_AUTH_USER } from 'mocks/mock.auth';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useNavigation } from '@react-navigation/native';
 import React, { useEffect, useMemo, useState } from 'react';
@@ -102,7 +104,7 @@ export default function DiagnosedYearScreen() {
       const error = validateField();
       if (error && !isFriend) return;
 
-      const { userId } = await getCurrentUser();
+      const { userId } = MOCK_ENABLED ? MOCK_AUTH_USER : await getCurrentUser();
       await updateUserDB({
         cognitoId: userId,
         lastName: null,

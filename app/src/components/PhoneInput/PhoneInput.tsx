@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import {
   View,
   Text,
@@ -61,9 +61,12 @@ export const PhoneInput: React.FC<PhoneInputProps> = ({
     }).start();
   }, [errorMessage, height]);
 
-  const filteredCountries = countryList.filter(country =>
-    country.name.toLowerCase().includes(query.toLowerCase()),
-  );
+  const filteredCountries = useMemo(() => {
+    const q = query.toLowerCase();
+    return countryList.filter(country =>
+      country.name.toLowerCase().includes(q),
+    );
+  }, [countryList, query]);
 
   useEffect(() => {
     const defaultCountry =

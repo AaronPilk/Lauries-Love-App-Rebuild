@@ -1,6 +1,11 @@
 import { ScrollView, View } from 'react-native';
 import { useSendbirdChat } from '@sendbird/uikit-react-native';
-import React, { FunctionComponent, useEffect, useState } from 'react';
+import React, {
+  FunctionComponent,
+  useCallback,
+  useEffect,
+  useState,
+} from 'react';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 
 import colors from 'styles/colors';
@@ -71,32 +76,46 @@ const MessagesTabJoinGroup: FunctionComponent<MessagesTabJoinGroupProps> = ({
     }
   };
 
-  const onPressJoinGroup = async (channelUrl: string) => {
-    try {
-      const channel = await sdk.groupChannel.getChannel(channelUrl);
-      if (!channel) return;
+  const onPressJoinGroup = useCallback(
+    async (channelUrl: string) => {
+      try {
+        const channel = await sdk.groupChannel.getChannel(channelUrl);
+        if (!channel) return;
 
-      const data = JSON.parse(channel.data ?? '{}') as { isPrivate?: boolean };
-      const isPrivate = data.isPrivate ?? false;
-      if (isPrivate) return;
+        const data = JSON.parse(channel.data ?? '{}') as {
+          isPrivate?: boolean;
+        };
+        const isPrivate = data.isPrivate ?? false;
+        if (isPrivate) return;
 
-      const result = await channel.join();
-      if (!result) return;
+        const result = await channel.join();
+        if (!result) return;
 
-      trackIntercom('join_group');
+        trackIntercom('join_group');
 
-      navigation.navigate(PATHS_MESSAGES_TAB.messagesTabChatGroup, {
-        channelUrl: channel.url,
-      });
-    } catch (error) {
-      if (__DEV__) console.warn('onPressJoinGroup', error);
-    }
-  };
+        navigation.navigate(PATHS_MESSAGES_TAB.messagesTabChatGroup, {
+          channelUrl: channel.url,
+        });
+      } catch (error) {
+        if (__DEV__) console.warn('onPressJoinGroup', error);
+      }
+    },
+    [sdk, trackIntercom, navigation],
+  );
+
+  const onPressCreateGroup = useCallback(
+    () => navigation.navigate(PATHS_MESSAGES_TAB.messagesTabCreateGroup),
+    [navigation],
+  );
 
   useEffect(() => {
     getChannelsHandler();
-    getRecommendedChannelsHandler();
   }, [search]);
+
+  // Recommended channels do not depend on the search text — fetch once.
+  useEffect(() => {
+    getRecommendedChannelsHandler();
+  }, []);
 
   return (
     <BackgroundScreen type="messages">
@@ -121,9 +140,7 @@ const MessagesTabJoinGroup: FunctionComponent<MessagesTabJoinGroupProps> = ({
             channels={recommendedChannels}
             onSelect={onPressJoinGroup}
             isLoading={loading}
-            onPressCreateGroup={() =>
-              navigation.navigate(PATHS_MESSAGES_TAB.messagesTabCreateGroup)
-            }
+            onPressCreateGroup={onPressCreateGroup}
           />
         </View>
         <View>
@@ -132,9 +149,7 @@ const MessagesTabJoinGroup: FunctionComponent<MessagesTabJoinGroupProps> = ({
             channels={channels}
             onSelect={onPressJoinGroup}
             isLoading={loading}
-            onPressCreateGroup={() =>
-              navigation.navigate(PATHS_MESSAGES_TAB.messagesTabCreateGroup)
-            }
+            onPressCreateGroup={onPressCreateGroup}
           />
         </View>
       </ScrollView>

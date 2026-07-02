@@ -134,16 +134,21 @@ const HomeTabMain: FunctionComponent<HomeTabMainProps> = ({ navigation }) => {
         };
       }) as GroupChannelSendBirdType[];
 
-    if (selectTime === 'trending')
-      return [...postsWithAmount].sort((a, b) => {
-        const amountB =
-          (JSON.parse(b.data).commentQty || 0) +
-          (JSON.parse(b.data).commentQty || 0);
-        const amountA =
-          (JSON.parse(a.data).commentQty || 0) +
-          (JSON.parse(a.data).commentQty || 0);
-        return amountB - amountA;
-      });
+    if (selectTime === 'trending') {
+      // Parse each post's data once (instead of twice per sort comparison)
+      const trendingScoreCache = new Map<string, number>();
+      const getTrendingScore = (item: GroupChannelSendBirdType) => {
+        const cached = trendingScoreCache.get(item.url);
+        if (cached !== undefined) return cached;
+        const commentQty = JSON.parse(item.data).commentQty || 0;
+        const score = commentQty + commentQty;
+        trendingScoreCache.set(item.url, score);
+        return score;
+      };
+      return [...postsWithAmount].sort(
+        (a, b) => getTrendingScore(b) - getTrendingScore(a),
+      );
+    }
 
     if (selectTime === 'new')
       return [...postsWithAmount].sort((a, b) => {
@@ -153,19 +158,19 @@ const HomeTabMain: FunctionComponent<HomeTabMainProps> = ({ navigation }) => {
     return postsWithAmount;
   }, [selectType, selectTime, posts, friends, friends.length, posts.length]);
 
-  const onPressPost = (
-    channelUrl: string,
-    isNowOpenKeyboard: boolean = false,
-  ) => {
-    navigation.navigate(PATHS_HOME_TAB.homeTabPost, {
-      channelUrl,
-      isNowOpenKeyboard,
-    });
-  };
+  const onPressPost = useCallback(
+    (channelUrl: string, isNowOpenKeyboard: boolean = false) => {
+      navigation.navigate(PATHS_HOME_TAB.homeTabPost, {
+        channelUrl,
+        isNowOpenKeyboard,
+      });
+    },
+    [navigation],
+  );
 
-  const onPressTaraStoryPost = () => {
+  const onPressTaraStoryPost = useCallback(() => {
     navigation.navigate(PATHS_HOME_TAB.homeTabTaraDetails);
-  };
+  }, [navigation]);
 
   function handleIntercom() {
     openIntercom();
@@ -223,16 +228,20 @@ const HomeTabMain: FunctionComponent<HomeTabMainProps> = ({ navigation }) => {
       }) as GroupChannelSendBirdType[];
     setShowResultPage(true);
     if (selectTime === 'trending') {
+      // Parse each post's data once (instead of twice per sort comparison)
+      const trendingScoreCache = new Map<string, number>();
+      const getTrendingScore = (item: GroupChannelSendBirdType) => {
+        const cached = trendingScoreCache.get(item.url);
+        if (cached !== undefined) return cached;
+        const commentQty = JSON.parse(item.data).commentQty || 0;
+        const score = commentQty + commentQty;
+        trendingScoreCache.set(item.url, score);
+        return score;
+      };
       setSearchPosts(
-        [...filteredPosts].sort((a, b) => {
-          const amountB =
-            (JSON.parse(b.data).commentQty || 0) +
-            (JSON.parse(b.data).commentQty || 0);
-          const amountA =
-            (JSON.parse(a.data).commentQty || 0) +
-            (JSON.parse(a.data).commentQty || 0);
-          return amountB - amountA;
-        }),
+        [...filteredPosts].sort(
+          (a, b) => getTrendingScore(b) - getTrendingScore(a),
+        ),
       );
       return;
     }
@@ -272,6 +281,11 @@ const HomeTabMain: FunctionComponent<HomeTabMainProps> = ({ navigation }) => {
       />
     ),
     [onPressPost, showResultPage],
+  );
+
+  const keyExtractor = useCallback(
+    (item: any, index: number) => item.channelUrl ?? `post-${index}`,
+    [],
   );
 
   return (
@@ -366,7 +380,7 @@ const HomeTabMain: FunctionComponent<HomeTabMainProps> = ({ navigation }) => {
           <FlatList
             ref={listRef}
             data={showResultPage ? searchPosts : showPosts}
-            keyExtractor={(item, index) => item.channelUrl ?? `post-${index}`}
+            keyExtractor={keyExtractor}
             renderItem={renderPostItem}
             ListHeaderComponent={
               showResultPage ? null : (

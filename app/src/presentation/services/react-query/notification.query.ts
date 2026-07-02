@@ -126,8 +126,11 @@ export function useListNotifications() {
 
 export function useUpdateNotification() {
   const queryClient = useQueryClient();
-  return useMutation(
-    async ({ id, ...body }: Partial<Notification>): Promise<Notification> => {
+  return useMutation({
+    mutationFn: async ({
+      id,
+      ...body
+    }: Partial<Notification>): Promise<Notification> => {
       const req = await makeAxiosHttpClient().request({
         method: 'put',
         url: `${appConfig.apiUrl}/notifications/${id}`,
@@ -135,19 +138,19 @@ export function useUpdateNotification() {
       });
       return req.body;
     },
-    {
-      onSuccess: () => {
-        queryClient.invalidateQueries([NotificationKeys.LIST]);
-      },
-      onError: console.error,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: [NotificationKeys.LIST] });
     },
-  );
+    onError: console.error,
+  });
 }
 
 export function useUpdateManyNotification() {
   const queryClient = useQueryClient();
-  return useMutation(
-    async (data: Partial<Notification>[]): Promise<Notification[]> => {
+  return useMutation({
+    mutationFn: async (
+      data: Partial<Notification>[],
+    ): Promise<Notification[]> => {
       const req = await makeAxiosHttpClient().request({
         method: 'post',
         url: `${appConfig.apiUrl}/notifications/bulk`,
@@ -157,11 +160,9 @@ export function useUpdateManyNotification() {
       });
       return req.body;
     },
-    {
-      onSuccess: () => {
-        queryClient.invalidateQueries([NotificationKeys.LIST]);
-      },
-      onError: console.error,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: [NotificationKeys.LIST] });
     },
-  );
+    onError: console.error,
+  });
 }

@@ -1,4 +1,4 @@
-import React, { FunctionComponent, useEffect, useState } from 'react';
+import React, { FunctionComponent, useEffect, useMemo, useState } from 'react';
 import {
   ScrollView,
   Text,
@@ -100,15 +100,7 @@ const MessagesTabCreateChat: FunctionComponent<MessagesTabCreateChatProps> = ({
         }),
       );
 
-      const filteredFriends = friendsWithStatus.filter(
-        friend =>
-          friend.nickname.toLowerCase().includes(search.toLowerCase()) &&
-          friend.status !== 'pending',
-      );
-
-      if (filteredFriends.length > 0) return setFriends(filteredFriends);
-
-      setFriends([]);
+      setFriends(friendsWithStatus);
     } catch (error) {
       if (__DEV__) console.warn('Error getting friends', error);
     } finally {
@@ -147,6 +139,18 @@ const MessagesTabCreateChat: FunctionComponent<MessagesTabCreateChatProps> = ({
     }
   };
 
+  // Search filtering happens locally: fetching friends (plus one status
+  // request per friend) on every keystroke is unnecessary network work.
+  const filteredFriends = useMemo(
+    () =>
+      friends.filter(
+        friend =>
+          friend.nickname.toLowerCase().includes(search.toLowerCase()) &&
+          friend.status !== 'pending',
+      ),
+    [friends, search],
+  );
+
   const handleScrollDown = ({
     nativeEvent: { layoutMeasurement, contentOffset, contentSize },
   }: NativeSyntheticEvent<NativeScrollEvent>) => {
@@ -154,13 +158,13 @@ const MessagesTabCreateChat: FunctionComponent<MessagesTabCreateChatProps> = ({
     const isEnd =
       layoutMeasurement.height + contentOffset.y >=
       contentSize.height - paddingToBottom;
-    if (friends.length >= limit && isEnd) setLimit(limit + 20);
+    if (filteredFriends.length >= limit && isEnd) setLimit(limit + 20);
   };
 
   useEffect(() => {
     if (!isFocused) return;
     getFriends();
-  }, [search, limit, isFocused]);
+  }, [limit, isFocused]);
 
   return (
     <BackgroundScreen type="messages">
@@ -214,11 +218,11 @@ const MessagesTabCreateChat: FunctionComponent<MessagesTabCreateChatProps> = ({
           <View style={styles.loaderContainer}>
             <ActivityIndicator size={'large'} color={colors.primary[600]} />
           </View>
-        ) : friends.length > 0 || search.length > 0 ? (
+        ) : filteredFriends.length > 0 || search.length > 0 ? (
           <ListFriendsMessageTab
             title={'Suggested friends to message'}
             titleEmptyList={search.length > 0 ? 'No friends found' : null}
-            friends={friends}
+            friends={filteredFriends}
             onSelect={selectUser => onSelectFriend(selectUser.userId)}
             handleScrollDown={handleScrollDown}
           />

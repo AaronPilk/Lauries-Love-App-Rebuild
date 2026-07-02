@@ -1,10 +1,11 @@
 import { LinearGradient } from 'expo-linear-gradient';
 import { View, Text, TouchableOpacity, Image } from 'react-native';
 import { useSendbirdChat } from '@sendbird/uikit-react-native';
-import { useNavigation, useFocusEffect } from '@react-navigation/native';
+import { useNavigation } from '@react-navigation/native';
 import React, {
   FunctionComponent,
   useCallback,
+  useEffect,
   useMemo,
   useState,
 } from 'react';
@@ -51,37 +52,30 @@ const PostHomeTab: FunctionComponent<PostHomeTabProps> = ({
 
   const [likes, setLikes] = useState(0);
   const [isLiked, setIsLiked] = useState(false);
-  const [message, setMessage] = useState('');
-  const [comments, setComments] = useState(0);
-  const [postImage, setPostImage] = useState<string>('');
-
-  useFocusEffect(
-    useCallback(() => {
-      getChannel();
-    }, [post.data]),
-  );
 
   const userID = useMemo(
     () => sdk.currentUser?.userId,
     [sdk.currentUser?.userId],
   );
 
-  async function getChannel() {
-    const postData = JSON.parse(post.data);
-    const firstMessage = postData.firstMessage;
+  // Parse post.data once per data change instead of on every focus/render
+  const postData = useMemo(() => {
+    try {
+      return JSON.parse(post.data || '{}');
+    } catch (error) {
+      return {};
+    }
+  }, [post.data]);
 
-    const commentQty = postData.commentQty || 0;
+  const message = postData.firstMessage;
+  const comments = postData.commentQty || 0;
+  const postImage: string = postData.image_sm ?? '';
 
+  useEffect(() => {
     const likesArray = postData.likes;
-
-    const postImage = postData.image_sm ?? '';
-
-    setMessage(firstMessage);
-    setComments(commentQty);
     setLikes(likesArray?.length || 0);
     setIsLiked(likesArray?.includes(userID || ''));
-    setPostImage(postImage);
-  }
+  }, [postData, userID]);
 
   const goToUserProfile = async () => {
     const userFilter =
@@ -113,7 +107,15 @@ const PostHomeTab: FunctionComponent<PostHomeTabProps> = ({
     return;
   };
 
-  const toggleReactionUserMessage = async () => {
+  const handlePressPost = useCallback(() => {
+    onPressPost(post.url);
+  }, [onPressPost, post.url]);
+
+  const handlePressComment = useCallback(() => {
+    setMetadata(sdk, comment, post.url);
+  }, [sdk, comment, post.url]);
+
+  const toggleReactionUserMessage = useCallback(async () => {
     if (!post || !userID) return;
 
     try {
@@ -169,7 +171,7 @@ const PostHomeTab: FunctionComponent<PostHomeTabProps> = ({
     } catch (error) {
       if (__DEV__) console.warn('Error toggling reaction:', error);
     }
-  };
+  }, [post, userID, sdk, message, sendNotification]);
 
   // useEffect(() => {
   //   setMetadata(sdk, comment, post.url);
@@ -181,7 +183,7 @@ const PostHomeTab: FunctionComponent<PostHomeTabProps> = ({
           {message}
         </Text>
         <TouchableOpacity
-          onPress={() => onPressPost(post.url)}
+          onPress={handlePressPost}
           style={styles.searchReadMoreButton}
         >
           <Text style={styles.searchReadMoreText}>Read full story</Text>
@@ -199,7 +201,7 @@ const PostHomeTab: FunctionComponent<PostHomeTabProps> = ({
   if (postImage && postImage.length > 0)
     return (
       <View style={styles.withImageContainer}>
-        <TouchableOpacity onPress={() => onPressPost(post.url)}>
+        <TouchableOpacity onPress={handlePressPost}>
           <PostImageWithLoading
             key={postImage}
             uri={postImage}
@@ -214,10 +216,7 @@ const PostHomeTab: FunctionComponent<PostHomeTabProps> = ({
             <Text style={styles.withImageHeaderText} numberOfLines={1}>
               {message}
             </Text>
-            <PostReadMoreButton
-              onPress={() => onPressPost(post.url)}
-              text="Read More"
-            />
+            <PostReadMoreButton onPress={handlePressPost} text="Read More" />
           </View>
           <Text
             style={[styles.contentText, { paddingRight: 12 }]}
@@ -230,16 +229,16 @@ const PostHomeTab: FunctionComponent<PostHomeTabProps> = ({
           footerStyles={styles.withImageFooter}
           likes={likes}
           isLiked={isLiked}
-          onPressLike={() => toggleReactionUserMessage()}
+          onPressLike={toggleReactionUserMessage}
           comments={comments}
-          onPressComment={() => setMetadata(sdk, comment, post.url)}
+          onPressComment={handlePressComment}
         />
       </View>
     );
 
   return (
     <View style={styles.mainContainer}>
-      <TouchableOpacity onPress={() => onPressPost(post.url)}>
+      <TouchableOpacity onPress={handlePressPost}>
         <LinearGradient
           colors={[colors.quaternary10018, colors.quaternary20018]}
           start={[0, 0]}
@@ -290,12 +289,12 @@ const PostHomeTab: FunctionComponent<PostHomeTabProps> = ({
       <PostFooter
         likes={likes}
         isLiked={isLiked}
-        onPressLike={() => toggleReactionUserMessage()}
+        onPressLike={toggleReactionUserMessage}
         comments={comments}
-        onPressComment={() => setMetadata(sdk, comment, post.url)}
+        onPressComment={handlePressComment}
       />
     </View>
   );
 };
 
-export default PostHomeTab;
+export default React.memo(PostHomeTab);

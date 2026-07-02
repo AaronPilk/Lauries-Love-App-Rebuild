@@ -60,4 +60,4 @@ const PostFooter: FunctionComponent<PostFooterProps> = ({
   );
 };
 
-export default PostFooter;
+export default React.memo(PostFooter);

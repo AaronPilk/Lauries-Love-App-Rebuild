@@ -1,5 +1,6 @@
 import React, {
   FunctionComponent,
+  useCallback,
   useEffect,
   useMemo,
   useRef,
@@ -124,7 +125,7 @@ const MessagesTabChat: FunctionComponent<MessagesTabChatProps> = ({
       channel?.members.find(
         member => member.userId !== sdk.currentUser?.userId,
       ) || null,
-    [channel, isFocused],
+    [channel, sdk.currentUser?.userId],
   );
 
   const fetchChannel = async () => {
@@ -266,6 +267,7 @@ const MessagesTabChat: FunctionComponent<MessagesTabChatProps> = ({
     const thumbnailsVideosArray = messagesChannel.filter(
       file => file.type && file.type.includes('video'),
     );
+    if (!thumbnailsVideosArray.length) return;
     try {
       const thumbnailsVideos = (
         await Promise.all(
@@ -282,10 +284,8 @@ const MessagesTabChat: FunctionComponent<MessagesTabChatProps> = ({
         )
       ).reduce<Record<string, string>>((acc, file) => {
         if (!file || !file.messageId) return acc;
-        return {
-          ...acc,
-          [file.messageId]: file.uri,
-        };
+        acc[file.messageId] = file.uri;
+        return acc;
       }, {});
       setThumbnails(thumbnailsVideos);
     } catch (error) {
@@ -293,7 +293,7 @@ const MessagesTabChat: FunctionComponent<MessagesTabChatProps> = ({
     }
   };
 
-  const renderImageDocument = (item: BaseMessageSendBirdType) => {
+  const renderImageDocument = useCallback((item: BaseMessageSendBirdType) => {
     if (item.messageType !== 'file' || !item.type || !item.url) return null;
     if (item.type.includes('image') || item.type.includes('video'))
       return (
@@ -341,12 +341,10 @@ const MessagesTabChat: FunctionComponent<MessagesTabChatProps> = ({
         </View>
       </TouchableOpacity>
     );
-  };
+  }, [thumbnails]);
 
-  const renderItem: ListRenderItem<BaseMessageSendBirdType> = ({
-    item,
-    index,
-  }) => {
+  const renderItem: ListRenderItem<BaseMessageSendBirdType> = useCallback(
+    ({ item, index }) => {
     const isUser = item.sender?.userId === userChat?.userId;
     const isPrevOtherDay =
       new Date(item.createdAt).getDate() !==
@@ -415,7 +413,15 @@ const MessagesTabChat: FunctionComponent<MessagesTabChatProps> = ({
         )}
       </>
     );
-  };
+    },
+    [messagesChannel, userChat?.userId, userDB?.country, renderImageDocument],
+  );
+
+  const keyExtractor = useCallback(
+    (item: BaseMessageSendBirdType) =>
+      `message-${item.messageId}-${item.sender?.userId}`,
+    [],
+  );
 
   useEffect(() => {
     animated();
@@ -512,9 +518,7 @@ const MessagesTabChat: FunctionComponent<MessagesTabChatProps> = ({
               inverted
               data={messagesChannel}
               renderItem={renderItem}
-              keyExtractor={item =>
-                `message-${item.messageId}-${item.sender?.userId}`
-              }
+              keyExtractor={keyExtractor}
               style={styles.messages}
               contentContainerStyle={styles.messagesContainer}
               showsVerticalScrollIndicator={false}

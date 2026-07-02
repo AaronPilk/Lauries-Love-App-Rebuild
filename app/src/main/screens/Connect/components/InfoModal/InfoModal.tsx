@@ -9,12 +9,19 @@ type Props = {
   setIsInfoOpen: Dispatch<boolean>;
 };
 
-export default function InfoModal({ isInfoOpen, setIsInfoOpen }: Props) {
-  const INFORMATION = [
-    `Laurie’s Love is committed to providing each member affected by cancer with a personalized support team who understands exactly what they are experiencing during their journey. We accomplish this with our comprehensive mapping system.`,
-    `Our application connects each member with others in the United States who share similar demographics, including specific types of cancer, age range, and gender. Upon registration, users are placed on the map via their zip code in the U.S., which allows members in a general geographical location to connect with each other and share the details of their unique cancer experience. This allows members to connect not only with someone in their town, city or county, but also anyone across the United States.`,
-    `The mapping feature offers members a deepened sense of connection due to the ability to see where others are located. The map function is one of the most vital components of the application as it connects warriors who are enduring the same diagnosis or members caring for or related to those with that diagnosis, inspires them to share all aspects of their stories with each other, and empowers them with the knowledge that they are not alone in their journey.`,
-  ];
+// Perf: static copy hoisted to module scope (was re-allocated every render).
+const INFORMATION = [
+  `Laurie’s Love is committed to providing each member affected by cancer with a personalized support team who understands exactly what they are experiencing during their journey. We accomplish this with our comprehensive mapping system.`,
+  `Our application connects each member with others in the United States who share similar demographics, including specific types of cancer, age range, and gender. Upon registration, users are placed on the map via their zip code in the U.S., which allows members in a general geographical location to connect with each other and share the details of their unique cancer experience. This allows members to connect not only with someone in their town, city or county, but also anyone across the United States.`,
+  `The mapping feature offers members a deepened sense of connection due to the ability to see where others are located. The map function is one of the most vital components of the application as it connects warriors who are enduring the same diagnosis or members caring for or related to those with that diagnosis, inspires them to share all aspects of their stories with each other, and empowers them with the knowledge that they are not alone in their journey.`,
+];
+
+// Perf: React.memo — props are a boolean + stable setter, so the modal tree
+// is skipped on unrelated map-screen re-renders (keystrokes, region changes).
+export default React.memo(function InfoModal({
+  isInfoOpen,
+  setIsInfoOpen,
+}: Props) {
   return (
     <Modal onClose={setIsInfoOpen} title="Map information" visible={isInfoOpen}>
       <View style={styles.container}>
@@ -30,4 +37,4 @@ export default function InfoModal({ isInfoOpen, setIsInfoOpen }: Props) {
       </View>
     </Modal>
   );
-}
+});

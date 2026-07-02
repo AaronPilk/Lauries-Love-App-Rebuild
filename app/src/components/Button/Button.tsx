@@ -125,4 +125,5 @@ const Button: FunctionComponent<ButtonProps> = ({
   );
 };
 
-export default Button;
+// Memoized: Button renders inside lists/forms; props are simple values.
+export default React.memo(Button);

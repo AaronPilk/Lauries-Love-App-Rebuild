@@ -39,4 +39,5 @@ const Checkbox: FunctionComponent<CheckboxProps> = ({ label, value, onChange }) 
       </TouchableOpacity>
   )
 }
-export default Checkbox;
+// Memoized: Checkbox is rendered inside option lists; props are simple values.
+export default React.memo(Checkbox);

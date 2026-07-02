@@ -27,6 +27,7 @@ export const useGetDesignations = () => {
 
       return false;
     },
-    staleTime: 10000,
+    // Static reference data — match the 5-min global default instead of 10s.
+    staleTime: 5 * 60 * 1000,
   });
 };

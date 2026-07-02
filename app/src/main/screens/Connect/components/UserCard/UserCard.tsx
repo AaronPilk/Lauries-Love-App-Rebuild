@@ -33,7 +33,19 @@ type Props = {
   setInitialRegion?: Dispatch<SetStateAction<Region>>;
 };
 
-export default function UserCard({ user, setInitialRegion }: Props) {
+// Perf: signed S3 URLs are valid for 7 days — cache them for the session so
+// every card mount (list scroll, map pin taps) doesn't re-run Amplify signing
+// and an extra setState render per card. Failed lookups are NOT cached, so
+// retry-on-remount behavior is unchanged.
+const profilePictureCache = new Map<string, URL>();
+
+// Perf: React.memo — cards receive stable user object references from the
+// screens' memoized lists, so unrelated screen re-renders (typing in search,
+// map region changes) no longer re-render every card.
+export default React.memo(function UserCard({
+  user,
+  setInitialRegion,
+}: Props) {
   const navigation = useNavigation();
   const { sdk } = useSendbirdChat();
   const { showToast } = useToastProvider();
@@ -41,7 +53,9 @@ export default function UserCard({ user, setInitialRegion }: Props) {
 
   const { allCountries } = useCountry();
 
-  const [profilePicture, setProfilePicture] = useState<URL | undefined>();
+  const [profilePicture, setProfilePicture] = useState<URL | undefined>(() =>
+    user.profilePicture ? profilePictureCache.get(user.profilePicture) : undefined,
+  );
   const [isLoadingSendMessage, setIsLoadingSendMessage] = useState(false);
 
   const isFriend = useMemo(
@@ -50,13 +64,25 @@ export default function UserCard({ user, setInitialRegion }: Props) {
   );
 
   useEffect(() => {
-    getProfilePicture();
-  }, [user.profilePicture]);
+    let active = true;
 
-  async function getProfilePicture() {
-    const profilePicture = await getFileStorageAmplify(user.profilePicture);
-    setProfilePicture(profilePicture);
-  }
+    const cached = user.profilePicture
+      ? profilePictureCache.get(user.profilePicture)
+      : undefined;
+    if (cached) {
+      setProfilePicture(prev => (prev === cached ? prev : cached));
+      return;
+    }
+
+    getFileStorageAmplify(user.profilePicture).then(url => {
+      if (url) profilePictureCache.set(user.profilePicture, url);
+      if (active) setProfilePicture(url);
+    });
+
+    return () => {
+      active = false;
+    };
+  }, [user.profilePicture]);
 
   function toChatUser(channelUrl: string, userId: string) {
     navigation.dispatch(
@@ -209,9 +235,13 @@ export default function UserCard({ user, setInitialRegion }: Props) {
     ? { uri: profilePicture.toString() }
     : require('../../../../../assets/images/image-not-found.png');
 
-  const country =
-    allCountries.find(country => country.code === user.country)?.name ||
-    'Unknown Country';
+  // Perf: memoized country lookup instead of scanning all countries per render.
+  const country = useMemo(
+    () =>
+      allCountries.find(country => country.code === user.country)?.name ||
+      'Unknown Country',
+    [allCountries, user.country],
+  );
 
   return (
     <View style={styles.container}>
@@ -281,4 +311,4 @@ export default function UserCard({ user, setInitialRegion }: Props) {
       </View>
     </View>
   );
-}
+});

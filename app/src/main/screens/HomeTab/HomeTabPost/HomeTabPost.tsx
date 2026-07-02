@@ -140,9 +140,9 @@ const HomeTabPost: FunctionComponent<HomeTabPostProps> = ({ navigation }) => {
     }).start();
   };
 
-  async function getChannel() {
-    getPosts();
+  const lastMeasuredImageUrlRef = useRef<string | null>(null);
 
+  async function getChannel() {
     if (!posts || !posts.length || !userPost) return;
 
     const userDetailPost = posts.find(post => post.url === userPost.channelUrl);
@@ -150,14 +150,17 @@ const HomeTabPost: FunctionComponent<HomeTabPostProps> = ({ navigation }) => {
 
     const likesArray = postData.likes;
     const postImageUrl = postData.image_md ?? '';
-    if (postImageUrl) {
+    // Only measure when the URL actually changes — Image.getSize on every
+    // focus/posts update triggers redundant network work
+    if (postImageUrl && lastMeasuredImageUrlRef.current !== postImageUrl) {
+      lastMeasuredImageUrlRef.current = postImageUrl;
       Image.getSize(
         postImageUrl,
         (width, height) => {
           setAspectRatio(width / height);
         },
         error => {
-          console.warn('Failed to get image size', error);
+          if (__DEV__) console.warn('Failed to get image size', error);
           setAspectRatio(null);
         },
       );
@@ -389,11 +392,19 @@ const HomeTabPost: FunctionComponent<HomeTabPostProps> = ({ navigation }) => {
     toggleAnimation();
   }, [postText.length > 0]);
 
+  // Refresh posts once per focus. Previously getChannel() called getPosts()
+  // with [posts] as a dependency, so every posts update re-triggered another
+  // fetch — a redundant request loop.
   useFocusEffect(
     useCallback(() => {
-      getChannel();
-    }, [posts, userPost]),
+      getPosts();
+      // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, []),
   );
+
+  useEffect(() => {
+    getChannel();
+  }, [posts, userPost]);
 
   useEffect(() => {
     getComments();

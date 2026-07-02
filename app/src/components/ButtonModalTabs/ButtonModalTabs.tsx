@@ -70,4 +70,5 @@ const ButtonModalTabs: FunctionComponent<ButtonModalTabsProps> = ({
   </TouchableOpacity>
 );
 
-export default ButtonModalTabs;
+// Memoized: rendered repeatedly in menu/settings lists; props are simple values.
+export default React.memo(ButtonModalTabs);

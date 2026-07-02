@@ -146,4 +146,5 @@ const Input: FunctionComponent<InputProps> = ({
   );
 };
 
-export default Input;
+// Memoized: skips re-render when the parent form re-renders for other fields.
+export default React.memo(Input);

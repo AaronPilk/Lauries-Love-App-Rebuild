@@ -1,10 +1,18 @@
-import React, { FunctionComponent, useEffect, useRef, useState } from 'react';
+import React, {
+  FunctionComponent,
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+} from 'react';
 import {
   Text,
   View,
   TouchableOpacity,
   NativeSyntheticEvent,
   NativeScrollEvent,
+  FlatList,
+  ListRenderItem,
 } from 'react-native';
 import { ScrollView } from 'react-native-gesture-handler';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -84,6 +92,102 @@ type LocalSearchResult = {
   nameMatched: boolean;
 };
 
+type ChannelRowProps = {
+  result: LocalSearchResult;
+  index: number;
+  showResultList: boolean;
+  search: string;
+  userChatId: string;
+  country: string;
+  onPressTo: (
+    channelUrl: string,
+    isGroup?: boolean,
+    targetMessageId?: string,
+  ) => void;
+};
+
+// Memoized list row: per-item derivation (friend lookup, avatar url, name,
+// last message) only re-runs when the row's own props change.
+const ChannelRow = React.memo<ChannelRowProps>(
+  ({ result, index, showResultList, search, userChatId, country, onPressTo }) => {
+    const item = result.channel;
+    const isGroup =
+      item.cachedMetaData?.type === 'group' ||
+      item.cachedMetaData?.type === 'recommendation';
+
+    // get message from result
+    const infoMessage = !!result.matchedMessages?.length
+      ? result.matchedMessages[0]
+      : item.lastMessage;
+    const lastMessage =
+      infoMessage?.messageType === 'file' ? 'File' : infoMessage?.message || '';
+    const isHighlight = !!result.matchedMessages?.length && !!search;
+
+    const friend = item.members.find(
+      member => member.userId !== userChatId,
+    ) as MemberSendBirdType | undefined;
+    const imageUrl = isGroup
+      ? item.coverUrl
+      : friend?.plainProfileUrl || defaultAvatar || item.coverUrl;
+    const name = isGroup ? item.name : friend?.nickname || 'No name';
+
+    const matchMessageId = `${result.matchedMessages[0]?.messageId ?? ''}`;
+
+    return (
+      <TouchableOpacity
+        style={styles.itemContainer}
+        onPress={() => onPressTo(item.url, isGroup, matchMessageId)}
+      >
+        <AvatarMessagesTab imageUrl={imageUrl} />
+        <View
+          style={[
+            styles.infoContainer,
+            index === 0 && !showResultList && styles.infoTopBorder,
+          ]}
+        >
+          <View style={styles.titlesItem}>
+            <Text style={styles.titleItem}>{name}</Text>
+            <Text numberOfLines={1} style={styles.subtitleItem}>
+              {isHighlight ? (
+                <HighlightedText text={lastMessage} highlight={search.trim()} />
+              ) : (
+                lastMessage
+              )}
+            </Text>
+          </View>
+          <View style={styles.dateContainer}>
+            <Text
+              style={[
+                styles.dateItem,
+                item.unreadMessageCount > 0 && styles.dataItemIsNew,
+              ]}
+            >
+              {infoMessage?.createdAt
+                ? toLocalizedTimeString(infoMessage?.createdAt || 0, country, {
+                    hour: '2-digit',
+                    minute: '2-digit',
+                  })
+                : ''}
+            </Text>
+            <View
+              style={[
+                styles.newMessagesContainer,
+                item.unreadMessageCount === 0 && {
+                  backgroundColor: 'transparent',
+                },
+              ]}
+            >
+              <Text style={styles.newMessages}>
+                {item.unreadMessageCount > 0 ? item.unreadMessageCount : ''}
+              </Text>
+            </View>
+          </View>
+        </View>
+      </TouchableOpacity>
+    );
+  },
+);
+
 const MessagesTabMain: FunctionComponent<MessagesTabMainProps> = ({
   navigation,
 }) => {
@@ -154,7 +258,8 @@ const MessagesTabMain: FunctionComponent<MessagesTabMainProps> = ({
           });
         }
       } catch (e) {
-        console.warn('Failed to fetch messages for channel', channel.url, e);
+        if (__DEV__)
+          console.warn('Failed to fetch messages for channel', channel.url, e);
       }
 
       if (matchedMessages.length > 0) {
@@ -192,30 +297,52 @@ const MessagesTabMain: FunctionComponent<MessagesTabMainProps> = ({
     });
   }, [groupChannels, debouncedSearch]);
 
-  const onPressTo = (
-    channelUrl: string,
-    isGroup = false,
-    targetMessageId?: string,
-  ) => {
-    const params = { channelUrl };
-    if (targetMessageId) {
-      Object.assign(params, { targetMessageId });
-    }
+  const onPressTo = useCallback(
+    (channelUrl: string, isGroup = false, targetMessageId?: string) => {
+      const params = { channelUrl };
+      if (targetMessageId) {
+        Object.assign(params, { targetMessageId });
+      }
 
-    if (isGroup)
-      navigation.navigate(PATHS_MESSAGES_TAB.messagesTabChatGroup, params);
-    else navigation.navigate(PATHS_MESSAGES_TAB.messagesTabChat, params);
-  };
+      if (isGroup)
+        navigation.navigate(PATHS_MESSAGES_TAB.messagesTabChatGroup, params);
+      else navigation.navigate(PATHS_MESSAGES_TAB.messagesTabChat, params);
+    },
+    [navigation],
+  );
 
-  const handleScrollDown = ({
-    nativeEvent: { layoutMeasurement, contentOffset, contentSize },
-  }: NativeSyntheticEvent<NativeScrollEvent>) => {
-    const paddingToBottom = 20;
-    const isEnd =
-      layoutMeasurement.height + contentOffset.y >=
-      contentSize.height - paddingToBottom;
-    if (groupChannels.length >= limit && isEnd) setLimit(limit + 20);
-  };
+  const handleScrollDown = useCallback(
+    ({
+      nativeEvent: { layoutMeasurement, contentOffset, contentSize },
+    }: NativeSyntheticEvent<NativeScrollEvent>) => {
+      const paddingToBottom = 20;
+      const isEnd =
+        layoutMeasurement.height + contentOffset.y >=
+        contentSize.height - paddingToBottom;
+      if (groupChannels.length >= limit && isEnd) setLimit(limit + 20);
+    },
+    [groupChannels.length, limit, setLimit],
+  );
+
+  const keyExtractor = useCallback(
+    (result: LocalSearchResult) => `chat-${result.channel.url}`,
+    [],
+  );
+
+  const renderChannelItem: ListRenderItem<LocalSearchResult> = useCallback(
+    ({ item, index }) => (
+      <ChannelRow
+        result={item}
+        index={index}
+        showResultList={showResultList}
+        search={search}
+        userChatId={userChat?.userId || ''}
+        country={userDB?.country ?? ''}
+        onPressTo={onPressTo}
+      />
+    ),
+    [showResultList, search, userChat?.userId, userDB?.country, onPressTo],
+  );
 
   useEffect(() => {
     if (isFocused) getChannels();
@@ -266,110 +393,19 @@ const MessagesTabMain: FunctionComponent<MessagesTabMainProps> = ({
         </View>
         {isSearching ? <LoadingLine /> : <View style={styles.loadingLine} />}
         {groupChannels.length > 0 ? (
-          <ScrollView
+          <FlatList
+            data={filterChannels}
+            renderItem={renderChannelItem}
+            keyExtractor={keyExtractor}
             showsVerticalScrollIndicator={false}
             contentContainerStyle={styles.listContainer}
             onScroll={handleScrollDown}
-          >
-            {showResultList && (
-              <Text style={styles.infoContainerTitle}>Results</Text>
-            )}
-            {filterChannels.length > 0 ? (
-              filterChannels.map((result, index) => {
-                const item = result.channel;
-                const isGroup =
-                  item.cachedMetaData?.type === 'group' ||
-                  item.cachedMetaData?.type === 'recommendation';
-
-                // get message from result
-                const infoMessage = !!result.matchedMessages?.length
-                  ? result.matchedMessages[0]
-                  : item.lastMessage;
-                const lastMessage =
-                  infoMessage?.messageType === 'file'
-                    ? 'File'
-                    : infoMessage?.message || '';
-                const isHighlight =
-                  !!result.matchedMessages?.length && !!search;
-
-                const friend = item.members.find(
-                  member => member.userId !== userChat.userId,
-                ) as MemberSendBirdType | undefined;
-                const imageUrl = isGroup
-                  ? item.coverUrl
-                  : friend?.plainProfileUrl || defaultAvatar || item.coverUrl;
-                const name = isGroup
-                  ? item.name
-                  : friend?.nickname || 'No name';
-
-                const matchMessageId = `${
-                  result.matchedMessages[0]?.messageId ?? ''
-                }`;
-
-                return (
-                  <TouchableOpacity
-                    key={`chat-${item.url}`}
-                    style={styles.itemContainer}
-                    onPress={() => onPressTo(item.url, isGroup, matchMessageId)}
-                  >
-                    <AvatarMessagesTab imageUrl={imageUrl} />
-                    <View
-                      style={[
-                        styles.infoContainer,
-                        index === 0 && !showResultList && styles.infoTopBorder,
-                      ]}
-                    >
-                      <View style={styles.titlesItem}>
-                        <Text style={styles.titleItem}>{name}</Text>
-                        <Text numberOfLines={1} style={styles.subtitleItem}>
-                          {isHighlight ? (
-                            <HighlightedText
-                              text={lastMessage}
-                              highlight={search.trim()}
-                            />
-                          ) : (
-                            lastMessage
-                          )}
-                        </Text>
-                      </View>
-                      <View style={styles.dateContainer}>
-                        <Text
-                          style={[
-                            styles.dateItem,
-                            item.unreadMessageCount > 0 && styles.dataItemIsNew,
-                          ]}
-                        >
-                          {infoMessage?.createdAt
-                            ? toLocalizedTimeString(
-                                infoMessage?.createdAt || 0,
-                                userDB?.country ?? '',
-                                {
-                                  hour: '2-digit',
-                                  minute: '2-digit',
-                                },
-                              )
-                            : ''}
-                        </Text>
-                        <View
-                          style={[
-                            styles.newMessagesContainer,
-                            item.unreadMessageCount === 0 && {
-                              backgroundColor: 'transparent',
-                            },
-                          ]}
-                        >
-                          <Text style={styles.newMessages}>
-                            {item.unreadMessageCount > 0
-                              ? item.unreadMessageCount
-                              : ''}
-                          </Text>
-                        </View>
-                      </View>
-                    </View>
-                  </TouchableOpacity>
-                );
-              })
-            ) : (
+            ListHeaderComponent={
+              showResultList ? (
+                <Text style={styles.infoContainerTitle}>Results</Text>
+              ) : null
+            }
+            ListEmptyComponent={
               <View
                 style={[
                   styles.emptyListContainer,
@@ -390,8 +426,8 @@ const MessagesTabMain: FunctionComponent<MessagesTabMainProps> = ({
                   </Text>
                 </View>
               </View>
-            )}
-          </ScrollView>
+            }
+          />
         ) : (
           <View style={styles.emptyListContainer}>
             <IconChat width={84} height={84} />

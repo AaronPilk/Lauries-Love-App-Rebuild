@@ -49,16 +49,28 @@ const AddMembersCreateGroup: FunctionComponent<AddMembersCreateGroupProps> = ({
   const [searchText, setSearchText] = useState('');
   const [myChannels, setMyChannels] = useState<GroupChannelSendBirdType[]>([]);
 
+  // Search filtering happens locally: fetching friends (plus one status
+  // request per friend) on every keystroke is unnecessary network work.
+  const filteredFriends = useMemo(
+    () =>
+      friends.filter(
+        friend =>
+          friend.nickname.toLowerCase().includes(searchText.toLowerCase()) &&
+          friend.status !== 'pending',
+      ),
+    [friends, searchText],
+  );
+
   const frequentlyContacted = useMemo(
     () =>
-      friends
+      filteredFriends
         .filter(friend =>
           myChannels.some(channel =>
             channel.members.some(member => member.userId === friend.userId),
           ),
         )
         .slice(0, 5),
-    [friends, myChannels],
+    [filteredFriends, myChannels],
   );
 
   const getMyChannels = async () => {
@@ -110,15 +122,7 @@ const AddMembersCreateGroup: FunctionComponent<AddMembersCreateGroupProps> = ({
         }),
       );
 
-      const filteredFriends = friendsWithStatus.filter(
-        friend =>
-          friend.nickname.toLowerCase().includes(searchText.toLowerCase()) &&
-          friend.status !== 'pending',
-      );
-
-      if (filteredFriends.length > 0) return setFriends(filteredFriends);
-
-      setFriends([]);
+      setFriends(friendsWithStatus);
     } catch (error) {
       if (__DEV__) console.warn('Error getting friends', error);
     }
@@ -131,13 +135,16 @@ const AddMembersCreateGroup: FunctionComponent<AddMembersCreateGroupProps> = ({
     const isEnd =
       layoutMeasurement.height + contentOffset.y >=
       contentSize.height - paddingToBottom;
-    if (friends.length >= limit && isEnd) setLimit(limit + 20);
+    if (filteredFriends.length >= limit && isEnd) setLimit(limit + 20);
   };
 
   useEffect(() => {
     getFriends();
+  }, [limit]);
+
+  useEffect(() => {
     getMyChannels();
-  }, [searchText, limit]);
+  }, []);
 
   return (
     <View style={styles.container}>
@@ -224,7 +231,7 @@ const AddMembersCreateGroup: FunctionComponent<AddMembersCreateGroupProps> = ({
         <ListFriendsMessageTab
           title={'All friends'}
           titleEmptyList={'No friends found'}
-          friends={friends}
+          friends={filteredFriends}
           onSelect={setSelectUsers}
           selectedUsers={selectUsers}
           isFullHeight

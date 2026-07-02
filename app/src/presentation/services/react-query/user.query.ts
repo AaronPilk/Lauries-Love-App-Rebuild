@@ -81,7 +81,9 @@ export const useGetUsersReq = () => {
       console.error(err?.message);
       return false;
     },
-    staleTime: 10000,
+    // 10s staleTime was overriding the 5-min global default and refetched the
+    // entire users list on every tab hop. Match the global default.
+    staleTime: 5 * 60 * 1000,
   });
 };
 

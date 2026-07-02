@@ -72,4 +72,4 @@ const TaraStoryPostHomeTab: FunctionComponent<TaraStoryPostHomeTabProps> = ({
   );
 };
 
-export default TaraStoryPostHomeTab;
+export default React.memo(TaraStoryPostHomeTab);

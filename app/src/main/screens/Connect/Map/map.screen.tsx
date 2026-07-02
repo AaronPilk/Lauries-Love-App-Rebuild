@@ -1,5 +1,5 @@
 import * as Location from 'expo-location';
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import MapView, { Marker, PROVIDER_GOOGLE, Region } from 'react-native-maps';
 import {
   RouteProp,
@@ -74,6 +74,46 @@ export interface Filters {
   diagnosisYear: { id: string; label: string }[];
 }
 
+// Perf: pure helper hoisted to module scope so it isn't re-created every render.
+function offsetOverlappingMarkers(users: User[]) {
+  const locationGroups: { [key: string]: User[] } = {};
+
+  users.forEach(user => {
+    const key = `${user.geoLocation?.latitude.toFixed(
+      6,
+    )},${user.geoLocation?.longitude.toFixed(6)}`;
+    if (!locationGroups[key]) {
+      locationGroups[key] = [];
+    }
+    locationGroups[key].push(user);
+  });
+
+  return Object.values(locationGroups)
+    .map(group => {
+      if (group.length === 1) {
+        return group;
+      }
+
+      const offsetDistance = 0.008;
+      const angleStep = (2 * Math.PI) / group.length;
+
+      return group.map((user, index) => {
+        const angle = angleStep * index;
+        const offsetLat = Math.sin(angle) * offsetDistance;
+        const offsetLng = Math.cos(angle) * offsetDistance;
+
+        return {
+          ...user,
+          location: {
+            latitude: user.geoLocation!.latitude + offsetLat,
+            longitude: user.geoLocation!.longitude + offsetLng,
+          },
+        };
+      });
+    })
+    .flat();
+}
+
 export default function MapScreen() {
   const isFocused = useIsFocused();
   const navigation = useNavigation();
@@ -95,7 +135,6 @@ export default function MapScreen() {
 
   const [city, setCity] = useState(userParams?.filters?.city || '');
   const [query, setQuery] = useState('');
-  const [friends, setFriends] = useState<User[]>();
   const [isLoading, setIsLoading] = useState(true);
   const [isInfoOpen, setIsInfoOpen] = useState(false);
   const [allFriends, setAllFriends] = useState<User[]>();
@@ -133,48 +172,11 @@ export default function MapScreen() {
   });
   const [region, setRegion] = useState<Region>();
   const [isShowMarkers, setIsShowMarkers] = useState(false);
-  const [countRender, setCountRender] = useState(0);
+  // Rebuild fix (P1 perf): removed `countRender` state — it incremented on
+  // every isShowMarkers flip, forcing an extra full re-render of the map and
+  // all markers, and was never read anywhere.
 
-  function offsetOverlappingMarkers(users: User[]) {
-    const locationGroups: { [key: string]: User[] } = {};
-
-    users.forEach(user => {
-      const key = `${user.geoLocation?.latitude.toFixed(
-        6,
-      )},${user.geoLocation?.longitude.toFixed(6)}`;
-      if (!locationGroups[key]) {
-        locationGroups[key] = [];
-      }
-      locationGroups[key].push(user);
-    });
-
-    return Object.values(locationGroups)
-      .map(group => {
-        if (group.length === 1) {
-          return group;
-        }
-
-        const offsetDistance = 0.008;
-        const angleStep = (2 * Math.PI) / group.length;
-
-        return group.map((user, index) => {
-          const angle = angleStep * index;
-          const offsetLat = Math.sin(angle) * offsetDistance;
-          const offsetLng = Math.cos(angle) * offsetDistance;
-
-          return {
-            ...user,
-            location: {
-              latitude: user.geoLocation!.latitude + offsetLat,
-              longitude: user.geoLocation!.longitude + offsetLng,
-            },
-          };
-        });
-      })
-      .flat();
-  }
-
-  const fetchUsersLocation = async () => {
+  const fetchUsersLocation = () => {
     if (!usersData?.data) return;
 
     try {
@@ -195,7 +197,6 @@ export default function MapScreen() {
       const adjustedFriends = offsetOverlappingMarkers(usersWithLocation);
 
       setAllFriends(adjustedFriends);
-      setFriends(adjustedFriends);
       setIsLoading(false);
     } catch (error) {
       if (__DEV__) console.warn('Error fetching users location', error);
@@ -273,8 +274,11 @@ export default function MapScreen() {
     })();
   }, []);
 
-  useEffect(() => {
-    const filtered = allFriends?.filter(friend => {
+  // Perf: filtered markers are now derived with useMemo instead of an effect
+  // writing to a second state slice (which double-rendered the whole map, and
+  // had a stale `isLoading` dep instead of `allFriends`). Same predicate.
+  const friends = useMemo(() => {
+    return allFriends?.filter(friend => {
       const matchesRole = designation.length
         ? designation.some(
             designation => friend.role?.description === designation.id,
@@ -315,9 +319,8 @@ export default function MapScreen() {
         matchesCity
       );
     });
-
-    setFriends(filtered);
   }, [
+    allFriends,
     designation,
     age,
     gender,
@@ -325,7 +328,6 @@ export default function MapScreen() {
     diagnosisYear,
     country,
     city,
-    isLoading,
   ]);
 
   function countFilters() {
@@ -339,6 +341,9 @@ export default function MapScreen() {
     if (diagnosisYear.length > 0) count++;
     return count;
   }
+
+  // Perf: computed once per render instead of 4x in JSX.
+  const filtersCount = countFilters();
 
   function handleView() {
     navigation.navigate('Connect', {
@@ -434,10 +439,6 @@ export default function MapScreen() {
   }, [isFocused]);
 
   useEffect(() => {
-    if (isShowMarkers) setCountRender(countRender + 1);
-  }, [isShowMarkers]);
-
-  useEffect(() => {
     // Rebuild fix (P1 map): previously Android re-zoomed to the WHOLE US every
     // time the map tab was focused. Instead, return to the user's own location
     // (their current location if we have it, otherwise the already-correct
@@ -456,9 +457,56 @@ export default function MapScreen() {
     if (!isFiltersOpen) {
       setQuery(city);
 
-      handleSearch(city);
+      // Perf: previously called unconditionally — with an empty city this
+      // threw an unhandled rejection on every mount/filter close, and geocode
+      // failures also rejected unhandled. Same visible behavior (geocode +
+      // animate when a city is set), without the rejection churn.
+      if (city.trim()) handleSearch(city).catch(() => {});
     }
   }, [isFiltersOpen]);
+
+  // Perf: marker elements are memoized so unrelated re-renders (search
+  // keystrokes, region changes, "my location" toggles) don't rebuild the whole
+  // Marker tree on every render. Rebuilds only when the visible friends set
+  // or the show flag changes. setUser is a stable useState setter.
+  const markers = useMemo(() => {
+    if (!isShowMarkers) return null;
+
+    return friends?.map(friend =>
+      friend.location || friend.geoLocation ? (
+        <Marker
+          key={friend.id}
+          // Rebuild fix (P1 perf): static image markers never need view
+          // tracking. The old onLayout toggled tracksView state per
+          // marker, re-rendering ALL markers in a feedback loop that
+          // dragged the JS thread down app-wide.
+          tracksViewChanges={false}
+          coordinate={{
+            latitude:
+              friend.location?.latitude || friend.geoLocation?.latitude || 0,
+            longitude:
+              friend.location?.longitude || friend.geoLocation?.longitude || 0,
+          }}
+          style={{
+            opacity: 1,
+            backgroundColor:
+              Platform.OS === 'ios' ? colors.primary[600] : colors.transparent,
+          }}
+          onPress={e => {
+            e.stopPropagation();
+            setUser(friend);
+          }}
+        >
+          <Image
+            source={require('../../../../assets/images/user-pin.png')}
+            style={{ width: 32, height: 32 }}
+          />
+        </Marker>
+      ) : (
+        []
+      ),
+    );
+  }, [isShowMarkers, friends]);
 
   if (isLoading || !isFocused) {
     return (
@@ -485,47 +533,7 @@ export default function MapScreen() {
           onPress={() => setUser(null)}
           maxZoomLevel={14.5}
         >
-          {isShowMarkers &&
-            friends?.map(friend =>
-              friend.location || friend.geoLocation ? (
-                <Marker
-                  key={friend.id}
-                  // Rebuild fix (P1 perf): static image markers never need view
-                  // tracking. The old onLayout toggled tracksView state per
-                  // marker, re-rendering ALL markers in a feedback loop that
-                  // dragged the JS thread down app-wide.
-                  tracksViewChanges={false}
-                  coordinate={{
-                    latitude:
-                      friend.location?.latitude ||
-                      friend.geoLocation?.latitude ||
-                      0,
-                    longitude:
-                      friend.location?.longitude ||
-                      friend.geoLocation?.longitude ||
-                      0,
-                  }}
-                  style={{
-                    opacity: 1,
-                    backgroundColor:
-                      Platform.OS === 'ios'
-                        ? colors.primary[600]
-                        : colors.transparent,
-                  }}
-                  onPress={e => {
-                    e.stopPropagation();
-                    setUser(friend);
-                  }}
-                >
-                  <Image
-                    source={require('../../../../assets/images/user-pin.png')}
-                    style={{ width: 32, height: 32 }}
-                  />
-                </Marker>
-              ) : (
-                []
-              ),
-            )}
+          {markers}
         </MapView>
         <SafeAreaView style={styles.safeAreaTop}>
           <View style={styles.topContainer}>
@@ -576,9 +584,7 @@ export default function MapScreen() {
                     styles.filterButton,
                     {
                       borderColor:
-                        countFilters() > 0
-                          ? colors.primary[300]
-                          : 'transparent',
+                        filtersCount > 0 ? colors.primary[300] : 'transparent',
                     },
                   ]}
                 >
@@ -589,11 +595,9 @@ export default function MapScreen() {
                     stroke={colors.neutral[700]}
                   />
 
-                  {countFilters() > 0 && (
+                  {filtersCount > 0 && (
                     <View style={styles.filterBadge}>
-                      <Text style={styles.filterBadgeText}>
-                        {countFilters()}
-                      </Text>
+                      <Text style={styles.filterBadgeText}>{filtersCount}</Text>
                     </View>
                   )}
                 </TouchableOpacity>

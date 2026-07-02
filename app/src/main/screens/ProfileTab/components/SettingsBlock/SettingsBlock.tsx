@@ -35,4 +35,4 @@ const SettingsBlock: FunctionComponent<SettingsBlockProps> = ({
   </View>
 );
 
-export default SettingsBlock;
+export default React.memo(SettingsBlock);

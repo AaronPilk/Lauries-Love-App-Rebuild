@@ -1,7 +1,6 @@
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   RouteProp,
-  useFocusEffect,
   useNavigation,
   useRoute,
 } from '@react-navigation/native';
@@ -32,6 +31,46 @@ import {
 } from 'assets/icons-auto/components';
 import { useCountry } from 'presentation/hooks';
 
+// Perf: pure helper hoisted to module scope so it isn't re-created every render.
+function offsetOverlappingMarkers(users: User[]) {
+  const locationGroups: { [key: string]: User[] } = {};
+
+  users.forEach(user => {
+    const key = `${user.geoLocation?.latitude.toFixed(
+      6,
+    )},${user.geoLocation?.longitude.toFixed(6)}`;
+    if (!locationGroups[key]) {
+      locationGroups[key] = [];
+    }
+    locationGroups[key].push(user);
+  });
+
+  return Object.values(locationGroups)
+    .map(group => {
+      if (group.length === 1) {
+        return group;
+      }
+
+      const offsetDistance = 0.04;
+      const angleStep = (2 * Math.PI) / group.length;
+
+      return group.map((user, index) => {
+        const angle = angleStep * index;
+        const offsetLat = Math.sin(angle) * offsetDistance;
+        const offsetLng = Math.cos(angle) * offsetDistance;
+
+        return {
+          ...user,
+          location: {
+            latitude: user.geoLocation!.latitude + offsetLat,
+            longitude: user.geoLocation!.longitude + offsetLng,
+          },
+        };
+      });
+    })
+    .flat();
+}
+
 export default function ListScreen() {
   const navigation = useNavigation();
   const route =
@@ -47,9 +86,6 @@ export default function ListScreen() {
   const { supportedCountryCodes } = useCountry();
 
   const [query, setQuery] = useState(userParams?.search);
-  const [isLoading, setIsLoading] = useState(true);
-  const [friends, setFriends] = useState<User[]>();
-  const [allFriends, setAllFriends] = useState<User[]>();
   const [isFiltersOpen, setIsFiltersOpen] = useState(false);
   const [city, setCity] = useState(userParams?.filters.city);
   const [isCurrentLocation, setIsCurrentLocation] = useState(false);
@@ -73,31 +109,30 @@ export default function ListScreen() {
     { id: string; label: string }[]
   >(userParams?.filters.diagnosisYear);
 
-  useFocusEffect(
-    useCallback(() => {
-      async function fetchUsersLocation() {
-        if (!usersData?.data)
-          throw new Error('usersData is undefined or missing data');
+  // Perf: derive the base list with useMemo instead of re-running the full
+  // users-table pass (filter + marker offsetting) on every screen focus and
+  // pushing it through two setState calls. Recomputes only when the users
+  // query data actually changes.
+  const allFriends = useMemo(() => {
+    if (!usersData?.data) return undefined;
 
-        const usersWithLocation = usersData.data.filter(
-          user =>
-            user.geoLocation &&
-            user.id !== userDB?.id &&
-            supportedCountryCodes.includes(user.country),
-        ) as User[];
+    const usersWithLocation = usersData.data.filter(
+      user =>
+        user.geoLocation &&
+        user.id !== userDB?.id &&
+        supportedCountryCodes.includes(user.country),
+    ) as User[];
 
-        const adjustedFriends = offsetOverlappingMarkers(usersWithLocation);
+    return offsetOverlappingMarkers(usersWithLocation);
+  }, [usersData, userDB?.id, supportedCountryCodes]);
 
-        setAllFriends(adjustedFriends);
-        setFriends(adjustedFriends);
-        setIsLoading(false);
-      }
-      fetchUsersLocation();
-    }, [usersData]),
-  );
+  const isLoading = !allFriends;
 
-  useEffect(() => {
-    const filtered = allFriends?.filter(friend => {
+  // Perf: filtering was previously an effect writing to a second state slice,
+  // which double-rendered on every filter/search change. Same predicate, now
+  // computed once per relevant change.
+  const friends = useMemo(() => {
+    return allFriends?.filter(friend => {
       const matchesRole = designation.length
         ? designation.some(
             designation => friend.role?.description === designation.id,
@@ -144,8 +179,6 @@ export default function ListScreen() {
         matchesSearch
       );
     });
-
-    setFriends(filtered);
   }, [
     designation,
     age,
@@ -174,45 +207,6 @@ export default function ListScreen() {
     };
   }, []);
 
-  function offsetOverlappingMarkers(users: User[]) {
-    const locationGroups: { [key: string]: User[] } = {};
-
-    users.forEach(user => {
-      const key = `${user.geoLocation?.latitude.toFixed(
-        6,
-      )},${user.geoLocation?.longitude.toFixed(6)}`;
-      if (!locationGroups[key]) {
-        locationGroups[key] = [];
-      }
-      locationGroups[key].push(user);
-    });
-
-    return Object.values(locationGroups)
-      .map(group => {
-        if (group.length === 1) {
-          return group;
-        }
-
-        const offsetDistance = 0.04;
-        const angleStep = (2 * Math.PI) / group.length;
-
-        return group.map((user, index) => {
-          const angle = angleStep * index;
-          const offsetLat = Math.sin(angle) * offsetDistance;
-          const offsetLng = Math.cos(angle) * offsetDistance;
-
-          return {
-            ...user,
-            location: {
-              latitude: user.geoLocation!.latitude + offsetLat,
-              longitude: user.geoLocation!.longitude + offsetLng,
-            },
-          };
-        });
-      })
-      .flat();
-  }
-
   function countFilters() {
     let count = 0;
 
@@ -224,6 +218,9 @@ export default function ListScreen() {
     if (diagnosisYear.length > 0) count++;
     return count;
   }
+
+  // Perf: computed once per render instead of 4x in JSX.
+  const filtersCount = countFilters();
 
   function handleView() {
     navigation.navigate('Connect', {
@@ -242,9 +239,12 @@ export default function ListScreen() {
     });
   }
 
-  function renderItem({ item }: { item: User }) {
-    return <UserCard user={item} />;
-  }
+  // Perf: stable identities so FlatList doesn't invalidate rows every render.
+  const renderItem = useCallback(
+    ({ item }: { item: User }) => <UserCard user={item} />,
+    [],
+  );
+  const keyExtractor = useCallback((item: User) => item.id, []);
 
   if (isLoading) {
     return (
@@ -304,7 +304,7 @@ export default function ListScreen() {
                 styles.filterButton,
                 {
                   borderColor:
-                    countFilters() > 0 ? colors.primary[300] : 'transparent',
+                    filtersCount > 0 ? colors.primary[300] : 'transparent',
                 },
               ]}
             >
@@ -315,9 +315,9 @@ export default function ListScreen() {
                 stroke={colors.neutral[700]}
               />
 
-              {countFilters() > 0 && (
+              {filtersCount > 0 && (
                 <View style={styles.filterCount}>
-                  <Text style={styles.filterCountText}>{countFilters()}</Text>
+                  <Text style={styles.filterCountText}>{filtersCount}</Text>
                 </View>
               )}
             </TouchableOpacity>
@@ -326,7 +326,7 @@ export default function ListScreen() {
 
         <FlatList
           data={friends}
-          keyExtractor={item => item.id}
+          keyExtractor={keyExtractor}
           renderItem={renderItem}
           contentContainerStyle={styles.flatListContainer}
           showsVerticalScrollIndicator={false}

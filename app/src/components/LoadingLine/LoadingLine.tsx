@@ -80,4 +80,5 @@ const LoadingLine: FunctionComponent = () => {
   );
 };
 
-export default LoadingLine;
+// Memoized: no props — parent re-renders should never restart/re-render it.
+export default React.memo(LoadingLine);

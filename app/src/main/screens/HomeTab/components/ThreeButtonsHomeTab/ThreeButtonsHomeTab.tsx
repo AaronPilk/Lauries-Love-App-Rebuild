@@ -195,4 +195,4 @@ const ThreeButtonsHomeTab: FunctionComponent<ThreeButtonsHomeTabProps> = ({
   );
 };
 
-export default ThreeButtonsHomeTab;
+export default React.memo(ThreeButtonsHomeTab);

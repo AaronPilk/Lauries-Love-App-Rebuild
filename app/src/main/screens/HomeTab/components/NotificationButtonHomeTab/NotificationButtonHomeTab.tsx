@@ -1,4 +1,4 @@
-import React, { FunctionComponent, useState } from 'react';
+import React, { FunctionComponent, useCallback, useState } from 'react';
 import { Text, TouchableOpacity, View } from 'react-native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 
@@ -27,9 +27,14 @@ const NotificationButtonHomeTab: FunctionComponent<
 > = ({ navigation }) => {
   const [unreadCount, setUnreadCount] = useState<number>(0);
 
-  useFocusEffect(() => {
-    getNotifications();
-  });
+  // useCallback guard: without it this effect re-runs (and re-fetches) on
+  // every parent render while the screen is focused, not once per focus.
+  useFocusEffect(
+    useCallback(() => {
+      getNotifications();
+      // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, []),
+  );
 
   async function getNotifications() {
     try {
@@ -66,4 +71,4 @@ const NotificationButtonHomeTab: FunctionComponent<
   );
 };
 
-export default NotificationButtonHomeTab;
+export default React.memo(NotificationButtonHomeTab);

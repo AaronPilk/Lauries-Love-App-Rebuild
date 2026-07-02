@@ -112,9 +112,12 @@ export default function App() {
 
   useEffect(() => {
     if (!loaded) return;
-    setTimeout(() => {
+    // Perf: was a hardcoded 2000ms hold AFTER fonts loaded — 1.7s of dead
+    // perceived boot time. 300ms is enough to avoid a first-frame flash.
+    const timer = setTimeout(() => {
       SplashScreen.hide();
-    }, 2000);
+    }, 300);
+    return () => clearTimeout(timer);
   }, [loaded]);
 
   useEffect(() => {

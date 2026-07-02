@@ -1,5 +1,6 @@
 import React, {
   FunctionComponent,
+  useCallback,
   useEffect,
   useMemo,
   useRef,
@@ -78,7 +79,8 @@ const MessagesTabChatGroup: FunctionComponent<MessagesTabChatGroupProps> = ({
   const route =
     useRoute<RouteProp<RootMessagesTabParamList, 'messages-tab-chat-group'>>();
   const { sdk } = useSendbirdChat();
-  const { userChat, messages, loadMessages } = useSendbirdChatProvider();
+  const { userChat, groupChannels, messages, loadMessages } =
+    useSendbirdChatProvider();
   const { userDB } = useUserDBProvider();
 
   const [thumbnails, setThumbnails] = useState<Record<string, string>>({});
@@ -111,6 +113,15 @@ const MessagesTabChatGroup: FunctionComponent<MessagesTabChatGroupProps> = ({
 
   const fetchChannel = async () => {
     if (!route.params?.channelUrl) return;
+
+    // Render immediately from the already-loaded channel list (same pattern
+    // as MessagesTabChat); the fresh SDK fetch below replaces it when ready.
+    // In mock mode channels are plain objects, so no SDK methods are called
+    // on this cached instance.
+    const findChannel = groupChannels.find(
+      groupChannel => groupChannel.url === route.params?.channelUrl,
+    );
+    if (findChannel) setChannel(findChannel);
 
     try {
       const fetchedChannel = await sdk.groupChannel.getChannel(
@@ -145,6 +156,7 @@ const MessagesTabChatGroup: FunctionComponent<MessagesTabChatGroupProps> = ({
     const thumbnailsVideosArray = messagesChannel.filter(
       file => file.type && file.type.includes('video'),
     );
+    if (!thumbnailsVideosArray.length) return;
     try {
       const thumbnailsVideos = (
         await Promise.all(
@@ -161,10 +173,8 @@ const MessagesTabChatGroup: FunctionComponent<MessagesTabChatGroupProps> = ({
         )
       ).reduce<Record<string, string>>((acc, file) => {
         if (!file || !file.messageId) return acc;
-        return {
-          ...acc,
-          [file.messageId]: file.uri,
-        };
+        acc[file.messageId] = file.uri;
+        return acc;
       }, {});
       setThumbnails(thumbnailsVideos);
     } catch (error) {
@@ -172,37 +182,38 @@ const MessagesTabChatGroup: FunctionComponent<MessagesTabChatGroupProps> = ({
     }
   };
 
-  const renderImageDocument = (item: BaseMessageSendBirdType) => {
-    if (item.messageType !== 'file' || !item.type || !item.url) return null;
-    return (
-      <TouchableOpacity
-        onPress={() =>
-          setOpen({
-            width: 200,
-            height: 200,
-            uri: item.url || '',
-            mimeType: item.type || '',
-            name: item.name,
-          })
-        }
-      >
-        <Image
-          source={{
-            uri: item.type.includes('video')
-              ? thumbnails[item.messageId]
-              : item.url,
-            cache: 'force-cache',
-          }}
-          style={styles.messageImage}
-        />
-      </TouchableOpacity>
-    );
-  };
+  const renderImageDocument = useCallback(
+    (item: BaseMessageSendBirdType) => {
+      if (item.messageType !== 'file' || !item.type || !item.url) return null;
+      return (
+        <TouchableOpacity
+          onPress={() =>
+            setOpen({
+              width: 200,
+              height: 200,
+              uri: item.url || '',
+              mimeType: item.type || '',
+              name: item.name,
+            })
+          }
+        >
+          <Image
+            source={{
+              uri: item.type.includes('video')
+                ? thumbnails[item.messageId]
+                : item.url,
+              cache: 'force-cache',
+            }}
+            style={styles.messageImage}
+          />
+        </TouchableOpacity>
+      );
+    },
+    [thumbnails],
+  );
 
-  const renderItem: ListRenderItem<BaseMessageSendBirdType> = ({
-    item,
-    index,
-  }) => {
+  const renderItem: ListRenderItem<BaseMessageSendBirdType> = useCallback(
+    ({ item, index }) => {
     const isUser = item.sender?.userId === userChat?.userId;
     const isPrevOtherUser =
       item.sender?.userId !== messagesChannel[index - 1]?.sender?.userId;
@@ -297,7 +308,15 @@ const MessagesTabChatGroup: FunctionComponent<MessagesTabChatGroupProps> = ({
         )}
       </>
     );
-  };
+    },
+    [messagesChannel, userChat?.userId, userDB?.country, renderImageDocument],
+  );
+
+  const keyExtractor = useCallback(
+    (item: BaseMessageSendBirdType) =>
+      `message-${item.type}-${item.messageId}`,
+    [],
+  );
 
   const sendImage = async (message: string) => {
     if (!channel || !confirmImage) return;
@@ -460,7 +479,7 @@ const MessagesTabChatGroup: FunctionComponent<MessagesTabChatGroupProps> = ({
               inverted
               data={messagesChannel}
               renderItem={renderItem}
-              keyExtractor={item => `message-${item.type}-${item.messageId}`}
+              keyExtractor={keyExtractor}
               style={styles.messages}
               contentContainerStyle={styles.messagesContainer}
               showsVerticalScrollIndicator={false}

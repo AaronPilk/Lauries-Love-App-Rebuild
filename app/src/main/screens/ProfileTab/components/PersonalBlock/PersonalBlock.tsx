@@ -72,4 +72,4 @@ const PersonalBlock: FunctionComponent<PersonalBlockProps> = ({
   );
 };
 
-export default PersonalBlock;
+export default React.memo(PersonalBlock);

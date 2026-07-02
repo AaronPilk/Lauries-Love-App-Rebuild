@@ -30,7 +30,7 @@ type ImageWithLoadingProps = {
  * @example
  * <PostImageWithLoading key={imageUrl} uri={imageUrl} />
  */
-export const PostImageWithLoading: React.FC<ImageWithLoadingProps> = ({
+const PostImageWithLoadingComponent: React.FC<ImageWithLoadingProps> = ({
   uri,
   backupUri,
   style,
@@ -43,6 +43,7 @@ export const PostImageWithLoading: React.FC<ImageWithLoadingProps> = ({
   const [retryCount, setRetryCount] = useState(0);
   const [imageUri, setImageUri] = useState(uri);
   const retryTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const backupTriedRef = useRef(false);
 
   useEffect(() => {
     return () => {
@@ -53,6 +54,19 @@ export const PostImageWithLoading: React.FC<ImageWithLoadingProps> = ({
   }, []);
 
   const handleError = () => {
+    // Short-circuit: a sized (-sm/-md) URL that 404s will keep 404ing —
+    // go straight to the backup (original) URL instead of retrying it.
+    if (backupUri && backupUri !== imageUri && !backupTriedRef.current) {
+      backupTriedRef.current = true;
+      setLoading(true);
+      setImageUri(backupUri);
+      return;
+    }
+    // Never re-retry a dead URL once the backup has also failed
+    if (backupTriedRef.current) {
+      setLoading(false);
+      return;
+    }
     if (retryCount < maxRetry) {
       setLoading(true);
       if (retryTimeoutRef.current) {
@@ -66,14 +80,8 @@ export const PostImageWithLoading: React.FC<ImageWithLoadingProps> = ({
         setImageUri(retryUri);
       }, retryDelayMs);
     } else {
-      // If all retries fail, switch to backup URI if provided
-      if (backupUri && backupUri !== imageUri) {
-        setLoading(true);
-        setImageUri(backupUri);
-      } else {
-        // If no backup URI, reset to original URI and stop loading
-        setLoading(false);
-      }
+      // If all retries fail, stop loading
+      setLoading(false);
     }
   };
 
@@ -94,3 +102,5 @@ export const PostImageWithLoading: React.FC<ImageWithLoadingProps> = ({
     </View>
   );
 };
+
+export const PostImageWithLoading = React.memo(PostImageWithLoadingComponent);

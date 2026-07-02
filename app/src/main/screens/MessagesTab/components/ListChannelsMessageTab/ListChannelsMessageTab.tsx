@@ -30,6 +30,43 @@ type ListChannelsMessageTabProps = {
   handleScrollDown?: (event: NativeSyntheticEvent<NativeScrollEvent>) => void;
 };
 
+type ChannelItemRowProps = {
+  channel: GroupChannel;
+  isJoined: boolean;
+  isLast: boolean;
+  onSelect: (id: string) => void;
+};
+
+// Memoized row: membership check is done once in the parent and unchanged
+// rows skip re-rendering when the list re-renders.
+const ChannelItemRow = React.memo<ChannelItemRowProps>(
+  ({ channel, isJoined, isLast, onSelect }) => (
+    <View>
+      <View style={styles.userContainer}>
+        <AvatarMessagesTab imageUrl={channel.coverUrl} width={47} height={47} />
+        <Text numberOfLines={1} style={styles.userName}>
+          {channel.name}
+        </Text>
+        <TouchableOpacity
+          disabled={isJoined}
+          style={[styles.buttonJoinGroup, isJoined && styles.joined]}
+          onPress={() => onSelect(channel.url)}
+        >
+          <Text style={styles.buttonJoinGroupText}>
+            {isJoined ? 'Joined' : 'Join'}
+          </Text>
+          {!isJoined && <IconPlusCircle width={18} height={18} />}
+        </TouchableOpacity>
+      </View>
+      {!isLast && (
+        <View style={styles.separatorContainer}>
+          <View style={styles.separator} />
+        </View>
+      )}
+    </View>
+  ),
+);
+
 const ListChannelsMessageTab: FunctionComponent<
   ListChannelsMessageTabProps
 > = ({
@@ -81,41 +118,17 @@ const ListChannelsMessageTab: FunctionComponent<
             </TouchableOpacity>
           </View>
         ) : (
-          channels.map((channel, index) => {
-            const isJoined = channel.members.some(
-              member => member.userId === currentUser?.userId,
-            );
-
-            return (
-              <View key={index}>
-                <View style={styles.userContainer}>
-                  <AvatarMessagesTab
-                    imageUrl={channel.coverUrl}
-                    width={47}
-                    height={47}
-                  />
-                  <Text numberOfLines={1} style={styles.userName}>
-                    {channel.name}
-                  </Text>
-                  <TouchableOpacity
-                    disabled={isJoined}
-                    style={[styles.buttonJoinGroup, isJoined && styles.joined]}
-                    onPress={() => onSelect(channel.url)}
-                  >
-                    <Text style={styles.buttonJoinGroupText}>
-                      {isJoined ? 'Joined' : 'Join'}
-                    </Text>
-                    {!isJoined && <IconPlusCircle width={18} height={18} />}
-                  </TouchableOpacity>
-                </View>
-                {index !== channels.length - 1 && (
-                  <View style={styles.separatorContainer}>
-                    <View style={styles.separator} />
-                  </View>
-                )}
-              </View>
-            );
-          })
+          channels.map((channel, index) => (
+            <ChannelItemRow
+              key={index}
+              channel={channel}
+              isJoined={channel.members.some(
+                member => member.userId === currentUser?.userId,
+              )}
+              isLast={index === channels.length - 1}
+              onSelect={onSelect}
+            />
+          ))
         )}
       </View>
     </Layout>

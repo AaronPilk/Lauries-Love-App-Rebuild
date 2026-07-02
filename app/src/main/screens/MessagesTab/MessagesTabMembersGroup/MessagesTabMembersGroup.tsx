@@ -94,9 +94,13 @@ const MessagesTabMembersGroup: FunctionComponent<
   };
 
   useEffect(() => {
-    getCurrentChannel();
     getFriends();
   }, [limit]);
+
+  // The channel does not depend on the friends pagination limit — fetch once.
+  useEffect(() => {
+    getCurrentChannel();
+  }, []);
 
   return (
     <BackgroundScreen type="messages">

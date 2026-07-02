@@ -63,6 +63,8 @@ export function useGetDefinitions(type: DefinitionType, name?: string) {
       }
       return false;
     },
-    staleTime: 10000,
+    // Static reference data (cancer types, roles, etc.) — 10s staleTime was
+    // overriding the 5-min global default and refetching on every mount.
+    staleTime: 5 * 60 * 1000,
   });
 }

@@ -124,4 +124,4 @@ const ProfileBlock: FunctionComponent<ProfileBlockProps> = ({
   );
 };
 
-export default ProfileBlock;
+export default React.memo(ProfileBlock);

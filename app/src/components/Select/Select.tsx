@@ -1,5 +1,5 @@
 import { LinearGradient } from 'expo-linear-gradient';
-import React, { Dispatch, useState, useRef, ElementRef } from 'react';
+import React, { Dispatch, useState, useRef, ElementRef, useMemo } from 'react';
 import {
   FlatList,
   Modal,
@@ -99,9 +99,10 @@ export default function Select({
     );
   }
 
-  const filteredOptions = options.filter(option =>
-    option.label.toLowerCase().includes(query.toLowerCase()),
-  );
+  const filteredOptions = useMemo(() => {
+    const q = query.toLowerCase();
+    return options.filter(option => option.label.toLowerCase().includes(q));
+  }, [options, query]);
 
   return (
     <View>

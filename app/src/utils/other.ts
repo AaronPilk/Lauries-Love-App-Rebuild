@@ -7,11 +7,14 @@ import { ToastType } from 'providers/ToastProvider/ToastProvider.types';
  * @returns {void}
  * @example consoleCustom('Hello World')
  */
-export const consoleCustom = (message: string): void =>
+export const consoleCustom = (message: string): void => {
+  // Debug logger — console calls are expensive on-device in release builds.
+  if (!__DEV__) return;
   console.log(
     `%c${JSON.stringify(message)}`,
     'color: white; background-color: red; font-weight: bold;',
   );
+};
 
 /**
  * @description Custom show error

@@ -1,4 +1,3 @@
-import { useMemo } from 'react';
 import countriesJSON from 'presentation/ui/assets/data/countries.json';
 
 const SUPPORT_COUNTRY_CODES = ['US', 'CA'];
@@ -11,29 +10,26 @@ export type Country = {
   format?: string | null;
 };
 
+// Perf: the deep clone (JSON.parse(JSON.stringify(...))) of the full country
+// list previously ran on EVERY mount of any component using this hook. The
+// data is static, so compute once at module load and share stable references.
+const ALL_COUNTRIES: Array<Country> = JSON.parse(
+  JSON.stringify(countriesJSON),
+) as Array<Country>;
+
+const SUPPORTED_COUNTRIES: Array<Country> = ALL_COUNTRIES.filter(country =>
+  SUPPORT_COUNTRY_CODES.includes(country.code),
+);
+
+const DEFAULT_COUNTRY: Country = ALL_COUNTRIES.find(
+  c => c.code === DEFAULT_COUNTRY_CODE,
+)!;
+
 export default function useCountry() {
-  const allCountries = useMemo<Array<Country>>(
-    () => JSON.parse(JSON.stringify(countriesJSON)) as Array<Country>,
-    [],
-  );
-
-  const supportedCountries = useMemo<Array<Country>>(
-    () =>
-      allCountries.filter(country =>
-        SUPPORT_COUNTRY_CODES.includes(country.code),
-      ),
-    [allCountries],
-  );
-
-  const defaultCountry = useMemo<Country>(
-    () => allCountries.find(c => c.code === DEFAULT_COUNTRY_CODE)!,
-    [allCountries],
-  );
-
   return {
-    allCountries,
-    supportedCountries,
-    defaultCountry,
+    allCountries: ALL_COUNTRIES,
+    supportedCountries: SUPPORTED_COUNTRIES,
+    defaultCountry: DEFAULT_COUNTRY,
     supportedCountryCodes: SUPPORT_COUNTRY_CODES,
   };
 }

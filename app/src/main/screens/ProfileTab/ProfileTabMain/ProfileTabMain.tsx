@@ -1,4 +1,9 @@
-import React, { FunctionComponent, useEffect, useState } from 'react';
+import React, {
+  FunctionComponent,
+  useCallback,
+  useEffect,
+  useState,
+} from 'react';
 import { Linking, ScrollView, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -59,13 +64,13 @@ const ProfileTabMain: FunctionComponent<ClientsMainScreenProps> = ({
       value: item.id,
     }));
 
-  const onPressDetails = () => {
+  const onPressDetails = useCallback(() => {
     navigation.navigate(PATHS_PROFILE_TAB.profileTabDetails);
-  };
+  }, [navigation]);
 
-  const onPressQR = () => {
+  const onPressQR = useCallback(() => {
     navigation.navigate(PATHS_PROFILE_TAB.profileTabQR);
-  };
+  }, [navigation]);
 
   const onPressGender = async (gender: string) => {
     const result = await updateUserDB({

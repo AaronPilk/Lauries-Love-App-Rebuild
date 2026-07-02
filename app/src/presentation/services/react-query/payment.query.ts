@@ -29,9 +29,10 @@ export function useListPayments() {
     isFetchingNextPage,
     refetch,
     isRefetching,
-  } = useInfiniteQuery(
-    [PaymentKeys.LIST],
-    async ({ pageParam = 0 }): Promise<Result> => {
+  } = useInfiniteQuery({
+    queryKey: [PaymentKeys.LIST],
+    initialPageParam: 0,
+    queryFn: async ({ pageParam = 0 }): Promise<Result> => {
       const qb = RequestQueryBuilder.create();
 
       qb.setPage(pageParam);
@@ -43,16 +44,14 @@ export function useListPayments() {
 
       return req.body;
     },
-    {
-      getNextPageParam: lastPage => {
-        if (lastPage.page === lastPage.pageCount) {
-          return undefined;
-        }
+    getNextPageParam: lastPage => {
+      if (lastPage.page === lastPage.pageCount) {
+        return undefined;
+      }
 
-        return lastPage.page + 1;
-      },
+      return lastPage.page + 1;
     },
-  );
+  });
 
   return {
     data,
@@ -66,8 +65,8 @@ export function useListPayments() {
 
 export function useCreatePayment() {
   const queryClient = useQueryClient();
-  return useMutation(
-    async (body: PaymentInput): Promise<Payment> => {
+  return useMutation({
+    mutationFn: async (body: PaymentInput): Promise<Payment> => {
       const req = await makeAxiosHttpClient().request({
         method: 'post',
         url: `${appConfig.apiUrl}/payments`,
@@ -78,19 +77,20 @@ export function useCreatePayment() {
       }
       return req.body.result;
     },
-    {
-      onSuccess: () => {
-        queryClient.invalidateQueries([PaymentKeys.LIST, PaymentKeys.PROFILE]);
-      },
-      onError: console.error,
+    onSuccess: () => {
+      // v4 code passed both keys as ONE queryKey ([LIST, PROFILE]) which
+      // matched nothing; the intent is to invalidate both lists.
+      queryClient.invalidateQueries({ queryKey: [PaymentKeys.LIST] });
+      queryClient.invalidateQueries({ queryKey: [PaymentKeys.PROFILE] });
     },
-  );
+    onError: console.error,
+  });
 }
 
 export function useDeletePaymentProfile() {
   const queryClient = useQueryClient();
-  return useMutation(
-    async (paymentProfileId: string) => {
+  return useMutation({
+    mutationFn: async (paymentProfileId: string) => {
       const req = await makeAxiosHttpClient().request({
         method: 'delete',
         url: `${appConfig.apiUrl}/payments/paymentProfiles/${paymentProfileId}`,
@@ -100,51 +100,53 @@ export function useDeletePaymentProfile() {
       }
       return req.body.result;
     },
-    {
-      onSuccess: () => {
-        queryClient.invalidateQueries([PaymentKeys.PROFILE]);
-      },
-      onError: console.error,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: [PaymentKeys.PROFILE] });
     },
-  );
+    onError: console.error,
+  });
 }
 
 export function useGetPayment(id: string) {
-  return useQuery(
-    [PaymentKeys.LIST, id],
-    async (): Promise<Payment> => {
+  return useQuery({
+    queryKey: [PaymentKeys.LIST, id],
+    queryFn: async (): Promise<Payment> => {
       const req = await makeAxiosHttpClient().request({
         method: 'get',
         url: `${appConfig.apiUrl}/payments/${id}`,
       });
       return req.body;
     },
-    {
-      onError: console.error,
+    // v5 removed useQuery onError; keep the error log without throwing.
+    throwOnError: err => {
+      console.error(err);
+      return false;
     },
-  );
+  });
 }
 
 export function useGetPaymentProfiles() {
-  return useQuery(
-    [PaymentKeys.PROFILE],
-    async (): Promise<{ ok: boolean; cards: PaymentProfile[] }> => {
+  return useQuery({
+    queryKey: [PaymentKeys.PROFILE],
+    queryFn: async (): Promise<{ ok: boolean; cards: PaymentProfile[] }> => {
       const req = await makeAxiosHttpClient().request({
         method: 'get',
         url: `${appConfig.apiUrl}/payments/paymentProfiles`,
       });
       return req.body;
     },
-    {
-      onError: console.error,
+    // v5 removed useQuery onError; keep the error log without throwing.
+    throwOnError: err => {
+      console.error(err);
+      return false;
     },
-  );
+  });
 }
 
 export function useCancelPaymentSubscription() {
   const queryClient = useQueryClient();
-  return useMutation(
-    async (id: string): Promise<void> => {
+  return useMutation({
+    mutationFn: async (id: string): Promise<void> => {
       const req = await makeAxiosHttpClient().request({
         method: 'post',
         url: `${appConfig.apiUrl}/payments/cancel-subscription/${id}`,
@@ -153,11 +155,9 @@ export function useCancelPaymentSubscription() {
         throw Error(req.body.msg);
       }
     },
-    {
-      onSuccess: () => {
-        queryClient.invalidateQueries([PaymentKeys.LIST]);
-      },
-      onError: console.error,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: [PaymentKeys.LIST] });
     },
-  );
+    onError: console.error,
+  });
 }

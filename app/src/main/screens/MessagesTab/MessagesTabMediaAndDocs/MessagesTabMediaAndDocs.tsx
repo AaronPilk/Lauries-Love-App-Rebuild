@@ -121,10 +121,8 @@ const MessagesTabMediaAndDocs: FunctionComponent<
         )
       ).reduce<Record<string, string>>((acc, file) => {
         if (!file || !file.messageId) return acc;
-        return {
-          ...acc,
-          [file.messageId]: file.uri,
-        };
+        acc[file.messageId] = file.uri;
+        return acc;
       }, {});
       setThumbnails(thumbnailsVideos);
 

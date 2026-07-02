@@ -52,4 +52,5 @@ const ButtonInput: FunctionComponent<ButtonInputProps> = ({
   );
 };
 
-export default ButtonInput;
+// Memoized: rendered repeatedly in forms; props are simple values.
+export default React.memo(ButtonInput);

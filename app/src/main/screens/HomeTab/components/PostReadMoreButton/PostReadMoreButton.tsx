@@ -31,4 +31,4 @@ const PostReadMoreButton: FunctionComponent<PostReadMoreButtonProps> = ({
   );
 };
 
-export default PostReadMoreButton;
+export default React.memo(PostReadMoreButton);

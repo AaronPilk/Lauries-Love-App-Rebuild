@@ -1,4 +1,4 @@
-import React, { Dispatch, useEffect, useState } from 'react';
+import React, { Dispatch, useEffect, useMemo, useState } from 'react';
 import { Text, TextInput, View } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 
@@ -32,7 +32,10 @@ type Props = {
   setCity: Dispatch<string>;
 };
 
-export default function FiltersModal({
+// Perf: React.memo — the parent screens re-render on every search keystroke
+// and map region change; all props here (state setters + filter arrays) are
+// referentially stable across those renders, so the modal tree is skipped.
+export default React.memo(function FiltersModal({
   isFiltersOpen,
   setIsFiltersOpen,
   designation,
@@ -55,20 +58,33 @@ export default function FiltersModal({
 
   const { supportedCountries } = useCountry();
 
-  const ROLE_OPTIONS =
-    designations.data?.map(designation => ({
-      id: designation.description,
-      label: designation.description,
-    })) || [];
-  const CANCER_OPTIONS =
-    diagnosisTypes.data?.map(diagnosisType => ({
-      id: diagnosisType.description,
-      label: diagnosisType.description,
-    })) || [];
-  const DEFAULT_COUNTRIES = supportedCountries.map(country => ({
-    id: country.code,
-    label: country.name,
-  }));
+  // Perf: option arrays are memoized — they were rebuilt on every render,
+  // and DEFAULT_COUNTRIES' fresh identity made the effect below re-run on
+  // every single render.
+  const ROLE_OPTIONS = useMemo(
+    () =>
+      designations.data?.map(designation => ({
+        id: designation.description,
+        label: designation.description,
+      })) || [],
+    [designations.data],
+  );
+  const CANCER_OPTIONS = useMemo(
+    () =>
+      diagnosisTypes.data?.map(diagnosisType => ({
+        id: diagnosisType.description,
+        label: diagnosisType.description,
+      })) || [],
+    [diagnosisTypes.data],
+  );
+  const DEFAULT_COUNTRIES = useMemo(
+    () =>
+      supportedCountries.map(country => ({
+        id: country.code,
+        label: country.name,
+      })),
+    [supportedCountries],
+  );
 
   const [isCityOnFocus, setIsCityOnFocus] = useState(false);
 
@@ -87,10 +103,13 @@ export default function FiltersModal({
     setIsFiltersOpen(false);
   }
 
+  // Behavior preserved: whenever the country selection becomes empty it is
+  // reset to the supported defaults (previously enforced by the effect
+  // re-running every render; `country` in the deps keeps that guarantee).
   useEffect(() => {
     if (country.length === 0)
       setCountry(DEFAULT_COUNTRIES ? [...DEFAULT_COUNTRIES] : []);
-  }, [DEFAULT_COUNTRIES]);
+  }, [DEFAULT_COUNTRIES, country]);
 
   return (
     <Modal onClose={setIsFiltersOpen} title="Filters" visible={isFiltersOpen}>
@@ -164,4 +183,4 @@ export default function FiltersModal({
       </View>
     </Modal>
   );
-}
+});

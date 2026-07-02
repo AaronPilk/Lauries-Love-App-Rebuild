@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { StyleSheet } from 'react-native';
+import { LogBox, StyleSheet } from 'react-native';
 import { I18nextProvider } from 'react-i18next';
 import { Amplify } from 'aws-amplify';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
@@ -39,6 +39,19 @@ import { FONTS } from 'styles/fonts';
 // TODO: remove this library, need change to lingui/react-i18next
 import i18next from 'presentation/translations';
 import PosthogProvider from 'providers/PosthogProvider/PosthogProvider';
+
+// Known-noise warnings (dummy keys / stripped services / library deprecations).
+// Suppressed from the LogBox overlay so only REAL problems surface on-device.
+LogBox.ignoreLogs([
+  'This method is deprecated (as well as all React Native Firebase namespaced API)',
+  /\[UIKIT_ios\]/,
+  'No info about this app.',
+  'RNApplePay is not defined',
+  'Failed to register identified user',
+  /Sentry Logger/,
+  'FacebookAdvertiserIDCollectionEnabled',
+  '[expo-av]: Expo AV has been deprecated',
+]);
 
 // Only init Sentry when a DSN is configured; an empty DSN leaves the SDK in a
 // half-initialized state that logs a red "Transport disabled" error on every

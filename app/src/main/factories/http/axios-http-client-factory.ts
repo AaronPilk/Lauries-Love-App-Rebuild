@@ -5,11 +5,17 @@ import * as Auth from 'aws-amplify/auth';
 import { consoleCustom } from 'utils/other';
 import { MOCK_ENABLED } from 'mocks/mock.config';
 import { mockAxiosAdapter } from 'mocks/mock.adapter';
+import { SUPABASE_ENABLED } from 'services/supabase/backend.config';
+import { supabaseAxiosAdapter } from 'services/supabase/supabase.adapter';
 
 export const client = axios.create({
   baseURL: appConfig.apiUrl,
-  // Mock mode: answer from fake data instead of the network.
-  ...(MOCK_ENABLED ? { adapter: mockAxiosAdapter as any } : {}),
+  // Mock mode: fake data. Supabase mode: Backend V2. Legacy REST otherwise.
+  ...(MOCK_ENABLED
+    ? { adapter: mockAxiosAdapter as any }
+    : SUPABASE_ENABLED
+      ? { adapter: supabaseAxiosAdapter as any }
+      : {}),
 });
 
 export const makeAxiosHttpClient = (): AxiosHttpClient => {

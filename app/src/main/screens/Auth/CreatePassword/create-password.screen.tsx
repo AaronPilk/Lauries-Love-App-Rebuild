@@ -11,6 +11,8 @@ import {
 import { signUp, signIn, signOut } from 'aws-amplify/auth';
 import { MOCK_ENABLED } from 'mocks/mock.config';
 import { setMockSignedIn } from 'mocks/mock.auth';
+import { SUPABASE_ENABLED } from 'services/supabase/backend.config';
+import { sbSignUp } from 'services/supabase/supabase.auth';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import { LinearGradient } from 'expo-linear-gradient';
 
@@ -92,6 +94,24 @@ export default function CreatePasswordScreen() {
       setMockSignedIn(true);
       return 'DONE';
     }
+    if (SUPABASE_ENABLED) {
+      try {
+        setLoading(true);
+        const result = await sbSignUp(userOnboarding.email, account.password);
+        // With email confirmation off a session is returned immediately.
+        return result.isComplete ? 'DONE' : 'CONFIRM_SIGN_UP';
+      } catch (error: any) {
+        if (__DEV__) console.warn('Supabase signUp error', error);
+        setErrors(prevErrors => ({
+          ...prevErrors,
+          confirmPassword:
+            error?.message ?? 'Could not create the account. Try again.',
+        }));
+        return null;
+      } finally {
+        setLoading(false);
+      }
+    }
     try {
       setLoading(true);
       const result = await signUp({
@@ -137,7 +157,8 @@ export default function CreatePasswordScreen() {
         },
       });
     if (result === 'DONE') {
-      if (!MOCK_ENABLED)
+      // Mock: no sign-in needed. Supabase: signUp already returned a session.
+      if (!MOCK_ENABLED && !SUPABASE_ENABLED)
         await signIn({
           username: userOnboarding.email,
           password: account.password,

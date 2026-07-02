@@ -25,9 +25,11 @@ import Progress from 'components/Progress/Progress';
 import { useDBProvider } from 'providers/DBProvider/DBProvider';
 import { IconArrowLeft, IconCheckbox } from 'assets/icons-auto/components';
 import { useUserDBProvider } from 'providers/UserDBProvider/UserDBProvider';
+import { useUserAWSProvider } from 'providers/UserAWSProvider/UserAWSProvider';
 
 export default function DiagnosedYearScreen() {
   const { userDB, updateUserDB } = useUserDBProvider();
+  const { userAWS } = useUserAWSProvider();
   const {
     db: { designationTypes },
   } = useDBProvider();
@@ -135,7 +137,9 @@ export default function DiagnosedYearScreen() {
       const error = showYearField ? validateField() : '';
       if (error && showYearField) return;
 
-      const { userId } = MOCK_ENABLED ? MOCK_AUTH_USER : await getCurrentUser();
+      // Rebuild fix: read the id from the auth provider instead of a direct
+      // Cognito call — works identically in mock, Supabase, and legacy modes.
+      const userId = userAWS?.userId ?? (MOCK_ENABLED ? MOCK_AUTH_USER.userId : (await getCurrentUser()).userId);
       await updateUserDB({
         cognitoId: userId,
         lastName: null,

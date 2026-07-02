@@ -18,6 +18,10 @@ import { DEFAULT_APP_CONFIG } from './ApiProvider.constants';
 import { MOCK_ENABLED } from 'mocks/mock.config';
 import { mockApi } from 'mocks/mock.api';
 
+// Backend V2 (Supabase)
+import { SUPABASE_ENABLED } from 'services/supabase/backend.config';
+import { supabaseApi } from 'services/supabase/supabase.api';
+
 type ApiType = <T>(
   url: string,
   configurations?: {
@@ -53,6 +57,13 @@ const ApiProvider: FunctionComponent<ApiProviderProps> = ({ children }) => {
 
     if (MOCK_ENABLED) {
       return (await mockApi(currentUrl, {
+        method: config?.method,
+        data: config?.data,
+      })) as any;
+    }
+
+    if (SUPABASE_ENABLED) {
+      return (await supabaseApi(currentUrl, {
         method: config?.method,
         data: config?.data,
       })) as any;

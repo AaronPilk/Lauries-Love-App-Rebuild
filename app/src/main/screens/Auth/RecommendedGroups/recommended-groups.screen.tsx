@@ -30,7 +30,7 @@ import { styles } from './recommended-groups.styles';
 import { GroupChannel } from '@sendbird/chat/groupChannel';
 import { useDBProvider } from 'providers/DBProvider/DBProvider';
 import { IconArrowLeft } from 'assets/icons-auto/components';
-import { MOCK_ENABLED } from 'mocks/mock.config';
+import { SOCIAL_STUBBED } from 'services/supabase/backend.config';
 import { joinMockGroup } from 'mocks/mock.sendbird';
 
 export default function RecommendedGroupsScreen() {
@@ -74,7 +74,7 @@ export default function RecommendedGroupsScreen() {
     try {
       for (const ch of channels) {
         if (selected[ch.url]) {
-          if (MOCK_ENABLED) {
+          if (SOCIAL_STUBBED) {
             joinMockGroup(ch.url); // registers so Groups/Messages show it
           } else {
             const channel = await sdk.groupChannel.getChannel(ch.url);

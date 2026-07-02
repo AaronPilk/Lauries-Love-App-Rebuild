@@ -43,6 +43,19 @@ import {
   setMockSignedIn,
 } from 'mocks/mock.auth';
 
+// Backend V2 (Supabase Auth replaces Cognito)
+import { SUPABASE_ENABLED } from 'services/supabase/backend.config';
+import {
+  sbConfirmPasswordReset,
+  sbCurrentSession,
+  sbDeactivateAndSignOut,
+  sbForgotPassword,
+  sbSignIn,
+  sbSignOut,
+  sbUpdateEmail,
+  sbUpdatePassword,
+} from 'services/supabase/supabase.auth';
+
 type UserAWSContext = {
   userAWS: AuthUser | null;
   jwtTokenUser: JWT | null;
@@ -95,6 +108,21 @@ const UserAWSProvider: FunctionComponent<UserAWSProviderProps> = ({
       setUserAWS(MOCK_AUTH_USER);
       return { authSession: MOCK_AUTH_SESSION, currentUser: MOCK_AUTH_USER };
     }
+    if (SUPABASE_ENABLED) {
+      try {
+        const session = await sbCurrentSession();
+        if (!session) return null;
+        setJwtTokenUser(session.jwt);
+        setUserAWS(session.user as any);
+        return {
+          authSession: session.authSession,
+          currentUser: session.user as any,
+        };
+      } catch (error) {
+        if (__DEV__) console.log('supabase session error:', error);
+        return null;
+      }
+    }
     try {
       console.log('👤 checkCurrentUserAWS: Fetching auth session...');
       const authSession = await fetchAuthSession();
@@ -129,6 +157,17 @@ const UserAWSProvider: FunctionComponent<UserAWSProviderProps> = ({
       setUserAWS(MOCK_AUTH_USER);
       return MOCK_SIGN_IN_OUTPUT;
     }
+    if (SUPABASE_ENABLED) {
+      try {
+        const result = await sbSignIn(email, password);
+        setJwtTokenUser(result.jwt);
+        setUserAWS(result.user as any);
+        return result.signInOutput;
+      } catch (error) {
+        customShowError({ error, showToast });
+        return null;
+      }
+    }
     try {
       console.log('🔐 authAWS: Starting sign in...');
       const result = await signIn({
@@ -154,6 +193,7 @@ const UserAWSProvider: FunctionComponent<UserAWSProviderProps> = ({
     email,
   }: Authentication.ForgotPasswordParams) => {
     if (MOCK_ENABLED) return { isPasswordReset: true } as any;
+    if (SUPABASE_ENABLED) return sbForgotPassword(email);
     return resetPassword({
       username: email,
     });
@@ -164,6 +204,9 @@ const UserAWSProvider: FunctionComponent<UserAWSProviderProps> = ({
     verificationCode,
     newPassword,
   }: Authentication.ForgotPasswordSubmitParams) => {
+    if (MOCK_ENABLED) return true as any;
+    if (SUPABASE_ENABLED)
+      return sbConfirmPasswordReset(email, verificationCode, newPassword);
     return confirmResetPassword({
       username: email,
       newPassword,
@@ -175,6 +218,11 @@ const UserAWSProvider: FunctionComponent<UserAWSProviderProps> = ({
     data: UpdateUserAttributesInput,
   ) => {
     if (MOCK_ENABLED) return {} as any;
+    if (SUPABASE_ENABLED) {
+      const newEmail = (data as any)?.userAttributes?.email;
+      if (newEmail) await sbUpdateEmail(newEmail);
+      return {} as any;
+    }
     try {
       const result = await updateUserAttributes(data);
       return result;
@@ -188,7 +236,7 @@ const UserAWSProvider: FunctionComponent<UserAWSProviderProps> = ({
   const handleConfirmUserAttribute = async (
     data: ConfirmUserAttributeInput,
   ) => {
-    if (MOCK_ENABLED) return true;
+    if (MOCK_ENABLED || SUPABASE_ENABLED) return true;
     try {
       await confirmUserAttribute(data);
       await checkCurrentUserAWS();
@@ -203,7 +251,7 @@ const UserAWSProvider: FunctionComponent<UserAWSProviderProps> = ({
   const handleSendUserAttributeVerificationCode = async (
     data: SendUserAttributeVerificationCodeInput,
   ) => {
-    if (MOCK_ENABLED) return true;
+    if (MOCK_ENABLED || SUPABASE_ENABLED) return true;
     try {
       await sendUserAttributeVerificationCode(data);
       return true;
@@ -219,6 +267,14 @@ const UserAWSProvider: FunctionComponent<UserAWSProviderProps> = ({
     newPassword: string,
   ) => {
     if (MOCK_ENABLED) return true;
+    if (SUPABASE_ENABLED) {
+      try {
+        return await sbUpdatePassword(newPassword);
+      } catch (error: any) {
+        customShowError({ error, showToast });
+        return error.name;
+      }
+    }
     try {
       await updatePasswordAuth({
         oldPassword,
@@ -238,6 +294,16 @@ const UserAWSProvider: FunctionComponent<UserAWSProviderProps> = ({
       setJwtTokenUser(null);
       return true;
     }
+    if (SUPABASE_ENABLED) {
+      try {
+        await sbSignOut();
+      } catch (error) {
+        if (__DEV__) console.log('supabase signOut error:', error);
+      }
+      setUserAWS(null);
+      setJwtTokenUser(null);
+      return true;
+    }
     try {
       await signOut();
       setUserAWS(null);
@@ -253,6 +319,14 @@ const UserAWSProvider: FunctionComponent<UserAWSProviderProps> = ({
   const deleteAWS = async () => {
     if (MOCK_ENABLED) {
       setMockSignedIn(false);
+      setUserAWS(null);
+      setJwtTokenUser(null);
+      return true;
+    }
+    if (SUPABASE_ENABLED) {
+      // Full auth-user deletion requires the service role (edge function,
+      // Phase B). For now: deactivate profile + sign out.
+      await sbDeactivateAndSignOut();
       setUserAWS(null);
       setJwtTokenUser(null);
       return true;

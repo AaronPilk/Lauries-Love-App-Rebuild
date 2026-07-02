@@ -16,3 +16,9 @@ export const BACKEND: 'mock' | 'supabase' =
         : 'supabase';
 
 export const SUPABASE_ENABLED = BACKEND === 'supabase';
+
+// Feed/chat (formerly Sendbird) still run on in-app demo data until the
+// Phase-B migration onto posts/conversations tables. True whenever we are
+// NOT talking to the legacy Sendbird service — i.e. always, in the rebuild.
+import { MOCK_ENABLED } from 'mocks/mock.config';
+export const SOCIAL_STUBBED = MOCK_ENABLED || SUPABASE_ENABLED;

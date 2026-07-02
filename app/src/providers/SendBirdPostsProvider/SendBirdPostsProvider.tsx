@@ -14,7 +14,7 @@ import React, {
 
 import { useDBProvider } from 'providers/DBProvider/DBProvider';
 import { useApiProvider } from 'providers/ApiProvider/ApiProvider';
-import { MOCK_ENABLED } from 'mocks/mock.config';
+import { SOCIAL_STUBBED } from 'services/supabase/backend.config';
 import {
   MOCK_COMMENTS,
   MOCK_GROUPS,
@@ -120,7 +120,7 @@ const SendBirdPostsProvider: FunctionComponent<SendBirdPostsProviderProps> = ({
   };
 
   const getFilteringUserInfo = async () => {
-    if (MOCK_ENABLED) {
+    if (SOCIAL_STUBBED) {
       // Return recommendation groups matching the user's role/diagnosis the
       // same way the real Sendbird query would (name-contains, lowercase).
       const roleName = userDB?.role?.description?.toLowerCase() || '';
@@ -216,7 +216,7 @@ const SendBirdPostsProvider: FunctionComponent<SendBirdPostsProviderProps> = ({
   };
 
   const getPosts = async () => {
-    if (MOCK_ENABLED) {
+    if (SOCIAL_STUBBED) {
       setPosts(MOCK_POSTS as any);
       setComments(MOCK_COMMENTS as any);
       setLoadingStorage(false);
@@ -278,7 +278,7 @@ const SendBirdPostsProvider: FunctionComponent<SendBirdPostsProviderProps> = ({
     postUrl: string,
     messagePost: BaseMessageSendBirdType,
   ) => {
-    if (MOCK_ENABLED) return; // demo: reactions are local-only in components
+    if (SOCIAL_STUBBED) return; // demo: reactions are local-only in components
     if (!postUrl || !userChat) return;
     setLoadingServer(true);
 
@@ -311,7 +311,7 @@ const SendBirdPostsProvider: FunctionComponent<SendBirdPostsProviderProps> = ({
   };
 
   const getPost = async (channelUrl: string) => {
-    if (MOCK_ENABLED) {
+    if (SOCIAL_STUBBED) {
       const mockMessages = (MOCK_COMMENTS[channelUrl] ??
         []) as BaseMessageSendBirdType[];
       setComments({ ...comments, [channelUrl]: mockMessages });
@@ -373,7 +373,7 @@ const SendBirdPostsProvider: FunctionComponent<SendBirdPostsProviderProps> = ({
   };
 
   useEffect(() => {
-    if (MOCK_ENABLED) {
+    if (SOCIAL_STUBBED) {
       // Mock mode: inject fake posts/comments directly, skip storage + server.
       setPosts(MOCK_POSTS as any);
       setComments(MOCK_COMMENTS as any);

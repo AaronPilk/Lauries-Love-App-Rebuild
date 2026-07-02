@@ -204,7 +204,9 @@ export default function MapScreen() {
   };
 
   useEffect(() => {
-    if (usersData?.data && usersData.data.length > 0) fetchUsersLocation();
+    // Rebuild fix: run even when the list is EMPTY — the old length>0 gate
+    // meant a community with no (visible) users left the map spinning forever.
+    if (usersData?.data) fetchUsersLocation();
   }, [usersData]);
 
   useEffect(() => {

@@ -68,8 +68,12 @@ export const useGetUsersReq = () => {
 
       const users = res.body?.data || [];
 
+      // Rebuild fix (logic): the old filter dropped anyone with an empty
+      // diagnosisYear — but supporters/caregivers/family legitimately have
+      // none, so they were invisible in Connect. Only drop profiles that
+      // never completed onboarding (no name at all).
       const filteredUsers = users.filter(
-        (user: UserModel) => user.diagnosisYear !== '',
+        (user: UserModel) => !!(user.displayName || user.firstName),
       );
 
       return {

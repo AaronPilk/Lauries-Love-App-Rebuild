@@ -21,6 +21,7 @@ import { customShowError } from 'utils/other';
 import { appConfig } from 'main/config/app.config';
 import { getFileStorageAmplify } from 'utils/amplify-storage';
 import { platformServices } from './SendbirdChatProvider.config';
+import { MOCK_ENABLED } from 'mocks/mock.config';
 import { useApiProvider } from 'providers/ApiProvider/ApiProvider';
 import { useToastProvider } from 'providers/ToastProvider/ToastProvider';
 import { useUserDBProvider } from 'providers/UserDBProvider/UserDBProvider';
@@ -400,6 +401,10 @@ const SendbirdChatProvider: FunctionComponent<SendbirdChatProviderProps> = ({
         }`
       : undefined;
     if (!userID) return;
+
+    // Mock mode: no real Sendbird app — skip connect (avoids the error toast).
+    // Chat + feed screens render their empty states.
+    if (MOCK_ENABLED) return;
 
     try {
       const result =

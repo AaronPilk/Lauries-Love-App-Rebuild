@@ -1,14 +1,27 @@
 import { useNavigation } from '@react-navigation/native';
 import { CreatePaymentModel } from './donate-checkout.model';
 import { useStorage } from 'presentation/hooks';
-import ApplePay, { DetailsData, MethodData } from 'react-native-apple-payment';
+// Payment native modules are EXCLUDED from the iOS build (react-native.config.js;
+// they don't compile under Xcode 26 and aren't needed for UI testing). Load them
+// lazily so importing this handler never touches a missing native module.
+type DetailsData = any;
+type MethodData = any;
+type RequestDataType = any;
+type AllowedCardAuthMethodsType = any;
+type AllowedCardNetworkType = any;
 
-import {
-  GooglePay,
-  RequestDataType,
-  AllowedCardAuthMethodsType,
-  AllowedCardNetworkType,
-} from 'react-native-gpay-api';
+let ApplePay: any = null;
+let GooglePay: any = null;
+try {
+  ApplePay = require('react-native-apple-payment').default;
+} catch (e) {
+  if (__DEV__) console.log('ApplePay module unavailable (excluded from build)');
+}
+try {
+  GooglePay = require('react-native-gpay-api').GooglePay;
+} catch (e) {
+  if (__DEV__) console.log('GooglePay module unavailable (excluded from build)');
+}
 import { appConfig } from 'main/config/app.config';
 import { Alert } from 'react-native';
 import { useMemo, useState } from 'react';
@@ -81,6 +94,13 @@ export function useDefaultValues() {
   };
 
   const makeGooglePay = async (data: any, amount: number) => {
+    if (!GooglePay) {
+      Alert.alert(
+        'Payments disabled',
+        'Google Pay is not available in this test build.',
+      );
+      return;
+    }
     const allowedCardNetworks: AllowedCardNetworkType[] = [
       'VISA',
       'MASTERCARD',
@@ -141,6 +161,13 @@ export function useDefaultValues() {
   };
 
   const makeApplePay = async (data: any, amount: number) => {
+    if (!ApplePay) {
+      Alert.alert(
+        'Payments disabled',
+        'Apple Pay is not available in this test build.',
+      );
+      return;
+    }
     const Method: MethodData = {
       countryCode: country,
       currencyCode: currencyName,

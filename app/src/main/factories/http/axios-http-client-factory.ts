@@ -31,6 +31,7 @@ export const cometChatClient = axios.create({
 });
 
 client.interceptors.request.use(async (config: any) => {
+  if (MOCK_ENABLED) return config; // no real Cognito session to attach
   try {
     const session = await Auth.fetchAuthSession();
     const jwtToken = session.tokens?.accessToken;

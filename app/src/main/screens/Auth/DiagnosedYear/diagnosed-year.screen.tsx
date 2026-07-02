@@ -38,6 +38,10 @@ export default function DiagnosedYearScreen() {
   const [termsAccepted, setTermsAccepted] = useState(false);
   const [privacyAccepted, setPrivacyAccepted] = useState(false);
   const [loading, setLoading] = useState(false);
+  // Non-patient roles: "Have you been diagnosed?" — null until answered.
+  const [hasBeenDiagnosed, setHasBeenDiagnosed] = useState<boolean | null>(
+    null,
+  );
 
   const isFriend = useMemo(() => {
     // Rebuild fix (logic): only patients/survivors have a personal diagnosis
@@ -67,14 +71,28 @@ export default function DiagnosedYearScreen() {
     return !hasOwnDiagnosis;
   }, [userDB, designationTypes]);
 
+  // Year field applies to patients/survivors always, and to non-patient
+  // roles only when they answer YES to "Have you been diagnosed?".
+  const showYearField = !isFriend || hasBeenDiagnosed === true;
+
   const isDisabled = useMemo(
     () =>
-      (!isFriend && !diagnosedYear) ||
+      (isFriend && hasBeenDiagnosed === null) || // must answer the question
+      (showYearField && !diagnosedYear) ||
       !termsAccepted ||
       !privacyAccepted ||
-      !!error ||
+      (showYearField && !!error) ||
       loading,
-    [isFriend, diagnosedYear, termsAccepted, privacyAccepted, error, loading],
+    [
+      isFriend,
+      hasBeenDiagnosed,
+      showYearField,
+      diagnosedYear,
+      termsAccepted,
+      privacyAccepted,
+      error,
+      loading,
+    ],
   );
 
   useEffect(() => {
@@ -114,8 +132,8 @@ export default function DiagnosedYearScreen() {
   const handleOnPress = async () => {
     try {
       setLoading(true);
-      const error = validateField();
-      if (error && !isFriend) return;
+      const error = showYearField ? validateField() : '';
+      if (error && showYearField) return;
 
       const { userId } = MOCK_ENABLED ? MOCK_AUTH_USER : await getCurrentUser();
       await updateUserDB({
@@ -184,10 +202,46 @@ export default function DiagnosedYearScreen() {
                 <View style={{ gap: 24 }}>
                   <View style={{ gap: 8 }}>
                     <Text style={styles.title}>
-                      {isFriend ? 'Terms and Policy' : 'Diagnosed Year'}
+                      {isFriend ? 'Have you been diagnosed?' : 'Diagnosed Year'}
                     </Text>
                   </View>
-                  {!isFriend && (
+                  {isFriend && (
+                    <View style={styles.diagnosedButtonRow}>
+                      <TouchableOpacity
+                        style={[
+                          styles.diagnosedButton,
+                          hasBeenDiagnosed === true &&
+                            styles.diagnosedButtonSelected,
+                        ]}
+                        onPress={() => setHasBeenDiagnosed(true)}
+                        accessibilityRole="button"
+                        accessibilityState={{
+                          selected: hasBeenDiagnosed === true,
+                        }}
+                      >
+                        <Text style={styles.diagnosedButtonText}>Yes</Text>
+                      </TouchableOpacity>
+                      <TouchableOpacity
+                        style={[
+                          styles.diagnosedButton,
+                          hasBeenDiagnosed === false &&
+                            styles.diagnosedButtonSelected,
+                        ]}
+                        onPress={() => {
+                          setHasBeenDiagnosed(false);
+                          setDiagnosedYear('');
+                          setError('');
+                        }}
+                        accessibilityRole="button"
+                        accessibilityState={{
+                          selected: hasBeenDiagnosed === false,
+                        }}
+                      >
+                        <Text style={styles.diagnosedButtonText}>No</Text>
+                      </TouchableOpacity>
+                    </View>
+                  )}
+                  {showYearField && (
                     <View style={styles.mainSection}>
                       <Input
                         value={diagnosedYear}

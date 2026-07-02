@@ -72,4 +72,30 @@ export const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 12,
   },
+  // "Have you been diagnosed?" Yes/No selector — same button style as the
+  // gender/role onboarding screens for visual consistency.
+  diagnosedButtonRow: {
+    flexDirection: 'row',
+    gap: 12,
+  },
+  diagnosedButton: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 15,
+    paddingVertical: 21,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: 'transparent',
+    backgroundColor: colors.quaternary[200],
+  },
+  diagnosedButtonSelected: {
+    borderColor: colors.primary[600],
+    backgroundColor: colors.primary[100],
+  },
+  diagnosedButtonText: {
+    fontFamily: FONT_RALEWAY_500,
+    fontSize: 16,
+    color: colors.primary[600],
+  },
 });

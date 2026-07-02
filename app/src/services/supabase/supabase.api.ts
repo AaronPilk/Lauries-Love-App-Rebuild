@@ -2,7 +2,7 @@
 // ApiProvider calls this when BACKEND === 'supabase', so the 540-file screen
 // layer keeps working unchanged while we retire the old REST API.
 
-import { supabase } from './client';
+import { supabase, currentUserId } from './client';
 
 // ---------------------------------------------------------------------------
 // Shape mappers: Postgres rows -> the legacy API shapes the app expects
@@ -39,7 +39,10 @@ const mapDefinition = (row: DefRow) => ({
 });
 
 // Definitions are static per session — cache after first load.
+// Both the list and an id->def Map are cached so profile mapping is O(1) per
+// field instead of O(defs) via Array.find (matters when mapping 500 profiles).
 let defsCache: ReturnType<typeof mapDefinition>[] | null = null;
+let defsByIdCache: Map<string, ReturnType<typeof mapDefinition>> | null = null;
 async function getAllDefinitions() {
   if (defsCache) return defsCache;
   const { data, error } = await supabase
@@ -49,18 +52,22 @@ async function getAllDefinitions() {
     .order('sort');
   if (error) throw error;
   defsCache = (data as DefRow[]).map(mapDefinition);
+  defsByIdCache = new Map(defsCache.map(d => [d.id, d]));
   return defsCache;
 }
 
-const defById = async (id: string | null) => {
-  if (!id) return null;
-  const defs = await getAllDefinitions();
-  return defs.find(d => d.id === id) ?? null;
-};
+async function getDefinitionsById() {
+  if (!defsByIdCache) await getAllDefinitions();
+  return defsByIdCache!;
+}
 
-async function mapProfile(row: any) {
-  const defs = await getAllDefinitions();
-  const byId = (id: string) => defs.find(d => d.id === id) ?? id;
+/** Synchronous profile mapper — pass the prebuilt definitions Map. */
+function mapProfileWith(
+  row: any,
+  defsById: Map<string, ReturnType<typeof mapDefinition>>,
+) {
+  const byId = (id: string) => defsById.get(id) ?? id;
+  const roleDef = row.role_id ? defsById.get(row.role_id) ?? null : null;
   return {
     id: row.id,
     cognitoId: row.id, // legacy field name; = auth uid in V2
@@ -70,8 +77,8 @@ async function mapProfile(row: any) {
     lastName: row.last_name,
     displayName: row.display_name,
     diagnosisYear: row.diagnosis_year,
-    designation: await defById(row.role_id),
-    role: await defById(row.role_id),
+    designation: roleDef,
+    role: roleDef,
     phoneNumber: row.phone_number,
     phoneNumberLocation: row.phone_number_location,
     dob: null,
@@ -101,6 +108,10 @@ async function mapProfile(row: any) {
     },
     description: row.description,
   };
+}
+
+async function mapProfile(row: any) {
+  return mapProfileWith(row, await getDefinitionsById());
 }
 
 // Legacy camelCase user fields -> profiles columns
@@ -153,10 +164,8 @@ const assertUuid = (v: string, label = 'id') => {
   return v;
 };
 
-const uid = async () => {
-  const { data } = await supabase.auth.getUser();
-  return data.user?.id ?? null;
-};
+// Local cached session read — no network round-trip per request.
+const uid = currentUserId;
 
 // ---------------------------------------------------------------------------
 // Router — same contract as mockApi(url, {method, data})
@@ -254,7 +263,10 @@ export async function supabaseApi(
         .eq('active', true)
         .limit(500);
       if (error) throw error;
-      const mapped = await Promise.all((data ?? []).map(mapProfile));
+      // Single-pass, synchronous mapping with a prebuilt definitions Map —
+      // no per-row awaits/promises for a 500-profile page.
+      const defsById = await getDefinitionsById();
+      const mapped = (data ?? []).map(row => mapProfileWith(row, defsById));
       return {
         data: mapped,
         count: mapped.length,

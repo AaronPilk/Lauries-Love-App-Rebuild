@@ -23,3 +23,15 @@ export const supabase = createClient(url, key, {
     detectSessionInUrl: false, // React Native: no URL-based sessions
   },
 });
+
+/**
+ * Current auth user id, read from the LOCALLY CACHED session.
+ *
+ * PERF: supabase.auth.getUser() makes a network round-trip to /auth/v1/user
+ * on EVERY call; getSession() reads AsyncStorage/memory. Every data query was
+ * paying an extra RTT just to learn its own uid — use this everywhere instead.
+ */
+export async function currentUserId(): Promise<string | null> {
+  const { data } = await supabase.auth.getSession();
+  return data.session?.user?.id ?? null;
+}

@@ -38,7 +38,12 @@ type SendBirdPostsContext = {
   loadingServer: boolean;
   limit: number;
   setLimit: (limit: number) => void;
-  getPosts: () => void;
+  /**
+   * Refresh the feed. `before` (supabase mode only) is a created_at ISO
+   * cursor: when set, the next page is fetched and APPENDED — pagination
+   * plumbing for infinite scroll; nothing passes it yet.
+   */
+  getPosts: (before?: string) => void;
   getFilteringUserInfo: () => Promise<GroupChannel[] | undefined>;
   getPost: (channelUrl: string) => Promise<BaseMessageSendBirdType[]>;
   toggleReaction: (
@@ -103,7 +108,12 @@ const SendBirdPostsProvider: FunctionComponent<SendBirdPostsProviderProps> = ({
               messages,
             };
           } catch (error) {
-            console.log(`Error fetching messages for post: ${post.url}`, error);
+            // eslint-disable-next-line no-console
+            if (__DEV__)
+              console.log(
+                `Error fetching messages for post: ${post.url}`,
+                error,
+              );
             captureException(error);
             return { url: post.url, messages: [] };
           }
@@ -234,12 +244,22 @@ const SendBirdPostsProvider: FunctionComponent<SendBirdPostsProviderProps> = ({
     return filteredPosts;
   };
 
-  const getPosts = async () => {
+  const getPosts = async (before?: string) => {
     if (SUPABASE_ENABLED) {
       try {
         setLoadingServer(true);
-        const feed = await getFeedPosts();
-        setPosts(feed as any);
+        const feed = await getFeedPosts(50, before);
+        // Cursor page -> append (dedup by url); fresh load -> replace.
+        setPosts(prev =>
+          before
+            ? ([
+                ...prev,
+                ...(feed as any[]).filter(
+                  p => !prev.some((e: any) => e.url === p.url),
+                ),
+              ] as any)
+            : (feed as any),
+        );
       } catch (error) {
         if (__DEV__) console.warn('getFeedPosts error', error);
       } finally {

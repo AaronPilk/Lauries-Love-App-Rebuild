@@ -2,7 +2,7 @@
 // Buckets: 'avatars', 'post-images' — public read, owner-scoped writes
 // (object path MUST start with the uploader's uid; enforced by policy).
 
-import { supabase } from './client';
+import { supabase, currentUserId } from './client';
 
 const extFromUri = (uri: string) => {
   const clean = uri.split('?')[0];
@@ -30,8 +30,7 @@ export async function uploadImage(
   bucket: 'avatars' | 'post-images',
   localUri: string,
 ): Promise<string> {
-  const { data: auth } = await supabase.auth.getUser();
-  const me = auth.user?.id;
+  const me = await currentUserId();
   if (!me) throw new Error('Not authenticated');
 
   const ext = extFromUri(localUri);
@@ -59,8 +58,7 @@ export async function uploadImageBase64(
   base64: string,
   ext: string,
 ): Promise<string> {
-  const { data: auth } = await supabase.auth.getUser();
-  const me = auth.user?.id;
+  const me = await currentUserId();
   if (!me) throw new Error('Not authenticated');
 
   const cleanExt = (ext || 'jpg').replace('.', '').toLowerCase();

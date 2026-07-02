@@ -339,6 +339,21 @@ const HomeTabCreatePost: FunctionComponent<HomeTabCreatePostProps> = ({
                 visibility={visibility}
                 setVisibility={setVisibility}
               />
+              {visibility === 'group' && (
+                <Text style={styles.footerText}>
+                  {(() => {
+                    const tags = [
+                      userDB?.role?.description,
+                      ...((userDB?.diagnosisTypes ?? []) as any[]).map(
+                        (d: any) => d?.description,
+                      ),
+                    ].filter(Boolean);
+                    return tags.length > 0
+                      ? `Shared with your community: ${tags.join(' \u00b7 ')}`
+                      : 'Shared with members who match your profile';
+                  })()}
+                </Text>
+              )}
               <Animated.View
                 style={[
                   styles.footer,

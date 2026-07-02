@@ -1,7 +1,7 @@
 // Supabase Auth — drop-in replacements for the Cognito/Amplify call shapes
 // the app already uses, so UserAWSProvider + signup screens swap cleanly.
 
-import { supabase } from './client';
+import { supabase, currentUserId } from './client';
 
 export type LegacyAuthUser = { userId: string; username: string };
 
@@ -92,12 +92,9 @@ export async function sbUpdateEmail(newEmail: string) {
 // Account deletion needs the service role — handled by an edge function later.
 // For now: deactivate the profile (RLS-safe) and sign out.
 export async function sbDeactivateAndSignOut() {
-  const { data } = await supabase.auth.getUser();
-  if (data.user) {
-    await supabase
-      .from('profiles')
-      .update({ active: false })
-      .eq('id', data.user.id);
+  const me = await currentUserId();
+  if (me) {
+    await supabase.from('profiles').update({ active: false }).eq('id', me);
   }
   await supabase.auth.signOut();
   return true;

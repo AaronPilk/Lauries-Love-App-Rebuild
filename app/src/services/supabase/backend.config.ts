@@ -22,3 +22,6 @@ export const SUPABASE_ENABLED = BACKEND === 'supabase';
 // NOT talking to the legacy Sendbird service — i.e. always, in the rebuild.
 import { MOCK_ENABLED } from 'mocks/mock.config';
 export const SOCIAL_STUBBED = MOCK_ENABLED || SUPABASE_ENABLED;
+
+// Official support account (fixed row in profiles/auth.users).
+export const SUPPORT_PROFILE_ID = 'c0000000-0000-4000-8000-000000000001';

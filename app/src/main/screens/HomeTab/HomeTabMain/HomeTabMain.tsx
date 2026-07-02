@@ -42,6 +42,8 @@ import {
 } from 'assets/icons-auto/components';
 import Intercom from '@intercom/intercom-react-native';
 import { useIntercom } from 'providers/IntercomProvider/IntercomProvider';
+import { SUPABASE_ENABLED, SUPPORT_PROFILE_ID } from 'services/supabase/backend.config';
+import { findOrCreateDirectConversation } from 'services/supabase/supabase.chat';
 import InputSearch from 'components/InputSearch/InputSearch';
 import { useDebouncedValue } from 'utils/useDebouncedValue';
 
@@ -180,7 +182,21 @@ const HomeTabMain: FunctionComponent<HomeTabMainProps> = ({ navigation }) => {
     navigation.navigate(PATHS_HOME_TAB.homeTabTaraDetails);
   }, [navigation]);
 
-  function handleIntercom() {
+  async function handleIntercom() {
+    if (SUPABASE_ENABLED) {
+      // Support runs on OUR chat now (no Intercom): open a direct
+      // conversation with the official support account.
+      try {
+        const convId = await findOrCreateDirectConversation(SUPPORT_PROFILE_ID);
+        navigation.navigate('Messages', {
+          screen: 'messages-tab-chat',
+          params: { channelUrl: convId, userId: SUPPORT_PROFILE_ID },
+        } as never);
+      } catch (error) {
+        if (__DEV__) console.warn('support chat error', error);
+      }
+      return;
+    }
     openIntercom();
   }
 

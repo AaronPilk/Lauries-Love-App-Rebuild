@@ -28,7 +28,7 @@ import {
   getConversationMessages,
   getMyConversations,
 } from 'services/supabase/supabase.chat';
-import { supabase } from 'services/supabase/client';
+import { supabase, currentUserId } from 'services/supabase/client';
 import {
   getMockChatChannels,
   MOCK_CHAT_MESSAGES,
@@ -97,36 +97,41 @@ const SendbirdChatProvider: FunctionComponent<SendbirdChatProviderProps> = ({
   >({});
   const userID = useMemo(() => userDB?.cognitoId || null, [userDB?.cognitoId]);
 
+  // Pure fetch (no setState) so getChannels can run it in parallel with the
+  // channels queries and commit everything in a single render pass.
+  const fetchSupabaseFriends = async (): Promise<UserSendBirdType[]> => {
+    try {
+      const me = await currentUserId(); // cached session — no auth round-trip
+      if (!me) return [];
+      const { data } = await supabase
+        .from('friendships')
+        .select(
+          'status, requester:profiles!friendships_requester_id_fkey(id, first_name, display_name), addressee:profiles!friendships_addressee_id_fkey(id, first_name, display_name)',
+        )
+        .eq('status', 'accepted')
+        .or(`requester_id.eq.${me},addressee_id.eq.${me}`);
+      return (data ?? []).map((f: any) => {
+        const other = f.requester?.id === me ? f.addressee : f.requester;
+        return {
+          userId: other?.id,
+          nickname: other?.display_name || other?.first_name || 'Member',
+          plainProfileUrl: '',
+          isActive: true,
+          metaData: { id: other?.id },
+          status: 'accepted',
+        } as unknown as UserSendBirdType;
+      });
+    } catch (error) {
+      if (__DEV__) console.warn('supabase getFriends error', error);
+      return [];
+    }
+  };
+
   const getFriends = async () => {
     if (SUPABASE_ENABLED) {
-      try {
-        const { data: auth } = await supabase.auth.getUser();
-        const me = auth.user?.id;
-        if (!me) return [];
-        const { data } = await supabase
-          .from('friendships')
-          .select(
-            'status, requester:profiles!friendships_requester_id_fkey(id, first_name, display_name), addressee:profiles!friendships_addressee_id_fkey(id, first_name, display_name)',
-          )
-          .eq('status', 'accepted')
-          .or(`requester_id.eq.${me},addressee_id.eq.${me}`);
-        const list = (data ?? []).map((f: any) => {
-          const other = f.requester?.id === me ? f.addressee : f.requester;
-          return {
-            userId: other?.id,
-            nickname: other?.display_name || other?.first_name || 'Member',
-            plainProfileUrl: '',
-            isActive: true,
-            metaData: { id: other?.id },
-            status: 'accepted',
-          } as unknown as UserSendBirdType;
-        });
-        setFriends(list);
-        return list;
-      } catch (error) {
-        if (__DEV__) console.warn('supabase getFriends error', error);
-        return [];
-      }
+      const list = await fetchSupabaseFriends();
+      setFriends(list);
+      return list;
     }
     if (MOCK_ENABLED) {
       setFriends(MOCK_FRIENDS);
@@ -191,9 +196,14 @@ const SendbirdChatProvider: FunctionComponent<SendbirdChatProviderProps> = ({
   const getChannels = async () => {
     if (SUPABASE_ENABLED) {
       try {
-        const [groups, conversations] = await Promise.all([
+        // Friends fetched IN PARALLEL with channels (was a sequential extra
+        // round-trip after them), and all three states committed in the same
+        // continuation so React 18 batches them into ONE provider update
+        // instead of two/three consumer-tree re-renders.
+        const [groups, conversations, friendList] = await Promise.all([
           getMyGroupChannels(),
           getMyConversations(userDB?.id),
+          fetchSupabaseFriends(),
         ]);
         const channels = [...conversations, ...groups];
         const memberMap = channels.reduce<Record<string, UserSendBirdType>>(
@@ -207,7 +217,7 @@ const SendbirdChatProvider: FunctionComponent<SendbirdChatProviderProps> = ({
         );
         setMembers(memberMap);
         setGroupChannels(channels as any);
-        getFriends();
+        setFriends(friendList);
       } catch (error) {
         if (__DEV__) console.warn('supabase getChannels error', error);
       }

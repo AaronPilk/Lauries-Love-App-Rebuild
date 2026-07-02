@@ -2,12 +2,10 @@
 // Legacy Sendbird channel/message shapes preserved so screens stay unchanged.
 // Realtime: postgres_changes subscription on messages per conversation.
 
-import { supabase } from './client';
+import { supabase, currentUserId } from './client';
 
-const uid = async () => {
-  const { data } = await supabase.auth.getUser();
-  return data.user?.id ?? null;
-};
+// Local cached session read — no network round-trip per request.
+const uid = currentUserId;
 
 const senderFromProfile = (p: any) => ({
   userId: p?.id ?? 'unknown',
@@ -190,6 +188,11 @@ export async function sendChatMessage(conversationId: string, body: string) {
  * Returns an unsubscribe function. The callback receives a legacy-shaped
  * message (sender profile fetched lazily).
  */
+// Sender profiles are stable within a session — cache them so a busy
+// conversation doesn't trigger one profiles round-trip PER incoming message.
+const senderProfileCache = new Map<string, any>();
+const SENDER_CACHE_MAX = 300;
+
 export function subscribeToConversation(
   conversationId: string,
   onMessage: (msg: any) => void,
@@ -206,11 +209,20 @@ export function subscribeToConversation(
       },
       async payload => {
         const row: any = payload.new;
-        const { data: sender } = await supabase
-          .from('profiles')
-          .select('id, first_name, display_name, avatar_path')
-          .eq('id', row.sender_id)
-          .single();
+        let sender = senderProfileCache.get(row.sender_id);
+        if (!sender) {
+          const { data } = await supabase
+            .from('profiles')
+            .select('id, first_name, display_name, avatar_path')
+            .eq('id', row.sender_id)
+            .single();
+          sender = data;
+          if (sender) {
+            if (senderProfileCache.size >= SENDER_CACHE_MAX)
+              senderProfileCache.clear();
+            senderProfileCache.set(row.sender_id, sender);
+          }
+        }
         onMessage(msgShape(row, sender));
       },
     )

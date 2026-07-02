@@ -511,13 +511,36 @@ const MessagesTabChat: FunctionComponent<MessagesTabChatProps> = ({
   // Supabase realtime: on every INSERT for this conversation, refresh the
   // provider thread. loadMessages replaces the whole list keyed by messageId,
   // so our own sends (also delivered by the subscription) are deduped.
+  // One subscription per channelUrl (cleaned up on unmount/param change); an
+  // in-flight guard coalesces event bursts into at most one queued refetch
+  // instead of stacking a loadMessages round-trip per incoming message.
   useEffect(() => {
     if (!SUPABASE_ENABLED || !route.params?.channelUrl) return;
     const channelUrl = route.params.channelUrl;
-    const unsubscribe = subscribeToConversation(channelUrl, () => {
-      loadMessages(channelUrl);
-    });
-    return unsubscribe;
+    let active = true;
+    let inFlight = false;
+    let queued = false;
+    const refresh = async () => {
+      if (inFlight) {
+        queued = true;
+        return;
+      }
+      inFlight = true;
+      try {
+        await loadMessages(channelUrl);
+      } finally {
+        inFlight = false;
+        if (queued && active) {
+          queued = false;
+          refresh();
+        }
+      }
+    };
+    const unsubscribe = subscribeToConversation(channelUrl, refresh);
+    return () => {
+      active = false;
+      unsubscribe();
+    };
   }, [route.params?.channelUrl]);
 
   useEffect(() => {

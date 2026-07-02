@@ -2,13 +2,11 @@
 // Returns LEGACY Sendbird-channel/message shapes so the existing screens
 // render unchanged — same trick as the mock layer, but backed by Postgres.
 
-import { supabase } from './client';
+import { supabase, currentUserId } from './client';
 import { publicUrlFor } from './supabase.storage';
 
-const uid = async () => {
-  const { data } = await supabase.auth.getUser();
-  return data.user?.id ?? null;
-};
+// Local cached session read — no network round-trip per request.
+const uid = currentUserId;
 
 const senderFromProfile = (p: any) => ({
   userId: p?.id ?? 'unknown',
@@ -23,13 +21,20 @@ const senderFromProfile = (p: any) => ({
 // FEED
 // ---------------------------------------------------------------------------
 
-/** Posts shaped like the legacy Sendbird "post channels". */
-export async function getFeedPosts(limit = 50) {
-  const { data: posts, error } = await supabase
+/**
+ * Posts shaped like the legacy Sendbird "post channels".
+ * `before` is a created_at cursor (ISO string) for keyset pagination — pass
+ * the oldest loaded post's created_at to fetch the next page (infinite
+ * scroll plumbing; no UI wired yet).
+ */
+export async function getFeedPosts(limit = 50, before?: string) {
+  let query = supabase
     .from('posts')
     .select(
       '*, author:profiles!posts_author_id_fkey(id, first_name, display_name, avatar_path), comments(count)',
-    )
+    );
+  if (before) query = query.lt('created_at', before);
+  const { data: posts, error } = await query
     .order('created_at', { ascending: false })
     .limit(limit);
   if (error) throw error;

@@ -24,6 +24,10 @@ import { platformServices } from './SendbirdChatProvider.config';
 import { MOCK_ENABLED } from 'mocks/mock.config';
 import { SUPABASE_ENABLED, SOCIAL_STUBBED } from 'services/supabase/backend.config';
 import { getMyGroupChannels } from 'services/supabase/supabase.social';
+import {
+  getConversationMessages,
+  getMyConversations,
+} from 'services/supabase/supabase.chat';
 import { supabase } from 'services/supabase/client';
 import {
   getMockChatChannels,
@@ -187,7 +191,11 @@ const SendbirdChatProvider: FunctionComponent<SendbirdChatProviderProps> = ({
   const getChannels = async () => {
     if (SUPABASE_ENABLED) {
       try {
-        const channels = await getMyGroupChannels();
+        const [groups, conversations] = await Promise.all([
+          getMyGroupChannels(),
+          getMyConversations(userDB?.id),
+        ]);
+        const channels = [...conversations, ...groups];
         const memberMap = channels.reduce<Record<string, UserSendBirdType>>(
           (acc: any, channel: any) => {
             (channel.members || []).forEach((m: any) => {
@@ -530,6 +538,21 @@ const SendbirdChatProvider: FunctionComponent<SendbirdChatProviderProps> = ({
   };
 
   const loadMessages = async (channelUrl: string, limit = 50) => {
+    if (SUPABASE_ENABLED) {
+      try {
+        const msgs = (await getConversationMessages(
+          channelUrl,
+          limit,
+        )) as unknown as BaseMessage[];
+        setMessages(prev => ({ ...prev, [channelUrl]: msgs as any }));
+        return msgs;
+      } catch (error) {
+        // Group channels have no conversation yet -> empty thread.
+        if (__DEV__) console.log('loadMessages(supabase) empty:', channelUrl);
+        setMessages(prev => ({ ...prev, [channelUrl]: [] }));
+        return [];
+      }
+    }
     if (SOCIAL_STUBBED) {
       const mockMsgs = (MOCK_CHAT_MESSAGES[channelUrl] ?? []) as BaseMessage[];
       setMessages(prev => ({ ...prev, [channelUrl]: mockMsgs as any }));

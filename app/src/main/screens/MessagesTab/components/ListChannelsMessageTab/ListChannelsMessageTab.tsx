@@ -14,6 +14,7 @@ import {
 import colors from 'styles/colors';
 import styles from './ListChannelsMessageTab.styles';
 import AvatarMessagesTab from '../AvatarMessagesTab/AvatarMessagesTab';
+import { useSendbirdChatProvider } from 'providers/SendbirdChatProvider/SendbirdChatProvider';
 import {
   IconMessagesNotGroup,
   IconPlus,
@@ -28,6 +29,8 @@ type ListChannelsMessageTabProps = {
   isLoading?: boolean;
   onPressCreateGroup: () => void;
   handleScrollDown?: (event: NativeSyntheticEvent<NativeScrollEvent>) => void;
+  /** Extra channel urls to render as already joined (e.g. just-joined). */
+  joinedUrls?: string[];
 };
 
 type ChannelItemRowProps = {
@@ -77,10 +80,13 @@ const ListChannelsMessageTab: FunctionComponent<
   isLoading = false,
   onPressCreateGroup,
   handleScrollDown,
+  joinedUrls,
 }) => {
   const { sdk } = useSendbirdChat();
+  const { userChat } = useSendbirdChatProvider();
 
-  const currentUser = useMemo(() => sdk.currentUser, [sdk.currentUser]);
+  // Sendbird identity in legacy mode; Supabase profile id otherwise.
+  const currentUserId = sdk.currentUser?.userId ?? userChat?.userId ?? null;
 
   const Layout = useMemo(
     () => (isFullHeight ? View : ScrollView),
@@ -122,9 +128,12 @@ const ListChannelsMessageTab: FunctionComponent<
             <ChannelItemRow
               key={index}
               channel={channel}
-              isJoined={channel.members.some(
-                member => member.userId === currentUser?.userId,
-              )}
+              isJoined={
+                (joinedUrls?.includes(channel.url) ?? false) ||
+                (channel.members ?? []).some(
+                  member => member.userId === currentUserId,
+                )
+              }
               isLast={index === channels.length - 1}
               onSelect={onSelect}
             />

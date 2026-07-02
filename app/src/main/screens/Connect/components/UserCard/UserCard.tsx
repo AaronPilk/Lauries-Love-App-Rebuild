@@ -28,6 +28,7 @@ import {
 } from 'providers/SendbirdChatProvider/SendbirdChatProvider.types';
 import { useCountry } from 'presentation/hooks';
 import { SUPABASE_ENABLED } from 'services/supabase/backend.config';
+import { findOrCreateDirectConversation } from 'services/supabase/supabase.chat';
 
 type Props = {
   user: User;
@@ -150,12 +151,24 @@ export default React.memo(function UserCard({
 
   async function handleMessage() {
     if (SUPABASE_ENABLED) {
-      // Direct (1:1) chat is not migrated to Backend V2 yet.
-      showToast({
-        type: 'info',
-        message: 'Direct messages are coming soon',
-      });
-      return null;
+      // Supabase mode: 1:1 chat lives in the conversations tables. The
+      // conversation id plays the role of channel.url; user ids ARE profile
+      // ids in this mode.
+      try {
+        setIsLoadingSendMessage(true);
+        const conversationId = await findOrCreateDirectConversation(user.id);
+        await getChannels();
+        return toChatUser(conversationId, user.id);
+      } catch (error) {
+        if (__DEV__) console.warn('Error opening conversation:', error);
+        showToast({
+          type: 'info',
+          message: 'Unable to open chat right now',
+        });
+        return null;
+      } finally {
+        setIsLoadingSendMessage(false);
+      }
     }
 
     try {

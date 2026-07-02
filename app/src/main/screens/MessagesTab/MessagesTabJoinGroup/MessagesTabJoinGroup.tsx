@@ -41,6 +41,8 @@ const MessagesTabJoinGroup: FunctionComponent<MessagesTabJoinGroupProps> = ({
     GroupChannel[]
   >([]);
   const [loading, setLoading] = useState(true);
+  // Urls joined during THIS visit — rows light up as 'Joined' in place.
+  const [justJoined, setJustJoined] = useState<string[]>([]);
   const { getFilteringUserInfo } = useSendBirdPostsProvider();
   const { groupChannels, getChannels } = useSendbirdChatProvider();
 
@@ -50,12 +52,10 @@ const MessagesTabJoinGroup: FunctionComponent<MessagesTabJoinGroupProps> = ({
       try {
         const all = (await getAllGroups()) as unknown as
           GroupChannelSendBirdType[];
-        const joinedUrls = new Set(groupChannels.map(c => c.url));
         const filtered = all.filter(
           channel =>
-            !joinedUrls.has(channel.url) &&
-            (!search ||
-              channel.name.toLowerCase().includes(search.toLowerCase())),
+            !search ||
+            channel.name.toLowerCase().includes(search.toLowerCase()),
         );
         setChannels(filtered);
       } catch (error) {
@@ -108,13 +108,11 @@ const MessagesTabJoinGroup: FunctionComponent<MessagesTabJoinGroupProps> = ({
       if (SUPABASE_ENABLED) {
         try {
           await joinGroup(channelUrl);
-          await getChannels(); // refresh joined groups in the chat provider
-
+          // UX (user-requested): the button lights up as 'Joined' in place —
+          // no jump into the group chat.
+          setJustJoined(prev => [...prev, channelUrl]);
+          getChannels(); // refresh joined groups in the chat provider
           trackIntercom('join_group');
-
-          navigation.navigate(PATHS_MESSAGES_TAB.messagesTabChatGroup, {
-            channelUrl,
-          });
         } catch (error) {
           if (__DEV__) console.warn('onPressJoinGroup', error);
         }
@@ -134,11 +132,8 @@ const MessagesTabJoinGroup: FunctionComponent<MessagesTabJoinGroupProps> = ({
         const result = await channel.join();
         if (!result) return;
 
+        setJustJoined(prev => [...prev, channel.url]);
         trackIntercom('join_group');
-
-        navigation.navigate(PATHS_MESSAGES_TAB.messagesTabChatGroup, {
-          channelUrl: channel.url,
-        });
       } catch (error) {
         if (__DEV__) console.warn('onPressJoinGroup', error);
       }
@@ -184,6 +179,7 @@ const MessagesTabJoinGroup: FunctionComponent<MessagesTabJoinGroupProps> = ({
             onSelect={onPressJoinGroup}
             isLoading={loading}
             onPressCreateGroup={onPressCreateGroup}
+            joinedUrls={[...groupChannels.map(c => c.url), ...justJoined]}
           />
         </View>
         <View>
@@ -193,6 +189,7 @@ const MessagesTabJoinGroup: FunctionComponent<MessagesTabJoinGroupProps> = ({
             onSelect={onPressJoinGroup}
             isLoading={loading}
             onPressCreateGroup={onPressCreateGroup}
+            joinedUrls={[...groupChannels.map(c => c.url), ...justJoined]}
           />
         </View>
       </ScrollView>

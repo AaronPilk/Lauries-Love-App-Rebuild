@@ -41,6 +41,10 @@ import colors from 'styles/colors';
 import { useApiProvider } from 'providers/ApiProvider/ApiProvider';
 import { z } from 'zod';
 
+// supabase (Backend V2) chat
+import { SUPABASE_ENABLED } from 'services/supabase/backend.config';
+import { findOrCreateDirectConversation } from 'services/supabase/supabase.chat';
+
 type MessagesTabCreateChatProps = {
   navigation: NativeStackNavigationProp<RootMessagesTabParamList>;
 };
@@ -55,7 +59,8 @@ const MessagesTabCreateChat: FunctionComponent<MessagesTabCreateChatProps> = ({
   const { api } = useApiProvider();
   const isFocused = useIsFocused();
   const { sdk } = useSendbirdChat();
-  const { groupChannels, getChannels } = useSendbirdChatProvider();
+  const { groupChannels, getChannels, getFriends: getFriendsProvider } =
+    useSendbirdChatProvider();
   const [friends, setFriends] = useState<FriendWithStatus[]>([]);
   const [limit, setLimit] = useState(100);
   const [search, setSearch] = useState('');
@@ -84,6 +89,21 @@ const MessagesTabCreateChat: FunctionComponent<MessagesTabCreateChatProps> = ({
 
   const getFriends = async () => {
     setIsLoading(true);
+    if (SUPABASE_ENABLED) {
+      // Supabase mode: accepted friends come from the provider (friendships
+      // table) — the Sendbird friend-list query and per-friend status calls
+      // don't apply.
+      try {
+        const list = await getFriendsProvider();
+        setFriends(list as FriendWithStatus[]);
+      } catch (error) {
+        if (__DEV__) console.warn('Error getting friends', error);
+      } finally {
+        setIsEnd(false);
+        setIsLoading(false);
+      }
+      return;
+    }
     const friendListQuery = sdk.createFriendListQuery({
       limit,
     });
@@ -110,6 +130,21 @@ const MessagesTabCreateChat: FunctionComponent<MessagesTabCreateChatProps> = ({
   };
 
   const onSelectFriend = async (userId: string) => {
+    if (SUPABASE_ENABLED) {
+      // Supabase mode: userId IS the profile id; the conversation id plays
+      // the role of channel.url.
+      try {
+        const conversationId = await findOrCreateDirectConversation(userId);
+        getChannels();
+        return navigation.navigate(PATHS_MESSAGES_TAB.messagesTabChat, {
+          channelUrl: conversationId,
+          userId,
+        });
+      } catch (error) {
+        if (__DEV__) console.warn('Error creating channel', error);
+      }
+      return;
+    }
     try {
       const findChannel = groupChannels.find(
         channel =>

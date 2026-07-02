@@ -43,6 +43,10 @@ import {
 import { PATHS_MESSAGES_TAB } from 'main/navigators/paths';
 import { DEFAULT_ERROR_NOT_FOUND_USER_SENDBIRD } from 'providers/SendbirdChatProvider/SendbirdChatProvider.constants';
 
+// supabase (Backend V2) chat
+import { SUPABASE_ENABLED } from 'services/supabase/backend.config';
+import { findOrCreateDirectConversation } from 'services/supabase/supabase.chat';
+
 // hooks
 import { useCountry } from 'presentation/hooks';
 
@@ -184,6 +188,25 @@ const MessagesTabProfile: FunctionComponent<MessagesTabProfileProps> = ({
   };
 
   const openChat = async () => {
+    if (SUPABASE_ENABLED) {
+      // Supabase mode: route userId IS the profile id; the conversation id
+      // plays the role of channel.url.
+      try {
+        const otherProfileId = route.params?.userId || '';
+        if (!otherProfileId) return;
+        const conversationId = await findOrCreateDirectConversation(
+          otherProfileId,
+        );
+        getChannels();
+        return navigation.navigate(PATHS_MESSAGES_TAB.messagesTabChat, {
+          channelUrl: conversationId,
+          userId: otherProfileId,
+        });
+      } catch (error) {
+        if (__DEV__) console.warn('openChat error', error);
+      }
+      return;
+    }
     try {
       const query = sdk.groupChannel.createMyGroupChannelListQuery({
         userIdsFilter: {

@@ -61,6 +61,13 @@ import {
 // constants
 import { PATHS_MESSAGES_TAB } from 'main/navigators/paths';
 
+// supabase (Backend V2) chat
+import { SUPABASE_ENABLED } from 'services/supabase/backend.config';
+import {
+  sendChatMessage,
+  subscribeToConversation,
+} from 'services/supabase/supabase.chat';
+
 // styles
 import styles from './MessagesTabChat.styles';
 import colors from 'styles/colors';
@@ -85,6 +92,7 @@ const MessagesTabChat: FunctionComponent<MessagesTabChatProps> = ({
     loadMessages,
     setLimit,
     getFriends,
+    getChannels,
   } = useSendbirdChatProvider();
   const { sendPushNotificationToServer } = usePushNotificationProvider();
   const { userDB } = useUserDBProvider();
@@ -120,13 +128,14 @@ const MessagesTabChat: FunctionComponent<MessagesTabChatProps> = ({
     [messages, route.params?.channelUrl],
   );
 
-  const friend: MemberSendBirdType | null = useMemo(
-    () =>
-      channel?.members.find(
-        member => member.userId !== sdk.currentUser?.userId,
-      ) || null,
-    [channel, sdk.currentUser?.userId],
-  );
+  const friend: MemberSendBirdType | null = useMemo(() => {
+    // Supabase mode: there is no Sendbird connection, so sdk.currentUser is
+    // null — my chat identity is userChat (profile id).
+    const myUserId = SUPABASE_ENABLED
+      ? userChat?.userId
+      : sdk.currentUser?.userId;
+    return channel?.members.find(member => member.userId !== myUserId) || null;
+  }, [channel, sdk.currentUser?.userId, userChat?.userId]);
 
   const fetchChannel = async () => {
     if (!route.params?.channelUrl) return;
@@ -135,6 +144,15 @@ const MessagesTabChat: FunctionComponent<MessagesTabChatProps> = ({
       channel => channel.url === route.params?.channelUrl,
     );
     if (findChannel) setChannel(findChannel);
+
+    if (SUPABASE_ENABLED) {
+      // Supabase mode: the provider cache is the source of truth (channel
+      // objects are conversation/group-shaped). No Sendbird SDK fetch — if
+      // the conversation isn't cached yet (just created), refresh the list;
+      // the groupChannels effect below picks it up.
+      if (!findChannel) getChannels();
+      return;
+    }
 
     try {
       const fetchedChannel = await sdk.groupChannel.getChannel(
@@ -164,6 +182,12 @@ const MessagesTabChat: FunctionComponent<MessagesTabChatProps> = ({
   };
 
   const sendImage = async (message: string) => {
+    // Supabase mode: file attachments are not migrated yet — no-op silently.
+    if (SUPABASE_ENABLED) {
+      setConfirm(state => ({ ...state, image: null }));
+      setShowModals(state => ({ ...state, confirmImage: false }));
+      return;
+    }
     if (!channel || !confirm.image) return;
     setIsSending(true);
     try {
@@ -203,6 +227,12 @@ const MessagesTabChat: FunctionComponent<MessagesTabChatProps> = ({
   };
 
   const sendDocument = async (message: string) => {
+    // Supabase mode: file attachments are not migrated yet — no-op silently.
+    if (SUPABASE_ENABLED) {
+      setConfirm(state => ({ ...state, document: null }));
+      setShowModals(state => ({ ...state, confirmDocument: false }));
+      return;
+    }
     if (!channel || !confirm.document) return;
     setIsSending(true);
     try {
@@ -241,6 +271,25 @@ const MessagesTabChat: FunctionComponent<MessagesTabChatProps> = ({
 
   const sendMessage = async () => {
     if (!channel || !newMessage.length) return;
+    if (SUPABASE_ENABLED) {
+      const body = newMessage;
+      setNewMessage('');
+      try {
+        await sendChatMessage(channel.url, body);
+        // Refresh the same provider thread the Sendbird path renders from
+        // (also dedupes against the realtime INSERT for our own send).
+        await loadMessages(channel.url);
+        if (friend?.metaData?.id)
+          sendPushNotificationToServer({
+            content: body,
+            notifierIds: [friend?.metaData?.id || ''],
+            redirect: route.params?.channelUrl,
+          });
+      } catch (error) {
+        if (__DEV__) console.warn('Error sending message:', error);
+      }
+      return;
+    }
     try {
       channel
         .sendUserMessage({
@@ -447,6 +496,29 @@ const MessagesTabChat: FunctionComponent<MessagesTabChatProps> = ({
   useEffect(() => {
     hasScrollToTarget.current = false;
   }, []);
+
+  // Supabase mode: pick the channel up from the provider cache once the
+  // refreshed list arrives (fetchChannel may run before getChannels resolves,
+  // e.g. right after creating a brand-new conversation).
+  useEffect(() => {
+    if (!SUPABASE_ENABLED || channel) return;
+    const findChannel = groupChannels.find(
+      c => c.url === route.params?.channelUrl,
+    );
+    if (findChannel) setChannel(findChannel);
+  }, [groupChannels]);
+
+  // Supabase realtime: on every INSERT for this conversation, refresh the
+  // provider thread. loadMessages replaces the whole list keyed by messageId,
+  // so our own sends (also delivered by the subscription) are deduped.
+  useEffect(() => {
+    if (!SUPABASE_ENABLED || !route.params?.channelUrl) return;
+    const channelUrl = route.params.channelUrl;
+    const unsubscribe = subscribeToConversation(channelUrl, () => {
+      loadMessages(channelUrl);
+    });
+    return unsubscribe;
+  }, [route.params?.channelUrl]);
 
   useEffect(() => {
     const targetMessageId = route.params?.targetMessageId ?? '';

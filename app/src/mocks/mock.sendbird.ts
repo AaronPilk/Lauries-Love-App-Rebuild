@@ -203,12 +203,32 @@ const chat = (i: number, other: any, lastText: string, hoursAgo: number) => ({
   data: '',
 });
 
-export const MOCK_CHAT_CHANNELS: any[] = [
+const BASE_CHAT_CHANNELS: any[] = [
   chat(1, MOCK_USERS[0], 'How did the appointment go today?', 1),
   chat(2, MOCK_USERS[2], 'Thank you so much for the advice 🙏', 5),
   chat(3, MOCK_USERS[4], 'See you at the walking group Saturday!', 26),
-  MOCK_GROUPS[0], // one group chat in the list too
 ];
+
+// Groups the mock user has JOINED (signup flow + join buttons add to this).
+// Seeded with one group so the demo isn't empty before any joins.
+const joinedGroupUrls = new Set<string>([MOCK_GROUPS[0].url]);
+
+export const joinMockGroup = (url: string) => {
+  joinedGroupUrls.add(url);
+};
+
+export const leaveMockGroup = (url: string) => {
+  joinedGroupUrls.delete(url);
+};
+
+// Dynamic: chats + whatever groups have been joined this session.
+export const getMockChatChannels = (): any[] => [
+  ...BASE_CHAT_CHANNELS,
+  ...MOCK_GROUPS.filter(g => joinedGroupUrls.has(g.url)),
+];
+
+// Back-compat static export (used where a snapshot is fine).
+export const MOCK_CHAT_CHANNELS: any[] = getMockChatChannels();
 
 export const MOCK_CHAT_MESSAGES: Record<string, any[]> = {
   'mock-chat-1': [

@@ -23,7 +23,7 @@ import { getFileStorageAmplify } from 'utils/amplify-storage';
 import { platformServices } from './SendbirdChatProvider.config';
 import { MOCK_ENABLED } from 'mocks/mock.config';
 import {
-  MOCK_CHAT_CHANNELS,
+  getMockChatChannels,
   MOCK_CHAT_MESSAGES,
   MOCK_FRIENDS,
   MOCK_USER_CHAT,
@@ -153,18 +153,21 @@ const SendbirdChatProvider: FunctionComponent<SendbirdChatProviderProps> = ({
 
   const getChannels = async () => {
     if (MOCK_ENABLED) {
-      // Fake chat + group channels; members map keyed by userId.
-      const mockMembers = MOCK_CHAT_CHANNELS.reduce<
-        Record<string, UserSendBirdType>
-      >((acc, channel) => {
-        (channel.members || []).forEach((m: UserSendBirdType) => {
-          if (m.userId !== MOCK_USER_CHAT.userId) acc[m.userId] = m;
-        });
-        return acc;
-      }, {});
+      // Fake chat + JOINED group channels (joins during signup register via
+      // joinMockGroup); members map keyed by userId.
+      const channels = getMockChatChannels();
+      const mockMembers = channels.reduce<Record<string, UserSendBirdType>>(
+        (acc, channel) => {
+          (channel.members || []).forEach((m: UserSendBirdType) => {
+            if (m.userId !== MOCK_USER_CHAT.userId) acc[m.userId] = m;
+          });
+          return acc;
+        },
+        {},
+      );
       setMembers(mockMembers);
       setMessages(MOCK_CHAT_MESSAGES as any);
-      setGroupChannels(MOCK_CHAT_CHANNELS as any);
+      setGroupChannels(channels as any);
       setFriends(MOCK_FRIENDS);
       return;
     }

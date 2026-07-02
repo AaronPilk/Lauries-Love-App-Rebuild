@@ -31,6 +31,7 @@ import { GroupChannel } from '@sendbird/chat/groupChannel';
 import { useDBProvider } from 'providers/DBProvider/DBProvider';
 import { IconArrowLeft } from 'assets/icons-auto/components';
 import { MOCK_ENABLED } from 'mocks/mock.config';
+import { joinMockGroup } from 'mocks/mock.sendbird';
 
 export default function RecommendedGroupsScreen() {
   const { sdk } = useSendbirdChat();
@@ -72,9 +73,13 @@ export default function RecommendedGroupsScreen() {
     setJoining(true);
     try {
       for (const ch of channels) {
-        if (selected[ch.url] && !MOCK_ENABLED) {
-          const channel = await sdk.groupChannel.getChannel(ch.url);
-          await channel.join();
+        if (selected[ch.url]) {
+          if (MOCK_ENABLED) {
+            joinMockGroup(ch.url); // registers so Groups/Messages show it
+          } else {
+            const channel = await sdk.groupChannel.getChannel(ch.url);
+            await channel.join();
+          }
         }
       }
     } catch (e) {

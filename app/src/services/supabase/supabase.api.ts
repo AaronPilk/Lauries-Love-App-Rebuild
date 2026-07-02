@@ -145,6 +145,14 @@ function toProfilePatch(data: Record<string, any>) {
   return patch;
 }
 
+const UUID_RE =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+/** Reject non-UUID ids before they reach interpolated PostgREST filters. */
+const assertUuid = (v: string, label = 'id') => {
+  if (!UUID_RE.test(v)) throw new Error(`Invalid ${label}`);
+  return v;
+};
+
 const uid = async () => {
   const { data } = await supabase.auth.getUser();
   return data.user?.id ?? null;
@@ -186,7 +194,7 @@ export async function supabaseApi(
 
   const friendReqMatch = /^\/users\/([^/]+)\/friend-requests$/.exec(path);
   if (friendReqMatch) {
-    const otherId = friendReqMatch[1];
+    const otherId = assertUuid(friendReqMatch[1], 'user id');
     const me = await uid();
     if (!me) throw new Error('Not authenticated');
 
@@ -411,8 +419,10 @@ export async function supabaseApi(
     };
   }
   if (path.startsWith('/payments') || path.startsWith('/payment-profiles')) {
-    // Writes go through the payments edge function (service role), not here.
-    return { ok: true, data: [] };
+    // Payment processing moves to an edge function (Authorize.Net + service
+    // role). Until then FAIL LOUDLY — a fake success here would let users
+    // believe a donation went through.
+    throw new Error('Donations are not enabled in this build yet.');
   }
 
   if (__DEV__)

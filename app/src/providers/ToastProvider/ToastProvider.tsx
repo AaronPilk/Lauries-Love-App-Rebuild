@@ -3,6 +3,7 @@ import React, {
   FunctionComponent,
   useContext,
   useEffect,
+  useMemo,
   useState,
 } from 'react';
 import uuid from 'react-native-uuid';
@@ -49,8 +50,12 @@ const ToastProvider: FunctionComponent<ToastProviderProps> = ({ children }) => {
     }
   }, [messages, showMessage]);
 
+  // showToast only closes over the stable setMessages setter, so no reactive deps.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  const value = useMemo(() => ({ showToast }), []);
+
   return (
-    <toastContext.Provider value={{ showToast }}>
+    <toastContext.Provider value={value}>
       {children}
       {showMessage && (
         <MessageToast message={showMessage} onFinish={onFinish} />

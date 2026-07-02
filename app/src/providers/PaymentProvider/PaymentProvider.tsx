@@ -3,6 +3,7 @@ import { captureException } from '@sentry/react-native';
 import React, {
   createContext,
   useContext,
+  useMemo,
   useState,
   FunctionComponent,
 } from 'react';
@@ -158,18 +159,22 @@ const PaymentProvider: FunctionComponent<PaymentProviderProps> = ({
     }
   };
 
+  const value = useMemo(
+    () => ({
+      isLoading,
+      listPayments,
+      createPayment,
+      deletePaymentProfile,
+      getPayment,
+      getPaymentProfiles,
+      cancelPaymentSubscription,
+    }),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [isLoading, api],
+  );
+
   return (
-    <PaymentContext.Provider
-      value={{
-        isLoading,
-        listPayments,
-        createPayment,
-        deletePaymentProfile,
-        getPayment,
-        getPaymentProfiles,
-        cancelPaymentSubscription,
-      }}
-    >
+    <PaymentContext.Provider value={value}>
       {children}
     </PaymentContext.Provider>
   );

@@ -5,6 +5,7 @@ import React, {
   FunctionComponent,
   useContext,
   useEffect,
+  useMemo,
   useState,
 } from 'react';
 
@@ -124,7 +125,9 @@ const DBProvider: FunctionComponent<DBProviderProps> = ({ children }) => {
     getDefinitions();
   }, []);
 
-  return <dbContext.Provider value={{ db }}>{children}</dbContext.Provider>;
+  const value = useMemo(() => ({ db }), [db]);
+
+  return <dbContext.Provider value={value}>{children}</dbContext.Provider>;
 };
 
 export const useDBProvider = () => useContext(dbContext);

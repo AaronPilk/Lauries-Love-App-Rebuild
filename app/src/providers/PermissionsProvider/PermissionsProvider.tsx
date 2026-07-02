@@ -3,6 +3,7 @@ import React, {
   FunctionComponent,
   useContext,
   useEffect,
+  useMemo,
   useState,
 } from 'react';
 import {
@@ -161,15 +162,19 @@ const PermissionsProvider: FunctionComponent<PermissionsProviderProps> = ({
     getPermissions();
   }, []);
 
+  const value = useMemo(
+    () => ({
+      permissions,
+      requestPermissionsImagePicker,
+      requestPermissionsCamera,
+      requestPermissionsNotificationFirebase,
+    }),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [permissions],
+  );
+
   return (
-    <permissionsContext.Provider
-      value={{
-        permissions,
-        requestPermissionsImagePicker,
-        requestPermissionsCamera,
-        requestPermissionsNotificationFirebase,
-      }}
-    >
+    <permissionsContext.Provider value={value}>
       {children}
     </permissionsContext.Provider>
   );

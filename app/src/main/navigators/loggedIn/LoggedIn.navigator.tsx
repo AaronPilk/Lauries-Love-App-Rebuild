@@ -44,6 +44,11 @@ const BottomTabNavigator: FunctionComponent<BottomTabNavigatorProps> = ({
       screenOptions={{
         tabBarShowLabel: false,
         headerShown: false,
+        // Rebuild fix (P1 perf): freeze background tabs so provider state
+        // changes don't re-render all five tab stacks at once, and mount
+        // tabs lazily on first visit.
+        freezeOnBlur: true,
+        lazy: true,
         tabBarStyle: [
           styles.tabBar,
           isHideTabBar && styles.tabBarHide,
@@ -74,15 +79,9 @@ const BottomTabNavigator: FunctionComponent<BottomTabNavigatorProps> = ({
       <Tab.Screen
         name="Connect"
         component={ConnectNavigator}
-        listeners={({ navigation }) => ({
-          tabPress: e => {
-            e.preventDefault();
-            navigation.reset({
-              index: 0,
-              routes: [{ name: 'Connect' }],
-            });
-          },
-        })}
+        // Rebuild fix (P1 perf): removed the tabPress listener that RESET the
+        // whole Connect stack on every tab press — it remounted the map (GPS
+        // fetch + full users load) from scratch each visit.
         options={{
           tabBarIcon: ConnectTabIcon,
           title: 'Connect',

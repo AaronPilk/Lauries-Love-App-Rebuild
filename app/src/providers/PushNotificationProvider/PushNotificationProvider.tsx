@@ -2,6 +2,7 @@ import React, {
   FunctionComponent,
   useContext,
   useEffect,
+  useMemo,
   useState,
 } from 'react';
 import { Alert, Linking, Platform } from 'react-native';
@@ -255,10 +256,14 @@ const PushNotificationProvider: FunctionComponent<
     return () => subscription.remove();
   }, []);
 
+  const value = useMemo(
+    () => ({ sendPushNotification, sendPushNotificationToServer }),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [api, userDB],
+  );
+
   return (
-    <pushNotificationContext.Provider
-      value={{ sendPushNotification, sendPushNotificationToServer }}
-    >
+    <pushNotificationContext.Provider value={value}>
       {children}
     </pushNotificationContext.Provider>
   );

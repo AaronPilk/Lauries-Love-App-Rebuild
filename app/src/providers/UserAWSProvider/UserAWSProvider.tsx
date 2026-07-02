@@ -25,6 +25,7 @@ import React, {
   createContext,
   FunctionComponent,
   useContext,
+  useMemo,
   useState,
 } from 'react';
 
@@ -268,23 +269,27 @@ const UserAWSProvider: FunctionComponent<UserAWSProviderProps> = ({
     }
   };
 
+  const value = useMemo(
+    () => ({
+      userAWS,
+      jwtTokenUser,
+      checkCurrentUserAWS,
+      authAWS,
+      updateUserAttributesAWS,
+      handleConfirmUserAttribute,
+      handleSendUserAttributeVerificationCode,
+      updatePasswordAWS,
+      signOutAWS,
+      deleteAWS,
+      forgotPassword,
+      updatePassword,
+    }),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [userAWS, jwtTokenUser, showToast],
+  );
+
   return (
-    <userAWSContext.Provider
-      value={{
-        userAWS,
-        jwtTokenUser,
-        checkCurrentUserAWS,
-        authAWS,
-        updateUserAttributesAWS,
-        handleConfirmUserAttribute,
-        handleSendUserAttributeVerificationCode,
-        updatePasswordAWS,
-        signOutAWS,
-        deleteAWS,
-        forgotPassword,
-        updatePassword,
-      }}
-    >
+    <userAWSContext.Provider value={value}>
       {children}
     </userAWSContext.Provider>
   );

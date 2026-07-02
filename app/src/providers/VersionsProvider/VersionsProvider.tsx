@@ -3,6 +3,7 @@ import React, {
   FunctionComponent,
   useContext,
   useEffect,
+  useMemo,
   useState,
 } from 'react';
 import { Platform, Text, View } from 'react-native';
@@ -75,8 +76,10 @@ const VersionsProvider: FunctionComponent<VersionsProviderProps> = ({
     fetchLatestVersion();
   }, []);
 
+  const value = useMemo(() => ({}), []);
+
   return (
-    <versionsContext.Provider value={{}}>
+    <versionsContext.Provider value={value}>
       {children}
       {isUpdateAvailable && (
         <ModalUniversal

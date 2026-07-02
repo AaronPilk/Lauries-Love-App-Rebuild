@@ -7,7 +7,9 @@ import {
   MOCK_USERS,
 } from './mock.data';
 
-const delay = (ms = 150) => new Promise(res => setTimeout(res, ms));
+// Keep mock latency near-zero: screens fire several calls per focus, and
+// artificial delay compounds into visible tab lag.
+const delay = (ms = 10) => new Promise(res => setTimeout(res, ms));
 
 // Session-lifetime mutable state so create/update flows feel real.
 let currentUser: Record<string, any> = { ...MOCK_CURRENT_USER };

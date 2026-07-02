@@ -9,6 +9,7 @@ import React, {
   SetStateAction,
   useContext,
   useEffect,
+  useMemo,
   useState,
 } from 'react';
 
@@ -319,22 +320,39 @@ const UserDBProvider: FunctionComponent<UserDBProviderProps> = ({
     }
   }, [userDB?.id]);
 
+  const value = useMemo(
+    () => ({
+      isLoading,
+      userDB,
+      getUserDB,
+      createUserDB,
+      updateUserDB,
+      signOutDB,
+      deleteUserDB,
+      getOnlyUserDBById,
+      checkGeoLocationCity,
+      userOnboarding,
+      setUserOnboarding,
+    }),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [
+      isLoading,
+      userDB,
+      userOnboarding,
+      jwtTokenUser,
+      isOnboarding,
+      api,
+      showToast,
+      signInIntercom,
+      updateIntercom,
+      signOutIntercom,
+      signOutAWS,
+      defaultCountry,
+    ],
+  );
+
   return (
-    <userDBContext.Provider
-      value={{
-        isLoading,
-        userDB,
-        getUserDB,
-        createUserDB,
-        updateUserDB,
-        signOutDB,
-        deleteUserDB,
-        getOnlyUserDBById,
-        checkGeoLocationCity,
-        userOnboarding,
-        setUserOnboarding,
-      }}
-    >
+    <userDBContext.Provider value={value}>
       {children}
     </userDBContext.Provider>
   );

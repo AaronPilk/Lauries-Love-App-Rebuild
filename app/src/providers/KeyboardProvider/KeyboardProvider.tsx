@@ -2,6 +2,7 @@ import React, {
   FunctionComponent,
   useContext,
   useEffect,
+  useMemo,
   useState,
 } from "react";
 import { Keyboard } from "react-native";
@@ -34,8 +35,10 @@ const KeyboardProvider: FunctionComponent<KeyboardProviderProps> = ({
     };
   }, []);
 
+  const value = useMemo(() => ({ showKeyboard }), [showKeyboard]);
+
   return (
-    <keyboardContext.Provider value={{ showKeyboard }}>
+    <keyboardContext.Provider value={value}>
       {children}
     </keyboardContext.Provider>
   );

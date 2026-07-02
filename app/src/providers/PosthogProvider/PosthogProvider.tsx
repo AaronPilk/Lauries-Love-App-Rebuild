@@ -3,6 +3,7 @@ import React, {
   FunctionComponent,
   useContext,
   useEffect,
+  useMemo,
 } from 'react';
 import PostHog, { PostHogProvider } from 'posthog-react-native';
 
@@ -59,17 +60,20 @@ const PosthogProvider: FunctionComponent<PosthogProviderProps> = ({
     if (userDB?.cognitoId) identifyUser();
   }, [userDB?.cognitoId]);
 
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  const value = useMemo(() => ({ onCapture }), [userDB]);
+
   if (!posthog) {
     // Analytics disabled (no key): keep the context so consumers work, skip the SDK.
     return (
-      <posthogContext.Provider value={{ onCapture }}>
+      <posthogContext.Provider value={value}>
         {children}
       </posthogContext.Provider>
     );
   }
 
   return (
-    <posthogContext.Provider value={{ onCapture }}>
+    <posthogContext.Provider value={value}>
       <PostHogProvider
         client={posthog}
         options={{

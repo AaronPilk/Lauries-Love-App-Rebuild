@@ -3,6 +3,7 @@ import React, {
   ReactNode,
   useContext,
   useEffect,
+  useMemo,
   useState,
 } from 'react';
 import Intercom, {
@@ -109,17 +110,21 @@ export const IntercomProvider = ({ children }: { children: ReactNode }) => {
     return () => listener.remove();
   }, []);
 
+  const value = useMemo(
+    () => ({
+      signInIntercom,
+      updateIntercom,
+      signOutIntercom,
+      trackIntercom,
+      openIntercom,
+      unreadCount,
+    }),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [api, unreadCount],
+  );
+
   return (
-    <IntercomContext.Provider
-      value={{
-        signInIntercom,
-        updateIntercom,
-        signOutIntercom,
-        trackIntercom,
-        openIntercom,
-        unreadCount,
-      }}
-    >
+    <IntercomContext.Provider value={value}>
       {children}
     </IntercomContext.Provider>
   );

@@ -8,6 +8,7 @@ import React, {
   FunctionComponent,
   useContext,
   useEffect,
+  useMemo,
   useState,
 } from 'react';
 
@@ -383,22 +384,37 @@ const SendBirdPostsProvider: FunctionComponent<SendBirdPostsProviderProps> = ({
     if (userChat?.userId) storageDB().then(getPosts);
   }, [userChat?.userId, limit]);
 
+  const value = useMemo(
+    () => ({
+      posts,
+      comments,
+      loadingStorage,
+      loadingServer,
+      limit,
+      setLimit,
+      getPosts,
+      getFilteringUserInfo,
+      getPost,
+      toggleReaction,
+      sendNotification,
+    }),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [
+      posts,
+      comments,
+      loadingStorage,
+      loadingServer,
+      limit,
+      userChat,
+      userDB,
+      diagnosisType,
+      api,
+      sdk,
+    ],
+  );
+
   return (
-    <sendBirdPostsContext.Provider
-      value={{
-        posts,
-        comments,
-        loadingStorage,
-        loadingServer,
-        limit,
-        setLimit,
-        getPosts,
-        getFilteringUserInfo,
-        getPost,
-        toggleReaction,
-        sendNotification,
-      }}
-    >
+    <sendBirdPostsContext.Provider value={value}>
       {children}
     </sendBirdPostsContext.Provider>
   );

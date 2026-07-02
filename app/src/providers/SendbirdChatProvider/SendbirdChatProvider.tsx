@@ -627,25 +627,40 @@ const SendbirdChatProvider: FunctionComponent<SendbirdChatProviderProps> = ({
     };
   }, [userChat]);
 
+  const value = useMemo(
+    () => ({
+      userChat,
+      groupChannels,
+      messages,
+      members,
+      friends,
+      blockedUsers,
+      limit,
+      getChannels,
+      setLimit,
+      loadMessages,
+      getMember,
+      addBlockedUser,
+      removeBlockedUser,
+      getFriends,
+    }),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [
+      userChat,
+      groupChannels,
+      messages,
+      members,
+      friends,
+      blockedUsers,
+      limit,
+      userDB,
+      api,
+      sdk,
+    ],
+  );
+
   return (
-    <sendbirdChatContext.Provider
-      value={{
-        userChat,
-        groupChannels,
-        messages,
-        members,
-        friends,
-        blockedUsers,
-        limit,
-        getChannels,
-        setLimit,
-        loadMessages,
-        getMember,
-        addBlockedUser,
-        removeBlockedUser,
-        getFriends,
-      }}
-    >
+    <sendbirdChatContext.Provider value={value}>
       {children}
     </sendbirdChatContext.Provider>
   );

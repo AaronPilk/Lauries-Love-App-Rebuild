@@ -1,4 +1,9 @@
-import React, { FunctionComponent, useContext, useEffect } from 'react';
+import React, {
+  FunctionComponent,
+  useContext,
+  useEffect,
+  useMemo,
+} from 'react';
 import axios, { AxiosRequestConfig } from 'axios';
 import qs from 'qs';
 import { Audio, InterruptionModeAndroid, InterruptionModeIOS } from 'expo-av';
@@ -94,7 +99,10 @@ const ApiProvider: FunctionComponent<ApiProviderProps> = ({ children }) => {
     });
   }, []);
 
-  return <apiContext.Provider value={{ api }}>{children}</apiContext.Provider>;
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  const value = useMemo(() => ({ api }), [jwtTokenUser]);
+
+  return <apiContext.Provider value={value}>{children}</apiContext.Provider>;
 };
 
 export const useApiProvider = () => useContext(apiContext);

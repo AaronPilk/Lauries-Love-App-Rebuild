@@ -70,6 +70,10 @@ import { toLocalizedDateString } from 'utils/formatDate';
 import { PostImageWithLoading } from '../components/PostImageWithLoading/PostImageWithLoading';
 import { getOriginalImageUrl } from 'utils/imageUrlUtils';
 
+// backend v2
+import { SUPABASE_ENABLED } from 'services/supabase/backend.config';
+import { sendComment, toggleReactionOn } from 'services/supabase/supabase.social';
+
 type HomeTabPostProps = {
   navigation: NativeStackNavigationProp<RootHomeTabParamList>;
 };
@@ -196,6 +200,44 @@ const HomeTabPost: FunctionComponent<HomeTabPostProps> = ({ navigation }) => {
   const onCreateComment = async () => {
     if (!route.params?.channelUrl) return;
 
+    if (SUPABASE_ENABLED) {
+      const channelUrl = route.params.channelUrl;
+      const text = postText;
+      setPostText('');
+      inputRef.current?.blur();
+      try {
+        const msg = (await sendComment(
+          channelUrl,
+          text,
+        )) as unknown as BaseMessageSendBirdType;
+        setComments(state => [...state, msg]);
+        // comment counts come from the DB — no commentQty metadata update
+
+        const senderId = userDB?.cognitoId || '';
+        const notifierId = (
+          userPost?.sender?.metaData as MetaDataUserSendBirdType
+        )?.id;
+        if (notifierId && senderId && notifierId !== senderId)
+          sendNotification({
+            notifierId,
+            senderId,
+            entityType: 'NEW_MESSAGE',
+            type: 'post',
+            content: text,
+            meta: {
+              id: channelUrl,
+              redirectUrl: `sendbird/${channelUrl}`,
+            },
+          });
+      } catch (error) {
+        customShowError({
+          error,
+          showToast,
+        });
+      }
+      return;
+    }
+
     const tempComment = {
       ...DEFAULT_COMMENT_POST,
       messageId: new Date().getTime(),
@@ -273,6 +315,58 @@ const HomeTabPost: FunctionComponent<HomeTabPostProps> = ({ navigation }) => {
     message: BaseMessageSendBirdType,
     isPost = false,
   ) => {
+    if (SUPABASE_ENABLED) {
+      if (!route.params?.channelUrl) return;
+      const channelUrl = route.params.channelUrl;
+      const myId = userDB?.cognitoId || userID || '';
+      if (!myId) return;
+
+      if (isPost) {
+        try {
+          const likers = await toggleReactionOn('post', channelUrl);
+          setLikes(likers.length);
+          setIsLiked(likers.includes(myId));
+
+          const notifierId = (
+            userPost?.sender?.metaData as MetaDataUserSendBirdType
+          )?.id;
+          if (
+            likers.includes(myId) &&
+            notifierId &&
+            notifierId !== myId
+          )
+            sendNotification({
+              notifierId,
+              senderId: myId,
+              entityType: 'NEW_LIKE',
+              type: 'post',
+              content: message.message,
+              meta: {
+                id: channelUrl,
+                redirectUrl: `sendbird/${channelUrl}`,
+              },
+            });
+        } catch (error) {
+          if (__DEV__) console.warn('Error toggling post like', error);
+        }
+        return;
+      }
+
+      // Comment reaction: optimistic local toggle; the posts provider's
+      // toggleReaction is already Supabase-aware (writes + refreshes).
+      setReactions(state => {
+        const ids = state[message.messageId] || [];
+        return {
+          ...state,
+          [message.messageId]: ids.includes(myId)
+            ? ids.filter(id => id !== myId)
+            : [...ids, myId],
+        };
+      });
+      toggleReaction(channelUrl, message);
+      return;
+    }
+
     if (!route.params?.channelUrl || !userID) return;
 
     const isReactionTemp = reactions[message.messageId]?.some(

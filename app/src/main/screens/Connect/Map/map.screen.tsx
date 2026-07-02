@@ -490,8 +490,9 @@ export default function MapScreen() {
           }}
           style={{
             opacity: 1,
-            backgroundColor:
-              Platform.OS === 'ios' ? colors.primary[600] : colors.transparent,
+            // Rebuild fix: was primary[600] on iOS — painted a solid square
+            // behind the pin image (visible on Apple Maps).
+            backgroundColor: colors.transparent,
           }}
           onPress={e => {
             e.stopPropagation();

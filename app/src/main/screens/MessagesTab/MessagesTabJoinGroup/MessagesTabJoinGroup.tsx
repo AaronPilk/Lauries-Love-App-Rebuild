@@ -18,8 +18,13 @@ import { useIntercom } from 'providers/IntercomProvider/IntercomProvider';
 import BackgroundScreen from 'components/BackgroundScreen/BackgroundScreen';
 import ListChannelsMessageTab from '../components/ListChannelsMessageTab/ListChannelsMessageTab';
 import { useSendBirdPostsProvider } from 'providers/SendBirdPostsProvider/SendBirdPostsProvider';
+import { useSendbirdChatProvider } from 'providers/SendbirdChatProvider/SendbirdChatProvider';
 import { GroupChannelSendBirdType } from 'providers/SendbirdChatProvider/SendbirdChatProvider.types';
 import { RootMessagesTabParamList } from 'main/navigators/MessagesTabStacks/MessagesTabStacks.types';
+
+// backend v2
+import { SUPABASE_ENABLED } from 'services/supabase/backend.config';
+import { joinGroup, getAllGroups } from 'services/supabase/supabase.social';
 
 type MessagesTabJoinGroupProps = {
   navigation: NativeStackNavigationProp<RootMessagesTabParamList>;
@@ -37,8 +42,30 @@ const MessagesTabJoinGroup: FunctionComponent<MessagesTabJoinGroupProps> = ({
   >([]);
   const [loading, setLoading] = useState(true);
   const { getFilteringUserInfo } = useSendBirdPostsProvider();
+  const { groupChannels, getChannels } = useSendbirdChatProvider();
 
   const getChannelsHandler = async () => {
+    if (SUPABASE_ENABLED) {
+      setLoading(true);
+      try {
+        const all = (await getAllGroups()) as unknown as
+          GroupChannelSendBirdType[];
+        const joinedUrls = new Set(groupChannels.map(c => c.url));
+        const filtered = all.filter(
+          channel =>
+            !joinedUrls.has(channel.url) &&
+            (!search ||
+              channel.name.toLowerCase().includes(search.toLowerCase())),
+        );
+        setChannels(filtered);
+      } catch (error) {
+        if (__DEV__) console.warn('getChannelsHandler', error);
+      } finally {
+        setLoading(false);
+      }
+      return;
+    }
+
     const queryPublic = sdk.groupChannel.createPublicGroupChannelListQuery({
       includeEmpty: true,
       limit: 50,
@@ -78,6 +105,22 @@ const MessagesTabJoinGroup: FunctionComponent<MessagesTabJoinGroupProps> = ({
 
   const onPressJoinGroup = useCallback(
     async (channelUrl: string) => {
+      if (SUPABASE_ENABLED) {
+        try {
+          await joinGroup(channelUrl);
+          await getChannels(); // refresh joined groups in the chat provider
+
+          trackIntercom('join_group');
+
+          navigation.navigate(PATHS_MESSAGES_TAB.messagesTabChatGroup, {
+            channelUrl,
+          });
+        } catch (error) {
+          if (__DEV__) console.warn('onPressJoinGroup', error);
+        }
+        return;
+      }
+
       try {
         const channel = await sdk.groupChannel.getChannel(channelUrl);
         if (!channel) return;
@@ -100,7 +143,7 @@ const MessagesTabJoinGroup: FunctionComponent<MessagesTabJoinGroupProps> = ({
         if (__DEV__) console.warn('onPressJoinGroup', error);
       }
     },
-    [sdk, trackIntercom, navigation],
+    [sdk, trackIntercom, navigation, getChannels],
   );
 
   const onPressCreateGroup = useCallback(

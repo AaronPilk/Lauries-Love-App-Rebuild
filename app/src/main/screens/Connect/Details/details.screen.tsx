@@ -49,6 +49,7 @@ import {
 // constants
 import { PATHS_MESSAGES_TAB } from 'main/navigators/paths';
 import { DEFAULT_ERROR_NOT_FOUND_USER_SENDBIRD } from 'providers/SendbirdChatProvider/SendbirdChatProvider.constants';
+import { SUPABASE_ENABLED } from 'services/supabase/backend.config';
 
 // hooks
 import { useCountry } from 'presentation/hooks';
@@ -168,6 +169,15 @@ const DetailsScreen: FunctionComponent<DetailsScreenProps> = ({
   }
 
   async function handleMessage() {
+    if (SUPABASE_ENABLED) {
+      // Direct (1:1) chat is not migrated to Backend V2 yet.
+      showToast({
+        type: 'info',
+        message: 'Direct messages are coming soon',
+      });
+      return null;
+    }
+
     try {
       setIsLoadingSendMessage(true);
       const userId = await getUserId(user.id);

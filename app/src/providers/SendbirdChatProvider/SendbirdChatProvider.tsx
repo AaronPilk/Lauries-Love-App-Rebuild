@@ -21,7 +21,10 @@ import { customShowError } from 'utils/other';
 import { appConfig } from 'main/config/app.config';
 import { getFileStorageAmplify } from 'utils/amplify-storage';
 import { platformServices } from './SendbirdChatProvider.config';
-import { SOCIAL_STUBBED } from 'services/supabase/backend.config';
+import { MOCK_ENABLED } from 'mocks/mock.config';
+import { SUPABASE_ENABLED, SOCIAL_STUBBED } from 'services/supabase/backend.config';
+import { getMyGroupChannels } from 'services/supabase/supabase.social';
+import { supabase } from 'services/supabase/client';
 import {
   getMockChatChannels,
   MOCK_CHAT_MESSAGES,
@@ -91,7 +94,37 @@ const SendbirdChatProvider: FunctionComponent<SendbirdChatProviderProps> = ({
   const userID = useMemo(() => userDB?.cognitoId || null, [userDB?.cognitoId]);
 
   const getFriends = async () => {
-    if (SOCIAL_STUBBED) {
+    if (SUPABASE_ENABLED) {
+      try {
+        const { data: auth } = await supabase.auth.getUser();
+        const me = auth.user?.id;
+        if (!me) return [];
+        const { data } = await supabase
+          .from('friendships')
+          .select(
+            'status, requester:profiles!friendships_requester_id_fkey(id, first_name, display_name), addressee:profiles!friendships_addressee_id_fkey(id, first_name, display_name)',
+          )
+          .eq('status', 'accepted')
+          .or(`requester_id.eq.${me},addressee_id.eq.${me}`);
+        const list = (data ?? []).map((f: any) => {
+          const other = f.requester?.id === me ? f.addressee : f.requester;
+          return {
+            userId: other?.id,
+            nickname: other?.display_name || other?.first_name || 'Member',
+            plainProfileUrl: '',
+            isActive: true,
+            metaData: { id: other?.id },
+            status: 'accepted',
+          } as unknown as UserSendBirdType;
+        });
+        setFriends(list);
+        return list;
+      } catch (error) {
+        if (__DEV__) console.warn('supabase getFriends error', error);
+        return [];
+      }
+    }
+    if (MOCK_ENABLED) {
       setFriends(MOCK_FRIENDS);
       return MOCK_FRIENDS as UserSendBirdType[];
     }
@@ -152,7 +185,27 @@ const SendbirdChatProvider: FunctionComponent<SendbirdChatProviderProps> = ({
   };
 
   const getChannels = async () => {
-    if (SOCIAL_STUBBED) {
+    if (SUPABASE_ENABLED) {
+      try {
+        const channels = await getMyGroupChannels();
+        const memberMap = channels.reduce<Record<string, UserSendBirdType>>(
+          (acc: any, channel: any) => {
+            (channel.members || []).forEach((m: any) => {
+              if (m.userId !== userChat?.userId) acc[m.userId] = m;
+            });
+            return acc;
+          },
+          {},
+        );
+        setMembers(memberMap);
+        setGroupChannels(channels as any);
+        getFriends();
+      } catch (error) {
+        if (__DEV__) console.warn('supabase getChannels error', error);
+      }
+      return;
+    }
+    if (MOCK_ENABLED) {
       // Fake chat + JOINED group channels (joins during signup register via
       // joinMockGroup); members map keyed by userId.
       const channels = getMockChatChannels();
@@ -431,9 +484,21 @@ const SendbirdChatProvider: FunctionComponent<SendbirdChatProviderProps> = ({
       : undefined;
     if (!userID) return;
 
+    if (SUPABASE_ENABLED) {
+      // Real identity, no Sendbird: chat user mirrors the Supabase profile.
+      if (userDB?.id)
+        setUserChat({
+          userId: userDB.id,
+          nickname: userDB.displayName || userDB.firstName || 'Me',
+          plainProfileUrl: '',
+          isActive: true,
+          metaData: { id: userDB.id },
+        } as unknown as UserSendBirdType);
+      return;
+    }
     // Mock mode: no real Sendbird app — skip connect and use the fake chat
     // user so chat/feed/groups screens render with mock data.
-    if (SOCIAL_STUBBED) {
+    if (MOCK_ENABLED) {
       setUserChat(MOCK_USER_CHAT);
       return;
     }

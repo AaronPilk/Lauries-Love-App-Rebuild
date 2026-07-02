@@ -26,6 +26,11 @@ import { RootHomeTabParamList } from 'main/navigators/HomeTabStacks/HomeTabStack
 import { useToastProvider } from 'providers/ToastProvider/ToastProvider';
 import { useUserDBProvider } from 'providers/UserDBProvider/UserDBProvider';
 import { useDBProvider } from 'providers/DBProvider/DBProvider';
+import { useSendBirdPostsProvider } from 'providers/SendBirdPostsProvider/SendBirdPostsProvider';
+
+// backend v2
+import { SUPABASE_ENABLED } from 'services/supabase/backend.config';
+import { createPost } from 'services/supabase/supabase.social';
 
 // components
 import BackgroundScreen from 'components/BackgroundScreen/BackgroundScreen';
@@ -73,6 +78,7 @@ const HomeTabCreatePost: FunctionComponent<HomeTabCreatePostProps> = ({
   const inputRef = useRef<TextInput>(null);
   const [isLoading, setIsLoading] = useState(false);
   const { userDB } = useUserDBProvider();
+  const { getPosts } = useSendBirdPostsProvider();
   const {
     db: { diagnosisType },
   } = useDBProvider();
@@ -95,6 +101,18 @@ const HomeTabCreatePost: FunctionComponent<HomeTabCreatePostProps> = ({
   const onCreatePost = async () => {
     setIsLoading(true);
     try {
+      if (SUPABASE_ENABLED) {
+        // Backend V2: text post into the posts table. Group targeting is not
+        // wired from this screen yet (no single group id available), so
+        // 'group' visibility falls back to 'all'. Image upload lands with the
+        // Supabase media pipeline.
+        await createPost(postText, null);
+        getPosts();
+        navigation.navigate(PATHS_HOME_TAB.homeTabMain);
+        setIsLoading(false);
+        return;
+      }
+
       const roleName = userDB?.role?.description?.toLowerCase();
       const cancerType = (userDB?.diagnosisTypes ?? [])
         .map(id => {
@@ -184,6 +202,7 @@ const HomeTabCreatePost: FunctionComponent<HomeTabCreatePostProps> = ({
         });
     } catch (error) {
       if (__DEV__) console.warn('Error creating post', error);
+      setIsLoading(false);
       customShowError({
         error,
         showToast,

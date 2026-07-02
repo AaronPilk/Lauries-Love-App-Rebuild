@@ -314,10 +314,55 @@ export async function supabaseApi(
         .order('created_at', { ascending: false })
         .limit(100);
       if (error) throw error;
+      const rows = data ?? [];
+
+      // Resolve senders in one query -> actor firstName/profilePicture.
+      const senderIds = [
+        ...new Set(rows.map(r => r.sender_id).filter(Boolean)),
+      ];
+      const sendersById: Record<string, any> = {};
+      if (senderIds.length > 0) {
+        const { data: senders } = await supabase
+          .from('profiles')
+          .select('id, first_name, display_name, avatar_path')
+          .in('id', senderIds);
+        (senders ?? []).forEach(s => {
+          sendersById[s.id] = s;
+        });
+      }
+
+      // Legacy shape the Notifications screen reads:
+      //   item.active, item.id, item.createdAt,
+      //   item.notificationObject.entity            -> senderId
+      //   item.notificationObject.entityType.description -> NEW_LIKE | NEW_MESSAGE | NEW_FRIEND_REQUEST
+      //   item.notificationObject.content
+      //   item.notificationObject.redirect          -> 'sendbird/<postId>/<messageId>'
+      //   item.notificationObject.notificationChange.actor.{firstName, profilePicture}
+      const mapped = rows.map(row => {
+        const sender = row.sender_id ? sendersById[row.sender_id] : null;
+        return {
+          id: row.id,
+          active: row.read_at == null,
+          createdAt: row.created_at,
+          notificationObject: {
+            entity: row.sender_id ?? '',
+            entityType: { description: row.entity_type ?? '' },
+            content: row.content ?? '',
+            redirect: row.meta?.redirectUrl ?? '',
+            notificationChange: {
+              actor: {
+                firstName: sender?.first_name || sender?.display_name || '',
+                profilePicture: sender?.avatar_path ?? '',
+              },
+            },
+          },
+        };
+      });
+
       return {
-        data: data ?? [],
-        count: data?.length ?? 0,
-        total: data?.length ?? 0,
+        data: mapped,
+        count: mapped.length,
+        total: mapped.length,
         page: 1,
         pageCount: 1,
       };

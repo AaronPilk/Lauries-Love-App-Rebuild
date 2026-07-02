@@ -14,7 +14,14 @@ import React, {
 
 import { useDBProvider } from 'providers/DBProvider/DBProvider';
 import { useApiProvider } from 'providers/ApiProvider/ApiProvider';
-import { SOCIAL_STUBBED } from 'services/supabase/backend.config';
+import { MOCK_ENABLED } from 'mocks/mock.config';
+import { SUPABASE_ENABLED } from 'services/supabase/backend.config';
+import {
+  getFeedPosts,
+  getPostComments,
+  getRecommendedGroups,
+  toggleReactionOn,
+} from 'services/supabase/supabase.social';
 import {
   MOCK_COMMENTS,
   MOCK_GROUPS,
@@ -120,7 +127,19 @@ const SendBirdPostsProvider: FunctionComponent<SendBirdPostsProviderProps> = ({
   };
 
   const getFilteringUserInfo = async () => {
-    if (SOCIAL_STUBBED) {
+    if (SUPABASE_ENABLED) {
+      const roleName = userDB?.role?.description?.toLowerCase() || '';
+      const diagNames = (userDB?.diagnosisTypes || []).map(
+        (d: any) => d?.description?.toLowerCase() || '',
+      );
+      try {
+        return (await getRecommendedGroups([roleName, ...diagNames])) as any;
+      } catch (error) {
+        if (__DEV__) console.warn('getRecommendedGroups error', error);
+        return [];
+      }
+    }
+    if (MOCK_ENABLED) {
       // Return recommendation groups matching the user's role/diagnosis the
       // same way the real Sendbird query would (name-contains, lowercase).
       const roleName = userDB?.role?.description?.toLowerCase() || '';
@@ -216,7 +235,20 @@ const SendBirdPostsProvider: FunctionComponent<SendBirdPostsProviderProps> = ({
   };
 
   const getPosts = async () => {
-    if (SOCIAL_STUBBED) {
+    if (SUPABASE_ENABLED) {
+      try {
+        setLoadingServer(true);
+        const feed = await getFeedPosts();
+        setPosts(feed as any);
+      } catch (error) {
+        if (__DEV__) console.warn('getFeedPosts error', error);
+      } finally {
+        setLoadingStorage(false);
+        setLoadingServer(false);
+      }
+      return;
+    }
+    if (MOCK_ENABLED) {
       setPosts(MOCK_POSTS as any);
       setComments(MOCK_COMMENTS as any);
       setLoadingStorage(false);
@@ -278,7 +310,16 @@ const SendBirdPostsProvider: FunctionComponent<SendBirdPostsProviderProps> = ({
     postUrl: string,
     messagePost: BaseMessageSendBirdType,
   ) => {
-    if (SOCIAL_STUBBED) return; // demo: reactions are local-only in components
+    if (SUPABASE_ENABLED) {
+      try {
+        await toggleReactionOn('comment', String(messagePost.messageId));
+        await getPost(postUrl); // refresh reactions
+      } catch (error) {
+        if (__DEV__) console.warn('toggle comment reaction error', error);
+      }
+      return;
+    }
+    if (MOCK_ENABLED) return; // demo: reactions are local-only in components
     if (!postUrl || !userChat) return;
     setLoadingServer(true);
 
@@ -311,7 +352,19 @@ const SendBirdPostsProvider: FunctionComponent<SendBirdPostsProviderProps> = ({
   };
 
   const getPost = async (channelUrl: string) => {
-    if (SOCIAL_STUBBED) {
+    if (SUPABASE_ENABLED) {
+      try {
+        const msgs = (await getPostComments(
+          channelUrl,
+        )) as BaseMessageSendBirdType[];
+        setComments(prev => ({ ...prev, [channelUrl]: msgs }));
+        return msgs;
+      } catch (error) {
+        if (__DEV__) console.warn('getPostComments error', error);
+        return [];
+      }
+    }
+    if (MOCK_ENABLED) {
       const mockMessages = (MOCK_COMMENTS[channelUrl] ??
         []) as BaseMessageSendBirdType[];
       setComments({ ...comments, [channelUrl]: mockMessages });
@@ -373,7 +426,11 @@ const SendBirdPostsProvider: FunctionComponent<SendBirdPostsProviderProps> = ({
   };
 
   useEffect(() => {
-    if (SOCIAL_STUBBED) {
+    if (SUPABASE_ENABLED) {
+      getPosts();
+      return;
+    }
+    if (MOCK_ENABLED) {
       // Mock mode: inject fake posts/comments directly, skip storage + server.
       setPosts(MOCK_POSTS as any);
       setComments(MOCK_COMMENTS as any);

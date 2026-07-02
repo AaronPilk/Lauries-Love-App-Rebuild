@@ -27,6 +27,7 @@ import {
   UserSendBirdType,
 } from 'providers/SendbirdChatProvider/SendbirdChatProvider.types';
 import { useCountry } from 'presentation/hooks';
+import { SUPABASE_ENABLED } from 'services/supabase/backend.config';
 
 type Props = {
   user: User;
@@ -148,6 +149,15 @@ export default React.memo(function UserCard({
   }
 
   async function handleMessage() {
+    if (SUPABASE_ENABLED) {
+      // Direct (1:1) chat is not migrated to Backend V2 yet.
+      showToast({
+        type: 'info',
+        message: 'Direct messages are coming soon',
+      });
+      return null;
+    }
+
     try {
       setIsLoadingSendMessage(true);
       const userId = await getUserId(user.id);

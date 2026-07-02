@@ -30,7 +30,9 @@ import { styles } from './recommended-groups.styles';
 import { GroupChannel } from '@sendbird/chat/groupChannel';
 import { useDBProvider } from 'providers/DBProvider/DBProvider';
 import { IconArrowLeft } from 'assets/icons-auto/components';
-import { SOCIAL_STUBBED } from 'services/supabase/backend.config';
+import { SUPABASE_ENABLED } from 'services/supabase/backend.config';
+import { joinGroup } from 'services/supabase/supabase.social';
+import { MOCK_ENABLED } from 'mocks/mock.config';
 import { joinMockGroup } from 'mocks/mock.sendbird';
 
 export default function RecommendedGroupsScreen() {
@@ -74,7 +76,9 @@ export default function RecommendedGroupsScreen() {
     try {
       for (const ch of channels) {
         if (selected[ch.url]) {
-          if (SOCIAL_STUBBED) {
+          if (SUPABASE_ENABLED) {
+            await joinGroup(ch.url); // Backend V2: group_members insert
+          } else if (MOCK_ENABLED) {
             joinMockGroup(ch.url); // registers so Groups/Messages show it
           } else {
             const channel = await sdk.groupChannel.getChannel(ch.url);

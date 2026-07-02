@@ -32,6 +32,10 @@ import PostFooter from '../PostFooter/PostFooter';
 import { PostImageWithLoading } from '../PostImageWithLoading/PostImageWithLoading';
 import { getOriginalImageUrl } from 'utils/imageUrlUtils';
 
+// backend v2
+import { SUPABASE_ENABLED } from 'services/supabase/backend.config';
+import { toggleReactionOn } from 'services/supabase/supabase.social';
+
 type PostHomeTabProps = {
   post: GroupChannelSendBirdType;
   onPressPost: (channelUrl: string, isNowOpenKeyboard?: boolean) => void;
@@ -116,6 +120,37 @@ const PostHomeTab: FunctionComponent<PostHomeTabProps> = ({
   }, [sdk, comment, post.url]);
 
   const toggleReactionUserMessage = useCallback(async () => {
+    if (SUPABASE_ENABLED) {
+      if (!post) return;
+      const myId = userDB?.cognitoId || userID || '';
+      if (!myId) return;
+
+      try {
+        const likers = await toggleReactionOn('post', post.url);
+        setLikes(likers.length);
+        setIsLiked(likers.includes(myId));
+
+        const notifierId = post.creator?.userId;
+        const senderId = myId;
+        if (notifierId && senderId && notifierId !== senderId) {
+          sendNotification({
+            notifierId,
+            senderId,
+            entityType: 'NEW_LIKE',
+            type: 'post',
+            content: message,
+            meta: {
+              id: post.url,
+              redirectUrl: `sendbird/${post.url}`,
+            },
+          });
+        }
+      } catch (error) {
+        if (__DEV__) console.warn('Error toggling reaction:', error);
+      }
+      return;
+    }
+
     if (!post || !userID) return;
 
     try {
@@ -171,7 +206,7 @@ const PostHomeTab: FunctionComponent<PostHomeTabProps> = ({
     } catch (error) {
       if (__DEV__) console.warn('Error toggling reaction:', error);
     }
-  }, [post, userID, sdk, message, sendNotification]);
+  }, [post, userID, sdk, message, sendNotification, userDB?.cognitoId]);
 
   // useEffect(() => {
   //   setMetadata(sdk, comment, post.url);

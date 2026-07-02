@@ -65,67 +65,67 @@
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
-		0388BA629556456FAA246A67 /* ObjektivMk1_Trial_LtIt.ttf */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = undefined; includeInIndex = 0; lastKnownFileType = unknown; name = ObjektivMk1_Trial_LtIt.ttf; path = ../assets/fonts/ObjektivMk1_Trial_LtIt.ttf; sourceTree = "<group>"; };
-		09AC00C4872C44169EBD569F /* HankenGrotesk-ExtraBold.ttf */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = undefined; includeInIndex = 0; lastKnownFileType = unknown; name = "HankenGrotesk-ExtraBold.ttf"; path = "../assets/fonts/hanken-grotesk/HankenGrotesk-ExtraBold.ttf"; sourceTree = "<group>"; };
-		09D00BD4D0AB4B7491B4E23F /* HankenGrotesk-Thin.ttf */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = undefined; includeInIndex = 0; lastKnownFileType = unknown; name = "HankenGrotesk-Thin.ttf"; path = "../assets/fonts/hanken-grotesk/HankenGrotesk-Thin.ttf"; sourceTree = "<group>"; };
-		0B01193E35034FFAAE38181A /* Behind The Nineties Regular.ttf */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = undefined; includeInIndex = 0; lastKnownFileType = unknown; name = "Behind The Nineties Regular.ttf"; path = "../assets/fonts/behind-the-nineties/Behind The Nineties Regular.ttf"; sourceTree = "<group>"; };
-		0C3984A51FBB4182B7936ACA /* ObjektivMk1_Trial_Md.ttf */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = undefined; includeInIndex = 0; lastKnownFileType = unknown; name = ObjektivMk1_Trial_Md.ttf; path = ../assets/fonts/ObjektivMk1_Trial_Md.ttf; sourceTree = "<group>"; };
+		0388BA629556456FAA246A67 /* ObjektivMk1_Trial_LtIt.ttf */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = ObjektivMk1_Trial_LtIt.ttf; path = ../assets/fonts/ObjektivMk1_Trial_LtIt.ttf; sourceTree = "<group>"; };
+		09AC00C4872C44169EBD569F /* HankenGrotesk-ExtraBold.ttf */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = "HankenGrotesk-ExtraBold.ttf"; path = "../assets/fonts/hanken-grotesk/HankenGrotesk-ExtraBold.ttf"; sourceTree = "<group>"; };
+		09D00BD4D0AB4B7491B4E23F /* HankenGrotesk-Thin.ttf */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = "HankenGrotesk-Thin.ttf"; path = "../assets/fonts/hanken-grotesk/HankenGrotesk-Thin.ttf"; sourceTree = "<group>"; };
+		0B01193E35034FFAAE38181A /* Behind The Nineties Regular.ttf */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = "Behind The Nineties Regular.ttf"; path = "../assets/fonts/behind-the-nineties/Behind The Nineties Regular.ttf"; sourceTree = "<group>"; };
+		0C3984A51FBB4182B7936ACA /* ObjektivMk1_Trial_Md.ttf */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = ObjektivMk1_Trial_Md.ttf; path = ../assets/fonts/ObjektivMk1_Trial_Md.ttf; sourceTree = "<group>"; };
 		13B07F961A680F5B00A75B9A /* LauriesLove.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = LauriesLove.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		13B07FB51A68108700A75B9A /* Images.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; name = Images.xcassets; path = LauriesLove/Images.xcassets; sourceTree = "<group>"; };
 		13B07FB61A68108700A75B9A /* Info.plist */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; name = Info.plist; path = LauriesLove/Info.plist; sourceTree = "<group>"; };
-		13BD4241601742FB80675F48 /* Behind The Nineties Extra Bold.ttf */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = undefined; includeInIndex = 0; lastKnownFileType = unknown; name = "Behind The Nineties Extra Bold.ttf"; path = "../assets/fonts/behind-the-nineties/Behind The Nineties Extra Bold.ttf"; sourceTree = "<group>"; };
-		15457DCCF8204503965DB6AC /* Behind The Nineties Medium.ttf */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = undefined; includeInIndex = 0; lastKnownFileType = unknown; name = "Behind The Nineties Medium.ttf"; path = "../assets/fonts/behind-the-nineties/Behind The Nineties Medium.ttf"; sourceTree = "<group>"; };
-		18C010C9871647D8A89E8AC3 /* HankenGrotesk-Medium.ttf */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = undefined; includeInIndex = 0; lastKnownFileType = unknown; name = "HankenGrotesk-Medium.ttf"; path = "../assets/fonts/hanken-grotesk/HankenGrotesk-Medium.ttf"; sourceTree = "<group>"; };
+		13BD4241601742FB80675F48 /* Behind The Nineties Extra Bold.ttf */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = "Behind The Nineties Extra Bold.ttf"; path = "../assets/fonts/behind-the-nineties/Behind The Nineties Extra Bold.ttf"; sourceTree = "<group>"; };
+		15457DCCF8204503965DB6AC /* Behind The Nineties Medium.ttf */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = "Behind The Nineties Medium.ttf"; path = "../assets/fonts/behind-the-nineties/Behind The Nineties Medium.ttf"; sourceTree = "<group>"; };
+		18C010C9871647D8A89E8AC3 /* HankenGrotesk-Medium.ttf */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = "HankenGrotesk-Medium.ttf"; path = "../assets/fonts/hanken-grotesk/HankenGrotesk-Medium.ttf"; sourceTree = "<group>"; };
 		22EE2BE9C362E5FE8F164D1D /* Pods_LauriesLove.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = Pods_LauriesLove.framework; sourceTree = BUILT_PRODUCTS_DIR; };
-		28ED1C8AA0624D9EAB9E547D /* ObjektivMk1_Trial_SBdIt.ttf */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = undefined; includeInIndex = 0; lastKnownFileType = unknown; name = ObjektivMk1_Trial_SBdIt.ttf; path = ../assets/fonts/ObjektivMk1_Trial_SBdIt.ttf; sourceTree = "<group>"; };
-		2ACA0EA6567D485C8B85AAFB /* Raleway-SemiBold.ttf */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = undefined; includeInIndex = 0; lastKnownFileType = unknown; name = "Raleway-SemiBold.ttf"; path = "../assets/fonts/raleway/Raleway-SemiBold.ttf"; sourceTree = "<group>"; };
-		2B96CF6ADA754C3A93365720 /* HankenGrotesk-ExtraLight.ttf */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = undefined; includeInIndex = 0; lastKnownFileType = unknown; name = "HankenGrotesk-ExtraLight.ttf"; path = "../assets/fonts/hanken-grotesk/HankenGrotesk-ExtraLight.ttf"; sourceTree = "<group>"; };
-		2DA620889D8B4BCF9644B511 /* Raleway-Black.ttf */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = undefined; includeInIndex = 0; lastKnownFileType = unknown; name = "Raleway-Black.ttf"; path = "../assets/fonts/raleway/Raleway-Black.ttf"; sourceTree = "<group>"; };
-		35C0491E56E845F2A5935421 /* Raleway-ExtraBold.ttf */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = undefined; includeInIndex = 0; lastKnownFileType = unknown; name = "Raleway-ExtraBold.ttf"; path = "../assets/fonts/raleway/Raleway-ExtraBold.ttf"; sourceTree = "<group>"; };
-		385580366A6B404F9616E7F3 /* ObjektivMk1_Trial_Hair.ttf */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = undefined; includeInIndex = 0; lastKnownFileType = unknown; name = ObjektivMk1_Trial_Hair.ttf; path = ../assets/fonts/ObjektivMk1_Trial_Hair.ttf; sourceTree = "<group>"; };
+		28ED1C8AA0624D9EAB9E547D /* ObjektivMk1_Trial_SBdIt.ttf */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = ObjektivMk1_Trial_SBdIt.ttf; path = ../assets/fonts/ObjektivMk1_Trial_SBdIt.ttf; sourceTree = "<group>"; };
+		2ACA0EA6567D485C8B85AAFB /* Raleway-SemiBold.ttf */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = "Raleway-SemiBold.ttf"; path = "../assets/fonts/raleway/Raleway-SemiBold.ttf"; sourceTree = "<group>"; };
+		2B96CF6ADA754C3A93365720 /* HankenGrotesk-ExtraLight.ttf */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = "HankenGrotesk-ExtraLight.ttf"; path = "../assets/fonts/hanken-grotesk/HankenGrotesk-ExtraLight.ttf"; sourceTree = "<group>"; };
+		2DA620889D8B4BCF9644B511 /* Raleway-Black.ttf */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = "Raleway-Black.ttf"; path = "../assets/fonts/raleway/Raleway-Black.ttf"; sourceTree = "<group>"; };
+		35C0491E56E845F2A5935421 /* Raleway-ExtraBold.ttf */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = "Raleway-ExtraBold.ttf"; path = "../assets/fonts/raleway/Raleway-ExtraBold.ttf"; sourceTree = "<group>"; };
+		385580366A6B404F9616E7F3 /* ObjektivMk1_Trial_Hair.ttf */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = ObjektivMk1_Trial_Hair.ttf; path = ../assets/fonts/ObjektivMk1_Trial_Hair.ttf; sourceTree = "<group>"; };
 		4075D27D985B0159CDBD89B3 /* Pods-LauriesLove.release.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-LauriesLove.release.xcconfig"; path = "Target Support Files/Pods-LauriesLove/Pods-LauriesLove.release.xcconfig"; sourceTree = "<group>"; };
-		47E2083965B5468192546CF4 /* Behind The Nineties Italic.ttf */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = undefined; includeInIndex = 0; lastKnownFileType = unknown; name = "Behind The Nineties Italic.ttf"; path = "../assets/fonts/behind-the-nineties/Behind The Nineties Italic.ttf"; sourceTree = "<group>"; };
-		4A705A66BA22AA26E121EF6B /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; includeInIndex = 1; name = PrivacyInfo.xcprivacy; path = LauriesLove/PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
-		548BB1888DFE47F283E1907B /* ObjektivMk1_Trial_XBd.ttf */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = undefined; includeInIndex = 0; lastKnownFileType = unknown; name = ObjektivMk1_Trial_XBd.ttf; path = ../assets/fonts/ObjektivMk1_Trial_XBd.ttf; sourceTree = "<group>"; };
-		6423B26B22E944ADB295F27F /* HankenGrotesk-Black.ttf */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = undefined; includeInIndex = 0; lastKnownFileType = unknown; name = "HankenGrotesk-Black.ttf"; path = "../assets/fonts/hanken-grotesk/HankenGrotesk-Black.ttf"; sourceTree = "<group>"; };
+		47E2083965B5468192546CF4 /* Behind The Nineties Italic.ttf */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = "Behind The Nineties Italic.ttf"; path = "../assets/fonts/behind-the-nineties/Behind The Nineties Italic.ttf"; sourceTree = "<group>"; };
+		4A705A66BA22AA26E121EF6B /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xml; name = PrivacyInfo.xcprivacy; path = LauriesLove/PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
+		548BB1888DFE47F283E1907B /* ObjektivMk1_Trial_XBd.ttf */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = ObjektivMk1_Trial_XBd.ttf; path = ../assets/fonts/ObjektivMk1_Trial_XBd.ttf; sourceTree = "<group>"; };
+		6423B26B22E944ADB295F27F /* HankenGrotesk-Black.ttf */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = "HankenGrotesk-Black.ttf"; path = "../assets/fonts/hanken-grotesk/HankenGrotesk-Black.ttf"; sourceTree = "<group>"; };
 		668634B770CC45E5AE2A5704 /* GoogleService-Info.plist */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 4; includeInIndex = 0; lastKnownFileType = text.plist.xml; name = "GoogleService-Info.plist"; path = "LauriesLove/GoogleService-Info.plist"; sourceTree = "<group>"; };
-		68F363DF1223471984C10503 /* ObjektivVF_Trial_Wght.ttf */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = undefined; includeInIndex = 0; lastKnownFileType = unknown; name = ObjektivVF_Trial_Wght.ttf; path = ../assets/fonts/ObjektivVF_Trial_Wght.ttf; sourceTree = "<group>"; };
-		6A82936881F5494D9BB0FF3E /* Behind The Nineties Bold.ttf */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = undefined; includeInIndex = 0; lastKnownFileType = unknown; name = "Behind The Nineties Bold.ttf"; path = "../assets/fonts/behind-the-nineties/Behind The Nineties Bold.ttf"; sourceTree = "<group>"; };
-		6B30F96F8C104696A7577EB2 /* ObjektivMk1_Trial_XBdIt.ttf */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = undefined; includeInIndex = 0; lastKnownFileType = unknown; name = ObjektivMk1_Trial_XBdIt.ttf; path = ../assets/fonts/ObjektivMk1_Trial_XBdIt.ttf; sourceTree = "<group>"; };
+		68F363DF1223471984C10503 /* ObjektivVF_Trial_Wght.ttf */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = ObjektivVF_Trial_Wght.ttf; path = ../assets/fonts/ObjektivVF_Trial_Wght.ttf; sourceTree = "<group>"; };
+		6A82936881F5494D9BB0FF3E /* Behind The Nineties Bold.ttf */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = "Behind The Nineties Bold.ttf"; path = "../assets/fonts/behind-the-nineties/Behind The Nineties Bold.ttf"; sourceTree = "<group>"; };
+		6B30F96F8C104696A7577EB2 /* ObjektivMk1_Trial_XBdIt.ttf */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = ObjektivMk1_Trial_XBdIt.ttf; path = ../assets/fonts/ObjektivMk1_Trial_XBdIt.ttf; sourceTree = "<group>"; };
 		7103A230E557515392A36C5A /* Pods-LauriesLove.debug.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-LauriesLove.debug.xcconfig"; path = "Target Support Files/Pods-LauriesLove/Pods-LauriesLove.debug.xcconfig"; sourceTree = "<group>"; };
-		720B7E25A5484043AC83730A /* ObjektivMk1_Trial_HairIt.ttf */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = undefined; includeInIndex = 0; lastKnownFileType = unknown; name = ObjektivMk1_Trial_HairIt.ttf; path = ../assets/fonts/ObjektivMk1_Trial_HairIt.ttf; sourceTree = "<group>"; };
+		720B7E25A5484043AC83730A /* ObjektivMk1_Trial_HairIt.ttf */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = ObjektivMk1_Trial_HairIt.ttf; path = ../assets/fonts/ObjektivMk1_Trial_HairIt.ttf; sourceTree = "<group>"; };
 		7563F2BE71E6403E8A6C69D9 /* noop-file.swift */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 4; includeInIndex = 0; lastKnownFileType = sourcecode.swift; name = "noop-file.swift"; path = "LauriesLove/noop-file.swift"; sourceTree = "<group>"; };
-		76246FB93C534932801AA967 /* Raleway-Medium.ttf */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = undefined; includeInIndex = 0; lastKnownFileType = unknown; name = "Raleway-Medium.ttf"; path = "../assets/fonts/raleway/Raleway-Medium.ttf"; sourceTree = "<group>"; };
-		789052F981CB4E2692336AD3 /* ObjektivMk1_Trial_Blk.ttf */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = undefined; includeInIndex = 0; lastKnownFileType = unknown; name = ObjektivMk1_Trial_Blk.ttf; path = ../assets/fonts/ObjektivMk1_Trial_Blk.ttf; sourceTree = "<group>"; };
-		7C364A4C9C0542E3B0FDF4DA /* Raleway-Light.ttf */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = undefined; includeInIndex = 0; lastKnownFileType = unknown; name = "Raleway-Light.ttf"; path = "../assets/fonts/raleway/Raleway-Light.ttf"; sourceTree = "<group>"; };
-		84569A60EB7340658470E1D6 /* ObjektivVF_Trial_WghtItal.ttf */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = undefined; includeInIndex = 0; lastKnownFileType = unknown; name = ObjektivVF_Trial_WghtItal.ttf; path = ../assets/fonts/ObjektivVF_Trial_WghtItal.ttf; sourceTree = "<group>"; };
-		8B3FB88D7B614083B812DEAE /* Raleway-Regular.ttf */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = undefined; includeInIndex = 0; lastKnownFileType = unknown; name = "Raleway-Regular.ttf"; path = "../assets/fonts/raleway/Raleway-Regular.ttf"; sourceTree = "<group>"; };
-		8ED1AD821A7044749CEDD5C7 /* Behind The Nineties Black.ttf */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = undefined; includeInIndex = 0; lastKnownFileType = unknown; name = "Behind The Nineties Black.ttf"; path = "../assets/fonts/behind-the-nineties/Behind The Nineties Black.ttf"; sourceTree = "<group>"; };
-		A03BF4D018DC4D1EA19162E9 /* ObjektivMk1_Trial_Lt.ttf */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = undefined; includeInIndex = 0; lastKnownFileType = unknown; name = ObjektivMk1_Trial_Lt.ttf; path = ../assets/fonts/ObjektivMk1_Trial_Lt.ttf; sourceTree = "<group>"; };
-		A63509EF5E5D4A1EABD8B176 /* ObjektivMk1_Trial_BdIt.ttf */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = undefined; includeInIndex = 0; lastKnownFileType = unknown; name = ObjektivMk1_Trial_BdIt.ttf; path = ../assets/fonts/ObjektivMk1_Trial_BdIt.ttf; sourceTree = "<group>"; };
+		76246FB93C534932801AA967 /* Raleway-Medium.ttf */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = "Raleway-Medium.ttf"; path = "../assets/fonts/raleway/Raleway-Medium.ttf"; sourceTree = "<group>"; };
+		789052F981CB4E2692336AD3 /* ObjektivMk1_Trial_Blk.ttf */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = ObjektivMk1_Trial_Blk.ttf; path = ../assets/fonts/ObjektivMk1_Trial_Blk.ttf; sourceTree = "<group>"; };
+		7C364A4C9C0542E3B0FDF4DA /* Raleway-Light.ttf */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = "Raleway-Light.ttf"; path = "../assets/fonts/raleway/Raleway-Light.ttf"; sourceTree = "<group>"; };
+		84569A60EB7340658470E1D6 /* ObjektivVF_Trial_WghtItal.ttf */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = ObjektivVF_Trial_WghtItal.ttf; path = ../assets/fonts/ObjektivVF_Trial_WghtItal.ttf; sourceTree = "<group>"; };
+		8B3FB88D7B614083B812DEAE /* Raleway-Regular.ttf */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = "Raleway-Regular.ttf"; path = "../assets/fonts/raleway/Raleway-Regular.ttf"; sourceTree = "<group>"; };
+		8ED1AD821A7044749CEDD5C7 /* Behind The Nineties Black.ttf */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = "Behind The Nineties Black.ttf"; path = "../assets/fonts/behind-the-nineties/Behind The Nineties Black.ttf"; sourceTree = "<group>"; };
+		A03BF4D018DC4D1EA19162E9 /* ObjektivMk1_Trial_Lt.ttf */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = ObjektivMk1_Trial_Lt.ttf; path = ../assets/fonts/ObjektivMk1_Trial_Lt.ttf; sourceTree = "<group>"; };
+		A63509EF5E5D4A1EABD8B176 /* ObjektivMk1_Trial_BdIt.ttf */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = ObjektivMk1_Trial_BdIt.ttf; path = ../assets/fonts/ObjektivMk1_Trial_BdIt.ttf; sourceTree = "<group>"; };
 		AA286B85B6C04FC6940260E9 /* SplashScreen.storyboard */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = file.storyboard; name = SplashScreen.storyboard; path = LauriesLove/SplashScreen.storyboard; sourceTree = "<group>"; };
-		B4D40CC7897D4347B3E2A86D /* Behind The Nineties Semi Bold.ttf */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = undefined; includeInIndex = 0; lastKnownFileType = unknown; name = "Behind The Nineties Semi Bold.ttf"; path = "../assets/fonts/behind-the-nineties/Behind The Nineties Semi Bold.ttf"; sourceTree = "<group>"; };
-		B64E294CA7ED4A888534A052 /* Raleway-ExtraLight.ttf */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = undefined; includeInIndex = 0; lastKnownFileType = unknown; name = "Raleway-ExtraLight.ttf"; path = "../assets/fonts/raleway/Raleway-ExtraLight.ttf"; sourceTree = "<group>"; };
+		B4D40CC7897D4347B3E2A86D /* Behind The Nineties Semi Bold.ttf */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = "Behind The Nineties Semi Bold.ttf"; path = "../assets/fonts/behind-the-nineties/Behind The Nineties Semi Bold.ttf"; sourceTree = "<group>"; };
+		B64E294CA7ED4A888534A052 /* Raleway-ExtraLight.ttf */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = "Raleway-ExtraLight.ttf"; path = "../assets/fonts/raleway/Raleway-ExtraLight.ttf"; sourceTree = "<group>"; };
 		BA12B252484037CE24ACACCE /* ExpoModulesProvider.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = ExpoModulesProvider.swift; path = "Pods/Target Support Files/Pods-LauriesLove/ExpoModulesProvider.swift"; sourceTree = "<group>"; };
 		BB2F792C24A3F905000567C9 /* Expo.plist */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; path = Expo.plist; sourceTree = "<group>"; };
-		BBB005BA6FAE4D6882348C42 /* HankenGrotesk-SemiBold.ttf */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = undefined; includeInIndex = 0; lastKnownFileType = unknown; name = "HankenGrotesk-SemiBold.ttf"; path = "../assets/fonts/hanken-grotesk/HankenGrotesk-SemiBold.ttf"; sourceTree = "<group>"; };
-		BCB28F86CB804301A3B72697 /* ObjektivMk1_Trial_Bd.ttf */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = undefined; includeInIndex = 0; lastKnownFileType = unknown; name = ObjektivMk1_Trial_Bd.ttf; path = ../assets/fonts/ObjektivMk1_Trial_Bd.ttf; sourceTree = "<group>"; };
-		C059E66703F1441BB43D2E5D /* ObjektivMk1_Trial_MdIt.ttf */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = undefined; includeInIndex = 0; lastKnownFileType = unknown; name = ObjektivMk1_Trial_MdIt.ttf; path = ../assets/fonts/ObjektivMk1_Trial_MdIt.ttf; sourceTree = "<group>"; };
-		C426BA3AF72B4B92BD72C4CA /* HankenGrotesk-Bold.ttf */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = undefined; includeInIndex = 0; lastKnownFileType = unknown; name = "HankenGrotesk-Bold.ttf"; path = "../assets/fonts/hanken-grotesk/HankenGrotesk-Bold.ttf"; sourceTree = "<group>"; };
-		C958452761CF4D0AAB8050CC /* Autography.otf */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = undefined; includeInIndex = 0; lastKnownFileType = unknown; name = Autography.otf; path = ../assets/fonts/Autography.otf; sourceTree = "<group>"; };
-		CA89E97B9E744B9A993D5CFB /* ObjektivMk1_Trial_ThIt.ttf */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = undefined; includeInIndex = 0; lastKnownFileType = unknown; name = ObjektivMk1_Trial_ThIt.ttf; path = ../assets/fonts/ObjektivMk1_Trial_ThIt.ttf; sourceTree = "<group>"; };
-		CCD1F6DADAFA4F7AB8D8CC92 /* ObjektivMk1_Trial_SBd.ttf */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = undefined; includeInIndex = 0; lastKnownFileType = unknown; name = ObjektivMk1_Trial_SBd.ttf; path = ../assets/fonts/ObjektivMk1_Trial_SBd.ttf; sourceTree = "<group>"; };
-		CFDE41DEE028493FADCEFB4A /* ObjektivMk1_Trial_BlkIt.ttf */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = undefined; includeInIndex = 0; lastKnownFileType = unknown; name = ObjektivMk1_Trial_BlkIt.ttf; path = ../assets/fonts/ObjektivMk1_Trial_BlkIt.ttf; sourceTree = "<group>"; };
-		D732BE0F579946C09C439DBF /* Raleway-Thin.ttf */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = undefined; includeInIndex = 0; lastKnownFileType = unknown; name = "Raleway-Thin.ttf"; path = "../assets/fonts/raleway/Raleway-Thin.ttf"; sourceTree = "<group>"; };
-		E8EEDF6CB2864C0E95661CF2 /* Raleway-Bold.ttf */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = undefined; includeInIndex = 0; lastKnownFileType = unknown; name = "Raleway-Bold.ttf"; path = "../assets/fonts/raleway/Raleway-Bold.ttf"; sourceTree = "<group>"; };
-		EAC0EFC0B6BD4008AE4F24A7 /* HankenGrotesk-Light.ttf */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = undefined; includeInIndex = 0; lastKnownFileType = unknown; name = "HankenGrotesk-Light.ttf"; path = "../assets/fonts/hanken-grotesk/HankenGrotesk-Light.ttf"; sourceTree = "<group>"; };
+		BBB005BA6FAE4D6882348C42 /* HankenGrotesk-SemiBold.ttf */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = "HankenGrotesk-SemiBold.ttf"; path = "../assets/fonts/hanken-grotesk/HankenGrotesk-SemiBold.ttf"; sourceTree = "<group>"; };
+		BCB28F86CB804301A3B72697 /* ObjektivMk1_Trial_Bd.ttf */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = ObjektivMk1_Trial_Bd.ttf; path = ../assets/fonts/ObjektivMk1_Trial_Bd.ttf; sourceTree = "<group>"; };
+		C059E66703F1441BB43D2E5D /* ObjektivMk1_Trial_MdIt.ttf */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = ObjektivMk1_Trial_MdIt.ttf; path = ../assets/fonts/ObjektivMk1_Trial_MdIt.ttf; sourceTree = "<group>"; };
+		C426BA3AF72B4B92BD72C4CA /* HankenGrotesk-Bold.ttf */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = "HankenGrotesk-Bold.ttf"; path = "../assets/fonts/hanken-grotesk/HankenGrotesk-Bold.ttf"; sourceTree = "<group>"; };
+		C958452761CF4D0AAB8050CC /* Autography.otf */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = Autography.otf; path = ../assets/fonts/Autography.otf; sourceTree = "<group>"; };
+		CA89E97B9E744B9A993D5CFB /* ObjektivMk1_Trial_ThIt.ttf */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = ObjektivMk1_Trial_ThIt.ttf; path = ../assets/fonts/ObjektivMk1_Trial_ThIt.ttf; sourceTree = "<group>"; };
+		CCD1F6DADAFA4F7AB8D8CC92 /* ObjektivMk1_Trial_SBd.ttf */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = ObjektivMk1_Trial_SBd.ttf; path = ../assets/fonts/ObjektivMk1_Trial_SBd.ttf; sourceTree = "<group>"; };
+		CFDE41DEE028493FADCEFB4A /* ObjektivMk1_Trial_BlkIt.ttf */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = ObjektivMk1_Trial_BlkIt.ttf; path = ../assets/fonts/ObjektivMk1_Trial_BlkIt.ttf; sourceTree = "<group>"; };
+		D732BE0F579946C09C439DBF /* Raleway-Thin.ttf */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = "Raleway-Thin.ttf"; path = "../assets/fonts/raleway/Raleway-Thin.ttf"; sourceTree = "<group>"; };
+		E8EEDF6CB2864C0E95661CF2 /* Raleway-Bold.ttf */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = "Raleway-Bold.ttf"; path = "../assets/fonts/raleway/Raleway-Bold.ttf"; sourceTree = "<group>"; };
+		EAC0EFC0B6BD4008AE4F24A7 /* HankenGrotesk-Light.ttf */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = "HankenGrotesk-Light.ttf"; path = "../assets/fonts/hanken-grotesk/HankenGrotesk-Light.ttf"; sourceTree = "<group>"; };
 		ED297162215061F000B7C4FE /* JavaScriptCore.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = JavaScriptCore.framework; path = System/Library/Frameworks/JavaScriptCore.framework; sourceTree = SDKROOT; };
-		EF93C0E4A6084A5EBA8F1F39 /* ObjektivMk1_Trial_It.ttf */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = undefined; includeInIndex = 0; lastKnownFileType = unknown; name = ObjektivMk1_Trial_It.ttf; path = ../assets/fonts/ObjektivMk1_Trial_It.ttf; sourceTree = "<group>"; };
-		F0C4BD72CF094B4C9838624D /* ObjektivMk1_Trial_Rg.ttf */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = undefined; includeInIndex = 0; lastKnownFileType = unknown; name = ObjektivMk1_Trial_Rg.ttf; path = ../assets/fonts/ObjektivMk1_Trial_Rg.ttf; sourceTree = "<group>"; };
+		EF93C0E4A6084A5EBA8F1F39 /* ObjektivMk1_Trial_It.ttf */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = ObjektivMk1_Trial_It.ttf; path = ../assets/fonts/ObjektivMk1_Trial_It.ttf; sourceTree = "<group>"; };
+		F0C4BD72CF094B4C9838624D /* ObjektivMk1_Trial_Rg.ttf */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = ObjektivMk1_Trial_Rg.ttf; path = ../assets/fonts/ObjektivMk1_Trial_Rg.ttf; sourceTree = "<group>"; };
 		F11748412D0307B40044C1D9 /* AppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = AppDelegate.swift; path = LauriesLove/AppDelegate.swift; sourceTree = "<group>"; };
 		F11748442D0722820044C1D9 /* LauriesLove-Bridging-Header.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = "LauriesLove-Bridging-Header.h"; path = "LauriesLove/LauriesLove-Bridging-Header.h"; sourceTree = "<group>"; };
-		F1AAE8F8F8C149BBB9AA36EB /* ObjektivMk1_Trial_Th.ttf */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = undefined; includeInIndex = 0; lastKnownFileType = unknown; name = ObjektivMk1_Trial_Th.ttf; path = ../assets/fonts/ObjektivMk1_Trial_Th.ttf; sourceTree = "<group>"; };
-		F2914DC9F2464AA896B057DF /* HankenGrotesk-Regular.ttf */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = undefined; includeInIndex = 0; lastKnownFileType = unknown; name = "HankenGrotesk-Regular.ttf"; path = "../assets/fonts/hanken-grotesk/HankenGrotesk-Regular.ttf"; sourceTree = "<group>"; };
+		F1AAE8F8F8C149BBB9AA36EB /* ObjektivMk1_Trial_Th.ttf */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = ObjektivMk1_Trial_Th.ttf; path = ../assets/fonts/ObjektivMk1_Trial_Th.ttf; sourceTree = "<group>"; };
+		F2914DC9F2464AA896B057DF /* HankenGrotesk-Regular.ttf */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = "HankenGrotesk-Regular.ttf"; path = "../assets/fonts/hanken-grotesk/HankenGrotesk-Regular.ttf"; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -216,7 +216,6 @@
 				09D00BD4D0AB4B7491B4E23F /* HankenGrotesk-Thin.ttf */,
 			);
 			name = Resources;
-			path = "";
 			sourceTree = "<group>";
 		};
 		6FF3A74AE6F849C159A69998 /* Pods */ = {
@@ -225,7 +224,6 @@
 				7103A230E557515392A36C5A /* Pods-LauriesLove.debug.xcconfig */,
 				4075D27D985B0159CDBD89B3 /* Pods-LauriesLove.release.xcconfig */,
 			);
-			name = Pods;
 			path = Pods;
 			sourceTree = "<group>";
 		};
@@ -325,7 +323,7 @@
 					};
 				};
 			};
-			buildConfigurationList = 83CBB9FA1A601CBA00E9B192 /* Build configuration list for PBXProject "LauriesLove" */;
+			buildConfigurationList = 83CBB9FA1A601CBA00E9B192 /* Build configuration list for PBXProject "laurieslove" */;
 			compatibilityVersion = "Xcode 3.2";
 			developmentRegion = en;
 			hasScannedForEncodings = 0;
@@ -497,14 +495,6 @@
 				"${PODS_CONFIGURATION_BUILD_DIR}/React-Core/React-Core_privacy.bundle",
 				"${PODS_CONFIGURATION_BUILD_DIR}/React-cxxreact/React-cxxreact_privacy.bundle",
 				"${PODS_CONFIGURATION_BUILD_DIR}/Sentry/Sentry.bundle",
-				"${PODS_CONFIGURATION_BUILD_DIR}/Stripe/StripeBundle.bundle",
-				"${PODS_CONFIGURATION_BUILD_DIR}/StripeCore/StripeCoreBundle.bundle",
-				"${PODS_CONFIGURATION_BUILD_DIR}/StripeFinancialConnections/StripeFinancialConnectionsBundle.bundle",
-				"${PODS_CONFIGURATION_BUILD_DIR}/StripePaymentSheet/StripePaymentSheetBundle.bundle",
-				"${PODS_CONFIGURATION_BUILD_DIR}/StripePayments/StripePaymentsBundle.bundle",
-				"${PODS_CONFIGURATION_BUILD_DIR}/StripePayments/Stripe3DS2.bundle",
-				"${PODS_CONFIGURATION_BUILD_DIR}/StripePaymentsUI/StripePaymentsUIBundle.bundle",
-				"${PODS_CONFIGURATION_BUILD_DIR}/StripeUICore/StripeUICoreBundle.bundle",
 				"${PODS_CONFIGURATION_BUILD_DIR}/boost/boost_privacy.bundle",
 				"${PODS_CONFIGURATION_BUILD_DIR}/glog/glog_privacy.bundle",
 				"${PODS_CONFIGURATION_BUILD_DIR}/intercom-react-native/IntercomFramework.bundle",
@@ -564,14 +554,6 @@
 				"${TARGET_BUILD_DIR}/${UNLOCALIZED_RESOURCES_FOLDER_PATH}/React-Core_privacy.bundle",
 				"${TARGET_BUILD_DIR}/${UNLOCALIZED_RESOURCES_FOLDER_PATH}/React-cxxreact_privacy.bundle",
 				"${TARGET_BUILD_DIR}/${UNLOCALIZED_RESOURCES_FOLDER_PATH}/Sentry.bundle",
-				"${TARGET_BUILD_DIR}/${UNLOCALIZED_RESOURCES_FOLDER_PATH}/StripeBundle.bundle",
-				"${TARGET_BUILD_DIR}/${UNLOCALIZED_RESOURCES_FOLDER_PATH}/StripeCoreBundle.bundle",
-				"${TARGET_BUILD_DIR}/${UNLOCALIZED_RESOURCES_FOLDER_PATH}/StripeFinancialConnectionsBundle.bundle",
-				"${TARGET_BUILD_DIR}/${UNLOCALIZED_RESOURCES_FOLDER_PATH}/StripePaymentSheetBundle.bundle",
-				"${TARGET_BUILD_DIR}/${UNLOCALIZED_RESOURCES_FOLDER_PATH}/StripePaymentsBundle.bundle",
-				"${TARGET_BUILD_DIR}/${UNLOCALIZED_RESOURCES_FOLDER_PATH}/Stripe3DS2.bundle",
-				"${TARGET_BUILD_DIR}/${UNLOCALIZED_RESOURCES_FOLDER_PATH}/StripePaymentsUIBundle.bundle",
-				"${TARGET_BUILD_DIR}/${UNLOCALIZED_RESOURCES_FOLDER_PATH}/StripeUICoreBundle.bundle",
 				"${TARGET_BUILD_DIR}/${UNLOCALIZED_RESOURCES_FOLDER_PATH}/boost_privacy.bundle",
 				"${TARGET_BUILD_DIR}/${UNLOCALIZED_RESOURCES_FOLDER_PATH}/glog_privacy.bundle",
 				"${TARGET_BUILD_DIR}/${UNLOCALIZED_RESOURCES_FOLDER_PATH}/IntercomFramework.bundle",
@@ -688,6 +670,7 @@
 				CLANG_ENABLE_MODULES = YES;
 				CODE_SIGN_ENTITLEMENTS = LauriesLove/LauriesLove.entitlements;
 				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = 5F5C5G25Y6;
 				ENABLE_BITCODE = NO;
 				GCC_PREPROCESSOR_DEFINITIONS = (
 					"$(inherited)",
@@ -706,7 +689,7 @@
 					"-lc++",
 				);
 				OTHER_SWIFT_FLAGS = "$(inherited) -D EXPO_CONFIGURATION_DEBUG";
-				PRODUCT_BUNDLE_IDENTIFIER = com.SMv587dd8da82c.app;
+				PRODUCT_BUNDLE_IDENTIFIER = com.aaronpilk.laurieslove;
 				PRODUCT_NAME = LauriesLove;
 				SWIFT_OBJC_BRIDGING_HEADER = "LauriesLove/LauriesLove-Bridging-Header.h";
 				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
@@ -724,6 +707,7 @@
 				CLANG_ENABLE_MODULES = YES;
 				CODE_SIGN_ENTITLEMENTS = LauriesLove/LauriesLove.entitlements;
 				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = 5F5C5G25Y6;
 				INFOPLIST_FILE = LauriesLove/Info.plist;
 				IPHONEOS_DEPLOYMENT_TARGET = 15.1;
 				LD_RUNPATH_SEARCH_PATHS = (
@@ -737,7 +721,7 @@
 					"-lc++",
 				);
 				OTHER_SWIFT_FLAGS = "$(inherited) -D EXPO_CONFIGURATION_RELEASE";
-				PRODUCT_BUNDLE_IDENTIFIER = com.SMv587dd8da82c.app;
+				PRODUCT_BUNDLE_IDENTIFIER = com.aaronpilk.laurieslove;
 				PRODUCT_NAME = LauriesLove;
 				SWIFT_OBJC_BRIDGING_HEADER = "LauriesLove/LauriesLove-Bridging-Header.h";
 				SWIFT_VERSION = 5.0;
@@ -904,7 +888,7 @@
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
 		};
-		83CBB9FA1A601CBA00E9B192 /* Build configuration list for PBXProject "LauriesLove" */ = {
+		83CBB9FA1A601CBA00E9B192 /* Build configuration list for PBXProject "laurieslove" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				83CBBA201A601CBA00E9B192 /* Debug */,

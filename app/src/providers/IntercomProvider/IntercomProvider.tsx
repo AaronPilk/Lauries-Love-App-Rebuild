@@ -11,6 +11,7 @@ import Intercom, {
 } from '@intercom/intercom-react-native';
 
 import { useApiProvider } from 'providers/ApiProvider/ApiProvider';
+import { MOCK_ENABLED } from 'mocks/mock.config';
 
 interface IntercomContextType {
   signInIntercom: (attributes: UserAttributes, token: string) => Promise<void>;
@@ -33,6 +34,7 @@ export const IntercomProvider = ({ children }: { children: ReactNode }) => {
     { userId, email }: UserAttributes,
     token: string,
   ) {
+    if (MOCK_ENABLED) return; // no Intercom in mock mode
     try {
       const userHash: string | null = await api('/users/intercom/user-hash', {
         config: {
@@ -54,6 +56,7 @@ export const IntercomProvider = ({ children }: { children: ReactNode }) => {
   }
 
   function updateIntercom(attributes: UserAttributes) {
+    if (MOCK_ENABLED) return;
     try {
       Intercom.updateUser(attributes);
     } catch (error) {
@@ -62,6 +65,7 @@ export const IntercomProvider = ({ children }: { children: ReactNode }) => {
   }
 
   function signOutIntercom() {
+    if (MOCK_ENABLED) return;
     try {
       Intercom.logout();
     } catch (error) {
@@ -70,6 +74,7 @@ export const IntercomProvider = ({ children }: { children: ReactNode }) => {
   }
 
   function trackIntercom(event: string) {
+    if (MOCK_ENABLED) return;
     try {
       Intercom.logEvent(event, { completed: true });
     } catch (error) {
@@ -78,6 +83,7 @@ export const IntercomProvider = ({ children }: { children: ReactNode }) => {
   }
 
   function openIntercom() {
+    if (MOCK_ENABLED) return;
     try {
       Intercom.present();
     } catch (error) {

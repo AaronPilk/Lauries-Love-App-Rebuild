@@ -29,7 +29,6 @@ import InfoModal from '../components/InfoModal/InfoModal';
 import FiltersModal from '../components/FiltersModal/FiltersModal';
 import { useUserDBProvider } from 'providers/UserDBProvider/UserDBProvider';
 import { useGetUsersReq } from 'presentation/services/react-query/user.query';
-import { MOCK_ENABLED } from 'mocks/mock.config';
 import { useCountry } from 'presentation/hooks';
 import {
   IconBars3,
@@ -523,12 +522,11 @@ export default function MapScreen() {
       <View style={{ flex: 1 }}>
         <MapView
           ref={mapRef}
-          // Mock mode: no Google Maps key on iOS -> Google tiles never load
-          // (blank map). Apple Maps needs no key, so fall back to the default
-          // provider there. Android + real builds keep Google.
-          provider={
-            MOCK_ENABLED && Platform.OS === 'ios' ? undefined : PROVIDER_GOOGLE
-          }
+          // iOS: Apple Maps (no key needed). The Google Maps iOS key is a
+          // stripped placeholder in native code (AppDelegate), so Google
+          // renders blank gray tiles regardless of env values. Revisit only
+          // if a real Google key gets wired natively. Android keeps Google.
+          provider={Platform.OS === 'ios' ? undefined : PROVIDER_GOOGLE}
           style={styles.map}
           initialRegion={initialRegion}
           onRegionChangeComplete={handleRegionChangeComplete}

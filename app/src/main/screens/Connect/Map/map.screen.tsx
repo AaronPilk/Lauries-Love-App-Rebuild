@@ -29,6 +29,7 @@ import InfoModal from '../components/InfoModal/InfoModal';
 import FiltersModal from '../components/FiltersModal/FiltersModal';
 import { useUserDBProvider } from 'providers/UserDBProvider/UserDBProvider';
 import { useGetUsersReq } from 'presentation/services/react-query/user.query';
+import { MOCK_ENABLED } from 'mocks/mock.config';
 import { useCountry } from 'presentation/hooks';
 import {
   IconBars3,
@@ -133,7 +134,6 @@ export default function MapScreen() {
   const [region, setRegion] = useState<Region>();
   const [isShowMarkers, setIsShowMarkers] = useState(false);
   const [countRender, setCountRender] = useState(0);
-  const [tracksView, setTracksView] = useState(true);
 
   function offsetOverlappingMarkers(users: User[]) {
     const locationGroups: { [key: string]: User[] } = {};
@@ -303,9 +303,7 @@ export default function MapScreen() {
       );
     });
 
-    setTracksView(true);
     setFriends(filtered);
-    setTimeout(() => setTracksView(false), 200);
   }, [
     designation,
     age,
@@ -437,8 +435,8 @@ export default function MapScreen() {
         mapRef.current.animateToRegion(target, 1000);
       }
     }
-
-    setTracksView(true);
+    // Rebuild fix (P1 perf): no setTracksView(true) here — static image markers
+    // never need view tracking, and toggling it re-rendered every marker.
   }, [isFocused]);
 
   useEffect(() => {
@@ -462,7 +460,12 @@ export default function MapScreen() {
       <View style={{ flex: 1 }}>
         <MapView
           ref={mapRef}
-          provider={PROVIDER_GOOGLE}
+          // Mock mode: no Google Maps key on iOS -> Google tiles never load
+          // (blank map). Apple Maps needs no key, so fall back to the default
+          // provider there. Android + real builds keep Google.
+          provider={
+            MOCK_ENABLED && Platform.OS === 'ios' ? undefined : PROVIDER_GOOGLE
+          }
           style={styles.map}
           initialRegion={initialRegion}
           onRegionChangeComplete={handleRegionChangeComplete}
@@ -474,11 +477,11 @@ export default function MapScreen() {
               friend.location || friend.geoLocation ? (
                 <Marker
                   key={friend.id}
-                  tracksViewChanges={tracksView}
-                  onLayout={() => [
-                    setTracksView(true),
-                    setTimeout(() => setTracksView(false), 200),
-                  ]}
+                  // Rebuild fix (P1 perf): static image markers never need view
+                  // tracking. The old onLayout toggled tracksView state per
+                  // marker, re-rendering ALL markers in a feedback loop that
+                  // dragged the JS thread down app-wide.
+                  tracksViewChanges={false}
                   coordinate={{
                     latitude:
                       friend.location?.latitude ||

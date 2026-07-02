@@ -84,7 +84,11 @@ export const IntercomProvider = ({ children }: { children: ReactNode }) => {
   }
 
   function openIntercom() {
-    if (SOCIAL_STUBBED) return;
+    if (SOCIAL_STUBBED) {
+      // Support messenger needs an Intercom workspace (env wiring phase).
+      console.log('[intercom] support messenger not wired yet');
+      return;
+    }
     try {
       Intercom.present();
     } catch (error) {

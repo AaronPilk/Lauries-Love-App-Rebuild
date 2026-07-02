@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useSendbirdChat } from '@sendbird/uikit-react-native';
 import { z } from 'zod';
+import { SUPABASE_ENABLED } from 'services/supabase/backend.config';
 
 // types
 import { Notification } from './notifications.screen';
@@ -29,13 +30,21 @@ const useNotificationsScreen = () => {
 
     try {
       setIsLoading(true);
-      const query = sdk.createApplicationUserListQuery({
-        metaDataKeyFilter: 'id',
-        metaDataValuesFilter: [notificationSender.senderId],
-      });
-      const users = await query.next();
-      const user = users.length > 0 ? users[0] : null;
-      if (user) await sdk.addFriends([user.userId]);
+      // Sendbird is fully retired: friendship state lives in the friendships
+      // table. Legacy sdk mirror kept only for the legacy backend mode.
+      if (!SUPABASE_ENABLED) {
+        try {
+          const query = sdk.createApplicationUserListQuery({
+            metaDataKeyFilter: 'id',
+            metaDataValuesFilter: [notificationSender.senderId],
+          });
+          const users = await query.next();
+          const user = users.length > 0 ? users[0] : null;
+          if (user) await sdk.addFriends([user.userId]);
+        } catch (sdkError) {
+          if (__DEV__) console.warn('legacy sendbird addFriends', sdkError);
+        }
+      }
 
       const responseAccepted = await api(
         `/users/${notificationSender.senderId}/friend-requests`,

@@ -575,8 +575,10 @@ const MessagesTabChat: FunctionComponent<MessagesTabChatProps> = ({
                 onPress={() =>
                   friend?.userId &&
                   navigation.navigate(PATHS_MESSAGES_TAB.messagesTabDetails, {
-                    cognitoId: friend.metaData.cognitoId || '',
-                    userId: friend.metaData.id || '',
+                    // Supabase members carry no cognitoId in metaData — their
+                    // userId IS the profile id (and the members-map key).
+                    cognitoId: friend.metaData?.cognitoId || friend.userId,
+                    userId: friend.metaData?.id || friend.userId,
                     channelUrl: channel.url,
                   })
                 }

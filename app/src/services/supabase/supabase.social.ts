@@ -3,6 +3,7 @@
 // render unchanged — same trick as the mock layer, but backed by Postgres.
 
 import { supabase } from './client';
+import { publicUrlFor } from './supabase.storage';
 
 const uid = async () => {
   const { data } = await supabase.auth.getUser();
@@ -63,23 +64,35 @@ export async function getFeedPosts(limit = 50) {
       firstMessage: p.body,
       commentQty: p.comments?.[0]?.count ?? 0,
       likes: likesByPost[p.id] ?? [],
-      image_sm: p.image_path ?? '',
+      image_sm: publicUrlFor('post-images', p.image_path) ?? '',
       visibility: p.visibility,
       groupId: p.group_id,
     }),
   }));
 }
 
-export async function createPost(body: string, groupId?: string | null) {
+export async function createPost(
+  body: string,
+  options?: {
+    groupId?: string | null;
+    imagePath?: string | null;
+    /** legacy "My Groups" audience: role/diagnosis tag names, lowercased */
+    audienceTags?: string[];
+  },
+) {
   const me = await uid();
   if (!me) throw new Error('Not authenticated');
+  const isGroupAudience =
+    !!options?.groupId || (options?.audienceTags?.length ?? 0) > 0;
   const { data, error } = await supabase
     .from('posts')
     .insert({
       author_id: me,
       body,
-      visibility: groupId ? 'group' : 'all',
-      group_id: groupId ?? null,
+      visibility: isGroupAudience ? 'group' : 'all',
+      group_id: options?.groupId ?? null,
+      image_path: options?.imagePath ?? null,
+      audience_tags: (options?.audienceTags ?? []).map(t => t.toLowerCase()),
     })
     .select()
     .single();
@@ -196,20 +209,27 @@ export async function toggleReactionOn(
   const me = await uid();
   if (!me) throw new Error('Not authenticated');
 
-  const { data: existing } = await supabase
+  const { data: existing, error: findError } = await supabase
     .from('reactions')
     .select('id')
     .eq('entity_type', entityType)
     .eq('entity_id', entityId)
     .eq('user_id', me)
     .maybeSingle();
+  if (findError) throw findError;
 
   if (existing) {
-    await supabase.from('reactions').delete().eq('id', existing.id);
+    const { error } = await supabase
+      .from('reactions')
+      .delete()
+      .eq('id', existing.id);
+    if (error) throw error;
   } else {
-    await supabase
+    const { error } = await supabase
       .from('reactions')
       .insert({ entity_type: entityType, entity_id: entityId, user_id: me });
+    // 23505 = already liked (double-tap race) — treat as success.
+    if (error && error.code !== '23505') throw error;
   }
 
   const { data: rows } = await supabase

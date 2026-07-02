@@ -24,6 +24,9 @@ import AvatarMessagesTab from '../components/AvatarMessagesTab/AvatarMessagesTab
 // utils
 import { getFileStorageAmplify } from 'utils/amplify-storage';
 
+// backend v2
+import { SUPABASE_ENABLED } from 'services/supabase/backend.config';
+
 // icons
 import {
   IconBellOff,
@@ -55,6 +58,8 @@ const MessagesTabDetails: FunctionComponent<MessagesTabDetailsProps> = ({
     addBlockedUser,
     removeBlockedUser,
     getMember,
+    groupChannels,
+    userChat,
   } = useSendbirdChatProvider();
   const { getOnlyUserDBById } = useUserDBProvider();
   const route =
@@ -79,13 +84,13 @@ const MessagesTabDetails: FunctionComponent<MessagesTabDetailsProps> = ({
     const selectUserSendbird = selectMember;
     if (!selectUserSendbird && !selectUserDB) return null;
     const selectGender =
-      selectUserSendbird?.metaData.gender || selectUserDB?.gender || null;
+      selectUserSendbird?.metaData?.gender || selectUserDB?.gender || null;
     const selectCity =
-      selectUserSendbird?.metaData.city || selectUserDB?.state || null;
+      selectUserSendbird?.metaData?.city || selectUserDB?.state || null;
     const selectState =
-      selectUserSendbird?.metaData.state || selectUserDB?.state || null;
+      selectUserSendbird?.metaData?.state || selectUserDB?.state || null;
     const selectAge =
-      selectUserSendbird?.metaData.age || selectUserDB?.age || null;
+      selectUserSendbird?.metaData?.age || selectUserDB?.age || null;
     const gender = selectGender
       ? `${selectGender.slice(0, 1).toUpperCase()}${selectGender.slice(1)}`
       : null;
@@ -102,8 +107,9 @@ const MessagesTabDetails: FunctionComponent<MessagesTabDetailsProps> = ({
           }`
         : null;
     const age = selectAge;
-    return `${gender}${place ? ` • ${place}` : ''}${age ? ` • ${age}` : ''}`;
-  }, [selectMember]);
+    const parts = [gender, place, age ? `${age}` : null].filter(Boolean);
+    return parts.length > 0 ? parts.join(' • ') : null;
+  }, [selectMember, selectUserDB]);
 
   const handleBlockUser = async () => {
     if (!selectMember) return;
@@ -120,26 +126,53 @@ const MessagesTabDetails: FunctionComponent<MessagesTabDetailsProps> = ({
   };
 
   const getUserDBState = async () => {
-    const userDB = selectMember?.metaData.id
-      ? await getOnlyUserDBById(selectMember.metaData.id)
-      : null;
-    const profileImgUrl = userDB?.profilePicture
-      ? (await getFileStorageAmplify(userDB.profilePicture))?.href || null
-      : null;
-    if (userDB)
-      setSelectUserDB({
-        ...userDB,
-        profileImgUrl,
-      });
+    // Profile fetch via the REST layer (works in Supabase mode: /users/<id>).
+    const profileId = selectMember?.metaData?.id || selectMember?.userId;
+    const userDB = profileId ? await getOnlyUserDBById(profileId) : null;
+    if (!userDB) return;
+    let profileImgUrl: string | null = null;
+    if (userDB.profilePicture && !SUPABASE_ENABLED) {
+      // Legacy avatars live in S3; never worth blocking the screen on.
+      try {
+        profileImgUrl =
+          (await getFileStorageAmplify(userDB.profilePicture))?.href || null;
+      } catch (error) {
+        if (__DEV__) console.warn('Error resolving avatar url', error);
+      }
+    }
+    setSelectUserDB({
+      ...userDB,
+      profileImgUrl,
+    });
   };
 
   const getMemberState = async () => {
-    if (!route.params?.cognitoId) return;
+    const memberKey = route.params?.cognitoId || route.params?.userId || '';
     try {
-      const memberState = members[route.params.cognitoId];
-      if (!memberState) await getMember(route.params.cognitoId);
+      let memberState = memberKey ? members[memberKey] : undefined;
+      if (!memberState && route.params?.userId)
+        memberState = members[route.params.userId];
 
-      setSelectMember(members[route.params.cognitoId]);
+      // Supabase mode: the provider seeds members from channel data, but if
+      // the map misses, resolve the other participant straight from this
+      // conversation's members (metaData.id = profile id). No Sendbird calls.
+      if (!memberState && route.params?.channelUrl) {
+        const channel = groupChannels.find(
+          c => c.url === route.params?.channelUrl,
+        );
+        const other = channel?.members?.find(
+          m => m.userId !== userChat?.userId,
+        );
+        if (other) memberState = other as unknown as UserSendBirdType;
+      }
+
+      // Legacy fallback (getMember is a guarded no-op in Supabase/mock mode).
+      if (!memberState && memberKey) {
+        await getMember(memberKey);
+        memberState = members[memberKey];
+      }
+
+      if (memberState) setSelectMember(memberState);
     } catch (error) {
       if (__DEV__) console.warn('Error on get member', error);
     }
@@ -147,13 +180,26 @@ const MessagesTabDetails: FunctionComponent<MessagesTabDetailsProps> = ({
 
   useEffect(() => {
     getMemberState();
-  }, [members, route.params?.userId]);
+  }, [members, groupChannels, route.params?.cognitoId, route.params?.userId]);
 
   useEffect(() => {
     if (selectMember?.userId) getUserDBState();
   }, [selectMember?.userId]);
 
-  if (!selectMember) return null;
+  // Never render a dead white screen: keep the header + back button alive
+  // even while (or if) the member can't be resolved.
+  if (!selectMember)
+    return (
+      <BackgroundScreen type="messagesDetails">
+        <HeaderTabScreen
+          title="Details"
+          onPressLeft={() => navigation.goBack()}
+        />
+        <View style={[styles.container, { alignItems: 'center' }]}>
+          <ActivityIndicator color={colors.primary[600]} />
+        </View>
+      </BackgroundScreen>
+    );
   return (
     <>
       <BackgroundScreen type={isBlock ? 'friendBlock' : 'messagesDetails'}>
@@ -226,8 +272,9 @@ const MessagesTabDetails: FunctionComponent<MessagesTabDetailsProps> = ({
                 label={'Profile'}
                 onPress={() => {
                   navigation.navigate(PATHS_MESSAGES_TAB.messagesTabProfile, {
-                    userId: selectMember.metaData.id || '',
-                    cognitoId: selectMember.metaData.cognitoId || '',
+                    userId: selectMember.metaData?.id || selectMember.userId,
+                    cognitoId:
+                      selectMember.metaData?.cognitoId || selectMember.userId,
                   });
                 }}
               />

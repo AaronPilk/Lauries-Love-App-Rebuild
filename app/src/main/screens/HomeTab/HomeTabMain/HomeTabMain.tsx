@@ -121,7 +121,7 @@ const HomeTabMain: FunctionComponent<HomeTabMainProps> = ({ navigation }) => {
         const amountMessage = comments[post.url]?.length || 0;
         const amountReaction =
           comments[post.url]?.length > 0
-            ? comments[post.url][0].reactions.find(
+            ? comments[post.url][0].reactions?.find(
                 reaction => reaction.key === 'smile',
               )?.sampledUserIds?.length || 0
             : 0;
@@ -156,7 +156,15 @@ const HomeTabMain: FunctionComponent<HomeTabMainProps> = ({ navigation }) => {
       });
 
     return postsWithAmount;
-  }, [selectType, selectTime, posts, friends, friends.length, posts.length]);
+  }, [
+    selectType,
+    selectTime,
+    posts,
+    friends,
+    friends.length,
+    posts.length,
+    comments,
+  ]);
 
   const onPressPost = useCallback(
     (channelUrl: string, isNowOpenKeyboard: boolean = false) => {
@@ -214,7 +222,7 @@ const HomeTabMain: FunctionComponent<HomeTabMainProps> = ({ navigation }) => {
         const amountMessage = comments[post.url]?.length || 0;
         const amountReaction =
           comments[post.url]?.length > 0
-            ? comments[post.url][0].reactions.find(
+            ? comments[post.url][0].reactions?.find(
                 reaction => reaction.key === 'smile',
               )?.sampledUserIds?.length || 0
             : 0;

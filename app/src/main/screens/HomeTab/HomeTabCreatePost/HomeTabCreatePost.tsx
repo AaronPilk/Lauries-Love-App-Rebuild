@@ -31,6 +31,7 @@ import { useSendBirdPostsProvider } from 'providers/SendBirdPostsProvider/SendBi
 // backend v2
 import { SUPABASE_ENABLED } from 'services/supabase/backend.config';
 import { createPost } from 'services/supabase/supabase.social';
+import { uploadImageBase64 } from 'services/supabase/supabase.storage';
 
 // components
 import BackgroundScreen from 'components/BackgroundScreen/BackgroundScreen';
@@ -102,11 +103,26 @@ const HomeTabCreatePost: FunctionComponent<HomeTabCreatePostProps> = ({
     setIsLoading(true);
     try {
       if (SUPABASE_ENABLED) {
-        // Backend V2: text post into the posts table. Group targeting is not
-        // wired from this screen yet (no single group id available), so
-        // 'group' visibility falls back to 'all'. Image upload lands with the
-        // Supabase media pipeline.
-        await createPost(postText, null);
+        // Backend V2: optional photo -> Storage; 'My Groups' visibility ->
+        // audience tags (role + diagnosis names, legacy semantics).
+        let imagePath: string | null = null;
+        if (selectedImage) {
+          imagePath = await uploadImageBase64(
+            'post-images',
+            selectedImage.base64,
+            selectedImage.ext,
+          );
+        }
+        const audienceTags =
+          visibility === 'group'
+            ? ([
+                userDB?.role?.description,
+                ...((userDB?.diagnosisTypes ?? []) as any[]).map(
+                  d => d?.description,
+                ),
+              ].filter(Boolean) as string[])
+            : [];
+        await createPost(postText, { imagePath, audienceTags });
         getPosts();
         navigation.navigate(PATHS_HOME_TAB.homeTabMain);
         setIsLoading(false);
@@ -336,16 +352,13 @@ const HomeTabCreatePost: FunctionComponent<HomeTabCreatePostProps> = ({
                   <Text style={styles.footerText}>Anyone can reply</Text>
                 </View>
                 <TouchableOpacity
-                  disabled={
-                    !isActionButtonActive || isLoading || !!selectedImage
-                  }
+                  // Rebuild fix (user-reported): photo can be attached before
+                  // typing — was disabled until the text field had content.
+                  disabled={isLoading || !!selectedImage}
                   onPress={() => setShowUploadModal(true)}
                   style={[
                     styles.uploadButton,
-                    isActionButtonActive &&
-                      !isLoading &&
-                      !selectedImage &&
-                      styles.uploadActiveButton,
+                    !isLoading && !selectedImage && styles.uploadActiveButton,
                   ]}
                 >
                   <View style={styles.imageButtonInner}>

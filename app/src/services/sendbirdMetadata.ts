@@ -12,7 +12,7 @@ export async function setMetadata(
 
     // console.log('channelUrl', channelUrl);
 
-  if (messages[0]) {
+  if (messages && messages[0]) {
     try {
       const channel = await sdk.groupChannel.getChannel(channelUrl);
 

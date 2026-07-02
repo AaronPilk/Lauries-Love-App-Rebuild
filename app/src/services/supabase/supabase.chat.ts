@@ -154,7 +154,10 @@ export async function findOrCreateDirectConversation(otherProfileId: string) {
   return conv.id as string;
 }
 
-/** Messages for a conversation, oldest->newest, legacy message shapes. */
+/**
+ * Messages for a conversation — NEWEST FIRST (the chat screen renders an
+ * inverted FlatList, matching the old Sendbird reverse:true query).
+ */
 export async function getConversationMessages(conversationId: string, limit = 100) {
   const { data, error } = await supabase
     .from('messages')
@@ -162,7 +165,7 @@ export async function getConversationMessages(conversationId: string, limit = 10
       '*, sender:profiles!messages_sender_id_fkey(id, first_name, display_name, avatar_path)',
     )
     .eq('conversation_id', conversationId)
-    .order('created_at', { ascending: true })
+    .order('created_at', { ascending: false })
     .limit(limit);
   if (error) throw error;
   return (data ?? []).map(m => msgShape(m, m.sender));

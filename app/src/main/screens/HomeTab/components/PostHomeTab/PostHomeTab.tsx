@@ -116,26 +116,42 @@ const PostHomeTab: FunctionComponent<PostHomeTabProps> = ({
   }, [onPressPost, post.url]);
 
   const handlePressComment = useCallback(() => {
-    setMetadata(sdk, comment, post.url);
-  }, [sdk, comment, post.url]);
+    // Open the post detail with the comment composer focused — same params
+    // the "Read More" path uses. The legacy build only synced Sendbird
+    // channel metadata here (no navigation), which is a no-op in Supabase
+    // mode and must never call the Sendbird SDK.
+    if (!SUPABASE_ENABLED) setMetadata(sdk, comment, post.url);
+    onPressPost(post.url, true);
+  }, [sdk, comment, post.url, onPressPost]);
 
   const toggleReactionUserMessage = useCallback(async () => {
     if (SUPABASE_ENABLED) {
-      if (!post) return;
-      const myId = userDB?.cognitoId || userID || '';
-      if (!myId) return;
+      // No Sendbird here: identity is the Supabase profile id only.
+      if (!post?.url) return;
+      const myId = userDB?.cognitoId || userDB?.id || '';
+      if (!myId) {
+        if (__DEV__) console.warn('Like ignored: profile not loaded yet');
+        return;
+      }
+
+      // Optimistic flip so the heart responds instantly.
+      const wasLiked = isLiked;
+      const prevLikes = likes;
+      setIsLiked(!wasLiked);
+      setLikes(wasLiked ? Math.max(prevLikes - 1, 0) : prevLikes + 1);
 
       try {
         const likers = await toggleReactionOn('post', post.url);
+        // Reconcile with server truth.
+        const nowLiked = likers.includes(myId);
         setLikes(likers.length);
-        setIsLiked(likers.includes(myId));
+        setIsLiked(nowLiked);
 
         const notifierId = post.creator?.userId;
-        const senderId = myId;
-        if (notifierId && senderId && notifierId !== senderId) {
+        if (nowLiked && notifierId && notifierId !== myId) {
           sendNotification({
             notifierId,
-            senderId,
+            senderId: myId,
             entityType: 'NEW_LIKE',
             type: 'post',
             content: message,
@@ -146,6 +162,9 @@ const PostHomeTab: FunctionComponent<PostHomeTabProps> = ({
           });
         }
       } catch (error) {
+        // Revert the optimistic flip on failure.
+        setIsLiked(wasLiked);
+        setLikes(prevLikes);
         if (__DEV__) console.warn('Error toggling reaction:', error);
       }
       return;
@@ -206,7 +225,17 @@ const PostHomeTab: FunctionComponent<PostHomeTabProps> = ({
     } catch (error) {
       if (__DEV__) console.warn('Error toggling reaction:', error);
     }
-  }, [post, userID, sdk, message, sendNotification, userDB?.cognitoId]);
+  }, [
+    post,
+    userID,
+    sdk,
+    message,
+    sendNotification,
+    userDB?.cognitoId,
+    userDB?.id,
+    isLiked,
+    likes,
+  ]);
 
   // useEffect(() => {
   //   setMetadata(sdk, comment, post.url);

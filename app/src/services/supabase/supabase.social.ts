@@ -31,7 +31,7 @@ export async function getFeedPosts(limit = 50, before?: string) {
   let query = supabase
     .from('posts')
     .select(
-      '*, author:profiles!posts_author_id_fkey(id, first_name, display_name, avatar_path), comments(count)',
+      '*, author:profiles!posts_author_id_fkey(id, first_name, display_name, avatar_path), group:groups(name), comments(count)',
     );
   if (before) query = query.lt('created_at', before);
   const { data: posts, error } = await query
@@ -72,6 +72,8 @@ export async function getFeedPosts(limit = 50, before?: string) {
       image_sm: publicUrlFor('post-images', p.image_path) ?? '',
       visibility: p.visibility,
       groupId: p.group_id,
+      groupName: p.group?.name ?? null,
+      audienceTags: p.audience_tags ?? [],
     }),
   }));
 }

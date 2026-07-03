@@ -74,6 +74,18 @@ const PostHomeTab: FunctionComponent<PostHomeTabProps> = ({
   const message = postData.firstMessage;
   const comments = postData.commentQty || 0;
   const postImage: string = postData.image_sm ?? '';
+  // Group attribution: "in <Group Name>" for group-targeted posts, or the
+  // audience tags for community (My Groups) posts.
+  const groupLabel = useMemo(() => {
+    if (postData.visibility !== 'group') return null;
+    if (postData.groupName) return `in ${postData.groupName}`;
+    const tags: string[] = postData.audienceTags ?? [];
+    if (tags.length > 0)
+      return `in ${tags
+        .map((t: string) => t.replace(/\b\w/g, (c: string) => c.toUpperCase()))
+        .join(' \u00b7 ')}`;
+    return 'in My Groups';
+  }, [postData]);
 
   useEffect(() => {
     const likesArray = postData.likes;
@@ -279,6 +291,9 @@ const PostHomeTab: FunctionComponent<PostHomeTabProps> = ({
           <View style={styles.titleContainer}>
             <Text style={styles.withImageHeaderText} numberOfLines={1}>
               {message}
+              {groupLabel ? (
+                <Text style={styles.headerTime}> {groupLabel}</Text>
+              ) : null}
             </Text>
             <PostReadMoreButton onPress={handlePressPost} text="Read More" />
           </View>
@@ -332,6 +347,9 @@ const PostHomeTab: FunctionComponent<PostHomeTabProps> = ({
               >
                 <Text style={[styles.headerText]} numberOfLines={1}>
                   {post.creator?.nickname || ''}
+                  {groupLabel ? (
+                    <Text style={styles.headerTime}> {groupLabel}</Text>
+                  ) : null}
                 </Text>
               </TouchableOpacity>
             </View>

@@ -1,4 +1,4 @@
-import { useIsFocused } from '@react-navigation/native';
+import { useIsFocused, CommonActions } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import React, {
   FunctionComponent,
@@ -109,6 +109,17 @@ const HomeTabMain: FunctionComponent<HomeTabMainProps> = ({ navigation }) => {
                 .map(friend => friend.userId)
                 .includes(post.creator.userId),
           )
+        : SUPABASE_ENABLED
+        ? posts.filter(post => {
+            // Backend V2: the Groups tab = posts shared to groups/community
+            // audiences (visibility 'group'), not just posts by group members.
+            try {
+              const meta = post.data ? JSON.parse(post.data) : {};
+              return meta.visibility === 'group';
+            } catch {
+              return false;
+            }
+          })
         : posts.filter(
             post =>
               post.creator?.userId &&
@@ -188,10 +199,23 @@ const HomeTabMain: FunctionComponent<HomeTabMainProps> = ({ navigation }) => {
       // conversation with the official support account.
       try {
         const convId = await findOrCreateDirectConversation(SUPPORT_PROFILE_ID);
-        navigation.navigate('Messages', {
-          screen: 'messages-tab-chat',
-          params: { channelUrl: convId, userId: SUPPORT_PROFILE_ID },
-        } as never);
+        // Same stack shape the Connect flows use: Messages list UNDER the
+        // chat, so back returns to the list and the tab isn't hijacked.
+        navigation.dispatch(
+          CommonActions.navigate({
+            name: 'Messages',
+            state: {
+              routes: [
+                { name: 'messages-tab-main' },
+                {
+                  name: 'messages-tab-chat',
+                  params: { channelUrl: convId, userId: SUPPORT_PROFILE_ID },
+                },
+              ],
+              index: 1,
+            },
+          }),
+        );
       } catch (error) {
         if (__DEV__) console.warn('support chat error', error);
       }

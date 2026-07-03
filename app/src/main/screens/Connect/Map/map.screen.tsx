@@ -24,6 +24,7 @@ import useMap from './useMap';
 import styles from './map.styles';
 import colors from 'styles/colors';
 import Searchbar from 'components/Searchbar/Searchbar';
+import BrandedLoader from 'components/BrandedLoader/BrandedLoader';
 import UserCard from '../components/UserCard/UserCard';
 import InfoModal from '../components/InfoModal/InfoModal';
 import FiltersModal from '../components/FiltersModal/FiltersModal';
@@ -511,11 +512,9 @@ export default function MapScreen() {
   }, [isShowMarkers, friends]);
 
   if (isLoading || !isFocused) {
-    return (
-      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
-        <ActivityIndicator size="large" color={colors.primary[600]} />
-      </View>
-    );
+    // Branded loading screen (user-requested): logo + progress bar instead
+    // of a bare spinner — perceived speed while GPS + users resolve.
+    return <BrandedLoader />;
   }
 
   return (

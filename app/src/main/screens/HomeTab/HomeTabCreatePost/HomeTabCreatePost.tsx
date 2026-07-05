@@ -17,7 +17,7 @@ import {
   Image,
 } from 'react-native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import { useSendbirdChat } from '@sendbird/uikit-react-native';
+import { useSendbirdChat } from 'services/legacy-chat.shim';
 
 // types
 import { RootHomeTabParamList } from 'main/navigators/HomeTabStacks/HomeTabStacks.types';

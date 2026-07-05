@@ -6,13 +6,31 @@ import React, {
   useMemo,
   useState,
 } from 'react';
-import Intercom, {
-  IntercomEvents,
-  UserAttributes,
-} from '@intercom/intercom-react-native';
-
 import { useApiProvider } from 'providers/ApiProvider/ApiProvider';
 import { SOCIAL_STUBBED } from 'services/supabase/backend.config';
+
+// The Intercom RN SDK package was removed — local no-op stand-ins keep this
+// (already fully stubbed) provider compiling. Every user-facing method
+// early-returns on SOCIAL_STUBBED; these exist for the dead legacy paths and
+// the unread-count effect, which now resolves 0 and registers no listener.
+type UserAttributes = { userId?: string; email?: string; [key: string]: any };
+const IntercomEvents = {
+  IntercomUnreadCountDidChange: 'IntercomUnreadCountDidChange',
+} as const;
+const Intercom = {
+  setUserHash: (_hash: string) => {},
+  loginUserWithUserAttributes: (_attrs: UserAttributes) => {},
+  setLauncherVisibility: (_visibility: string) => {},
+  updateUser: (_attrs: UserAttributes) => {},
+  logout: () => {},
+  logEvent: (_event: string, _meta?: Record<string, any>) => {},
+  present: () => {},
+  getUnreadConversationCount: async () => 0,
+  addEventListener: (
+    _event: string,
+    _cb: (response: { count?: number }) => void,
+  ) => ({ remove: () => {} }),
+};
 
 interface IntercomContextType {
   signInIntercom: (attributes: UserAttributes, token: string) => Promise<void>;

@@ -1,5 +1,5 @@
 import { ScrollView, View } from 'react-native';
-import { useSendbirdChat } from '@sendbird/uikit-react-native';
+import { useSendbirdChat } from 'services/legacy-chat.shim';
 import React, {
   FunctionComponent,
   useCallback,
@@ -11,7 +11,7 @@ import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import colors from 'styles/colors';
 import styles from './MessagesTabJoinGroup.styles';
 import { PATHS_MESSAGES_TAB } from 'main/navigators/paths';
-import { GroupChannel } from '@sendbird/chat/groupChannel';
+import { GroupChannel } from 'services/legacy-chat.shim';
 import InputSearch from 'components/InputSearch/InputSearch';
 import HeaderTabScreen from 'components/HeaderTabScreen/HeaderTabScreen';
 import { useIntercom } from 'providers/IntercomProvider/IntercomProvider';

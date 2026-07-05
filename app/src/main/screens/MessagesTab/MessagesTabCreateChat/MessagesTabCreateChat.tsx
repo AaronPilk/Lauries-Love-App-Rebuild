@@ -9,7 +9,7 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import { useSendbirdChat } from '@sendbird/uikit-react-native';
+import { useSendbirdChat } from 'services/legacy-chat.shim';
 import { useIsFocused } from '@react-navigation/native';
 
 // types

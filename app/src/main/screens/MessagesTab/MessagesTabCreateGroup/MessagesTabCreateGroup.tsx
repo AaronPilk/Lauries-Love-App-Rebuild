@@ -9,7 +9,7 @@ import { ScrollView, Dimensions } from 'react-native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { PaperProvider } from 'react-native-paper';
 import { ImagePickerAsset } from 'expo-image-picker';
-import { useSendbirdChat } from '@sendbird/uikit-react-native';
+import { useSendbirdChat } from 'services/legacy-chat.shim';
 
 // types
 import { RootMessagesTabParamList } from 'main/navigators/MessagesTabStacks/MessagesTabStacks.types';

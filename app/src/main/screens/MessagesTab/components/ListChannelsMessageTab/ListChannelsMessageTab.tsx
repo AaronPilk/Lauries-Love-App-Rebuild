@@ -1,6 +1,6 @@
 import React, { FunctionComponent, useMemo } from 'react';
-import { GroupChannel } from '@sendbird/chat/groupChannel';
-import { useSendbirdChat } from '@sendbird/uikit-react-native';
+import { GroupChannel } from 'services/legacy-chat.shim';
+import { useSendbirdChat } from 'services/legacy-chat.shim';
 import {
   View,
   Text,

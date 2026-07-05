@@ -91,6 +91,52 @@ export const useGetUsersReq = () => {
   });
 };
 
+/**
+ * Viewport-aware users query for the MAP: only fetches profiles inside the
+ * visible region (users_in_bbox RPC) instead of the whole community.
+ * bbox values are rounded to ~1km so tiny pans reuse the cache.
+ */
+export const useGetUsersInRegionReq = (
+  region: {
+    latitude: number;
+    longitude: number;
+    latitudeDelta: number;
+    longitudeDelta: number;
+  } | null,
+) => {
+  const url = `${appConfig.apiUrl}/users`;
+  // Pad the box 25% beyond the viewport so markers exist while panning.
+  const bbox = region
+    ? {
+        minLat: +(region.latitude - region.latitudeDelta * 0.625).toFixed(2),
+        maxLat: +(region.latitude + region.latitudeDelta * 0.625).toFixed(2),
+        minLng: +(region.longitude - region.longitudeDelta * 0.625).toFixed(2),
+        maxLng: +(region.longitude + region.longitudeDelta * 0.625).toFixed(2),
+      }
+    : null;
+  return useQuery({
+    queryKey: [RequestKeys.userList, 'bbox', bbox],
+    enabled: !!bbox,
+    queryFn: async () => {
+      const res = await makeAxiosHttpClient().request({
+        method: 'get',
+        url,
+        params: { ...bbox, limit: 500 },
+      });
+      const users = (res.body?.data || []).filter(
+        (user: UserModel) => !!(user.displayName || user.firstName),
+      );
+      return { ...res.body, data: users } as PaginationResponse<UserModel>;
+    },
+    placeholderData: prev => prev, // keep old markers while the next box loads
+    staleTime: 5 * 60 * 1000,
+    throwOnError: err => {
+      console.error(err?.message);
+      return false;
+    },
+  });
+};
+
 // export const useCreateUser = () => {
 //   return useMutation({
 //     mutationFn: async (body: UserDBInput): Promise<User> => {

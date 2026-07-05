@@ -1,7 +1,6 @@
 import { z } from 'zod';
 import { captureException } from '@sentry/react-native';
-import { GroupChannel } from '@sendbird/chat/groupChannel';
-import { useSendbirdChat } from '@sendbird/uikit-react-native';
+import { useSendbirdChat } from 'services/legacy-chat.shim';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import React, {
   createContext,
@@ -29,7 +28,13 @@ import {
 } from 'mocks/mock.sendbird';
 import { useUserDBProvider } from 'providers/UserDBProvider/UserDBProvider';
 import { useSendbirdChatProvider } from 'providers/SendbirdChatProvider/SendbirdChatProvider';
-import { BaseMessageSendBirdType } from 'providers/SendbirdChatProvider/SendbirdChatProvider.types';
+import {
+  BaseMessageSendBirdType,
+  GroupChannelSendBirdType,
+} from 'providers/SendbirdChatProvider/SendbirdChatProvider.types';
+
+// Structural stand-in for the removed @sendbird/chat GroupChannel type.
+type GroupChannel = GroupChannelSendBirdType;
 
 type SendBirdPostsContext = {
   posts: GroupChannel[];

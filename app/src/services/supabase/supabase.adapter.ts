@@ -11,6 +11,7 @@ export async function supabaseAxiosAdapter(
   const url = `${config.url?.startsWith('http') ? '' : base}${config.url}`;
   const data = await supabaseApi(url, {
     method: config.method,
+    params: config.params,
     data:
       typeof config.data === 'string' && config.data
         ? JSON.parse(config.data)

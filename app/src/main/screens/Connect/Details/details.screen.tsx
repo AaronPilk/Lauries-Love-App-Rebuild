@@ -9,7 +9,7 @@ import {
   View,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
-import { useSendbirdChat } from '@sendbird/uikit-react-native';
+import { useSendbirdChat } from 'services/legacy-chat.shim';
 import {
   CommonActions,
   RouteProp,
@@ -19,7 +19,7 @@ import {
 
 import { ConnectStackParamList } from 'types/navigation';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import { QueryType } from '@sendbird/chat/groupChannel';
+import { QueryType } from 'services/legacy-chat.shim';
 
 // types
 import {

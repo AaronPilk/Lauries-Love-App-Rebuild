@@ -1,46 +1,15 @@
-import * as Storage from '@aws-amplify/storage';
-import { GetUrlOptions } from '@aws-amplify/storage/dist/esm/providers/s3/types/options';
-import { StorageUploadDataPayload } from '@aws-amplify/storage/dist/esm/types';
+// Legacy S3 (Amplify Storage) — RETIRED. Media now lives in Supabase Storage
+// (services/supabase/supabase.storage.ts). These stubs keep the old call
+// sites compiling; they are only reached for legacy S3 paths that no longer
+// exist, where callers already handle an undefined/false result by falling
+// back to defaults.
 
 export const getFileStorageAmplify = async (
-  path: string,
-  options?: GetUrlOptions,
-) => {
-  try {
-    const result = await Storage.getUrl({
-      path,
-      options: {
-        expiresIn: 60 * 60 * 24 * 7,
-        ...options,
-      },
-    });
+  _path: string,
+  _options?: any,
+): Promise<{ href: string } | undefined> => undefined;
 
-    return result.url;
-  } catch (error) {}
-};
+export const removeFileStorageAmplify = async (_path: string) => false;
 
-export const removeFileStorageAmplify = async (path: string) => {
-  try {
-    await Storage.remove({
-      path,
-    });
-    return true;
-  } catch (error) {
-    return false;
-  }
-};
-
-export const uploadFileStorageAmplify = async (
-  path: string,
-  data: StorageUploadDataPayload,
-) => {
-  try {
-    const result = await Storage.uploadData({
-      path,
-      data,
-    }).result;
-    return result.path;
-  } catch (error) {
-    return false;
-  }
-};
+export const uploadFileStorageAmplify = async (_path: string, _data: any) =>
+  false as const;

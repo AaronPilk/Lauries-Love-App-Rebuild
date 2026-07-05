@@ -1,4 +1,4 @@
-import { Role, UserOnlineState } from '@sendbird/chat';
+import { Role, UserOnlineState } from 'services/legacy-chat.shim';
 import { BaseMessageSendBirdType } from 'providers/SendbirdChatProvider/SendbirdChatProvider.types';
 
 export const DEFAULT_COMMENT_POST = {

@@ -167,16 +167,7 @@
           "isAutoInitEnabled": true
         }
       ],
-      "expo-video",
-      [
-        "@intercom/intercom-react-native",
-        {
-          "appId": "YOUR_INTERCOM_APP_ID",
-          "androidApiKey": "YOUR_INTERCOM_ANDROID_API_KEY",
-          "iosApiKey": "YOUR_INTERCOM_IOS_API_KEY",
-          "intercomRegion": "US"
-        }
-      ]
+      "expo-video"
     ],
     "extra": {
       "eas": {

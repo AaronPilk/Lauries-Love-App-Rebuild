@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { useSendbirdChat } from '@sendbird/uikit-react-native';
+import { useSendbirdChat } from 'services/legacy-chat.shim';
 import { z } from 'zod';
 import { SUPABASE_ENABLED } from 'services/supabase/backend.config';
 

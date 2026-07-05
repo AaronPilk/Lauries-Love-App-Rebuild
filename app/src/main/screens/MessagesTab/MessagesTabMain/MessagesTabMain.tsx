@@ -24,7 +24,7 @@ import {
   GroupChannelSendBirdType,
   MemberSendBirdType,
 } from 'providers/SendbirdChatProvider/SendbirdChatProvider.types';
-import { BaseMessage } from '@sendbird/chat/message';
+import { BaseMessage } from 'services/legacy-chat.shim';
 
 // providers
 import { useSendbirdChatProvider } from 'providers/SendbirdChatProvider/SendbirdChatProvider';
@@ -56,7 +56,7 @@ import { toLocalizedTimeString } from 'utils/formatDate';
 import { useUserDBProvider } from 'providers/UserDBProvider/UserDBProvider';
 import { useDebouncedValue } from 'utils/useDebouncedValue';
 import LoadingLine from 'components/LoadingLine/LoadingLine';
-import { useSendbirdChat } from '@sendbird/uikit-react-native';
+import { useSendbirdChat } from 'services/legacy-chat.shim';
 
 type MessagesTabMainProps = {
   navigation: NativeStackNavigationProp<RootMessagesTabParamList>;

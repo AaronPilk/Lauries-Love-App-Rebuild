@@ -1,6 +1,6 @@
 import { LinearGradient } from 'expo-linear-gradient';
 import { View, Text, TouchableOpacity, Image } from 'react-native';
-import { useSendbirdChat } from '@sendbird/uikit-react-native';
+import { useSendbirdChat } from 'services/legacy-chat.shim';
 import { useNavigation } from '@react-navigation/native';
 import React, {
   FunctionComponent,
@@ -12,7 +12,6 @@ import React, {
 
 import colors from 'styles/colors';
 import styles from './PostHomeTab.styles';
-import { setMetadata } from 'services/sendbirdMetadata';
 import defaultAvatar from 'assets/images/avatar-empty.png';
 import { useToastProvider } from 'providers/ToastProvider/ToastProvider';
 import { useGetUsersReq } from 'presentation/services/react-query/user.query';
@@ -130,9 +129,7 @@ const PostHomeTab: FunctionComponent<PostHomeTabProps> = ({
   const handlePressComment = useCallback(() => {
     // Open the post detail with the comment composer focused — same params
     // the "Read More" path uses. The legacy build only synced Sendbird
-    // channel metadata here (no navigation), which is a no-op in Supabase
-    // mode and must never call the Sendbird SDK.
-    if (!SUPABASE_ENABLED) setMetadata(sdk, comment, post.url);
+    // channel metadata here (no navigation); that sync is gone with Sendbird.
     onPressPost(post.url, true);
   }, [sdk, comment, post.url, onPressPost]);
 

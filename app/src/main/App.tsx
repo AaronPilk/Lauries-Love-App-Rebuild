@@ -1,7 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { LogBox, StyleSheet } from 'react-native';
 import { I18nextProvider } from 'react-i18next';
-import { Amplify } from 'aws-amplify';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import * as Sentry from '@sentry/react-native';
 import SplashScreen from 'react-native-splash-screen';
@@ -59,21 +58,8 @@ LogBox.ignoreLogs([
 if (appConfig.DEFAULT_SENTRY_SETTINGS.dsn) {
   Sentry.init(appConfig.DEFAULT_SENTRY_SETTINGS);
 }
-Amplify.configure({
-  Auth: {
-    Cognito: {
-      userPoolId: appConfig.userPoolId || '',
-      userPoolClientId: appConfig.userCognitoPoolId || '',
-      identityPoolId: appConfig.cognitoIdnPoolId || '',
-    },
-  },
-  Storage: {
-    S3: {
-      bucket: appConfig.s3Bucket || '',
-      region: appConfig.awsRegion || '',
-    },
-  },
-});
+// Amplify.configure removed — aws-amplify is no longer part of the app
+// (Cognito/S3 replaced by Supabase auth + storage).
 Notifications.setNotificationHandler({
   handleNotification: async () => ({
     shouldShowAlert: true,

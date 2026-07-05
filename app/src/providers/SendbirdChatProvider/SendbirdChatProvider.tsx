@@ -1,13 +1,9 @@
 import { z } from 'zod';
-import { MMKV } from 'react-native-mmkv';
-import { BaseMessage } from '@sendbird/chat/message';
 import { captureException } from '@sentry/react-native';
-import { GroupChannelHandler } from '@sendbird/chat/groupChannel';
 import {
-  SendbirdUIKitContainer,
-  useConnection,
+  GroupChannelHandler,
   useSendbirdChat,
-} from '@sendbird/uikit-react-native';
+} from 'services/legacy-chat.shim';
 import React, {
   createContext,
   FunctionComponent,
@@ -17,10 +13,6 @@ import React, {
   useState,
 } from 'react';
 
-import { customShowError } from 'utils/other';
-import { appConfig } from 'main/config/app.config';
-import { getFileStorageAmplify } from 'utils/amplify-storage';
-import { platformServices } from './SendbirdChatProvider.config';
 import { MOCK_ENABLED } from 'mocks/mock.config';
 import { SUPABASE_ENABLED, SOCIAL_STUBBED } from 'services/supabase/backend.config';
 import { getMyGroupChannels } from 'services/supabase/supabase.social';
@@ -37,7 +29,6 @@ import {
   MOCK_USER_CHAT,
 } from 'mocks/mock.sendbird';
 import { useApiProvider } from 'providers/ApiProvider/ApiProvider';
-import { useToastProvider } from 'providers/ToastProvider/ToastProvider';
 import { useUserDBProvider } from 'providers/UserDBProvider/UserDBProvider';
 import {
   BaseMessageSendBirdType,
@@ -45,6 +36,9 @@ import {
   MemberSendBirdType,
   UserSendBirdType,
 } from './SendbirdChatProvider.types';
+
+// Structural stand-in for the removed @sendbird/chat BaseMessage type.
+type BaseMessage = BaseMessageSendBirdType;
 
 type SendbirdChatContext = {
   userChat: UserSendBirdType | null;
@@ -73,18 +67,14 @@ export type LocalSearchResult = {
   nameMatched: boolean;
 };
 
-const mmkv = new MMKV();
-
 export const sendbirdChatContext = createContext({} as SendbirdChatContext);
 
 const SendbirdChatProvider: FunctionComponent<SendbirdChatProviderProps> = ({
   children,
 }) => {
   const { api } = useApiProvider();
-  const { connect, disconnect } = useConnection();
-  const { showToast } = useToastProvider();
   const { sdk } = useSendbirdChat();
-  const { userDB, updateUserDB } = useUserDBProvider();
+  const { userDB } = useUserDBProvider();
   const [userChat, setUserChat] = useState<UserSendBirdType | null>(null);
   const [groupChannels, setGroupChannels] = useState<
     GroupChannelSendBirdType[]
@@ -363,144 +353,7 @@ const SendbirdChatProvider: FunctionComponent<SendbirdChatProviderProps> = ({
     }
   };
 
-  const updateAvatarChat = async (
-    user: UserSendBirdType,
-  ): Promise<UserSendBirdType> => {
-    if (!userDB?.profilePicture) {
-      const newUser = await sdk.updateCurrentUserInfo({
-        profileUrl: '',
-      });
-      return newUser as UserSendBirdType;
-    }
-    const type = userDB.profilePicture.split('.').pop();
-    const name = userDB.profilePicture.split('/').pop();
-    const uri = (await getFileStorageAmplify(userDB.profilePicture))?.href;
-    const newUser =
-      uri && name
-        ? ((await sdk.updateCurrentUserInfo({
-            profileImage: { name, uri, type: `image/${type}` },
-          })) as UserSendBirdType)
-        : user;
-
-    return {
-      ...newUser,
-      metaData: {
-        ...newUser.metaData,
-        ...JSON.parse(newUser.metaData.userInfo || '{}'),
-      },
-    } as UserSendBirdType;
-  };
-
-  const updateUser = async (
-    user: UserSendBirdType,
-  ): Promise<UserSendBirdType> => {
-    try {
-      const isRemoveAvatar =
-        user.plainProfileUrl &&
-        user.plainProfileUrl.length > 0 &&
-        !userDB?.profilePicture;
-      const isNewAvatar =
-        userDB?.profilePicture &&
-        (!user.metaData?.profileUrlAWS ||
-          user.metaData.profileUrlAWS !== userDB.profilePicture ||
-          !user.plainProfileUrl ||
-          user.plainProfileUrl.length === 0);
-      const dataJSONMetaData = {
-        ...(userDB?.age && { age: userDB.age }),
-        ...(userDB?.gender && {
-          gender: userDB.gender,
-        }),
-        ...(userDB?.country && {
-          country: userDB.country,
-        }),
-        ...(userDB?.city && {
-          city: userDB.city,
-        }),
-        ...(userDB?.state && {
-          state: userDB.state,
-        }),
-        ...(userDB?.email && {
-          email: userDB.email,
-        }),
-      };
-      const newMetaData = {
-        userInfo: JSON.stringify(dataJSONMetaData),
-        ...(userDB?.profilePicture && { profileUrlAWS: userDB.profilePicture }),
-        ...(userDB?.id && {
-          id: userDB.id,
-        }),
-        ...(userDB?.cognitoId && {
-          cognitoId: userDB.cognitoId,
-        }),
-      };
-      const createMetaData = Object.keys(newMetaData).reduce<
-        Record<string, string>
-      >((acc, key) => {
-        const valueNew = (newMetaData as Record<string, string>)[key];
-        const valueOld = (user.metaData as Record<string, string>)[key];
-
-        return !valueOld && valueNew ? { ...acc, [key]: valueNew } : acc;
-      }, {});
-      const updateMetaData = Object.keys(newMetaData).reduce<
-        Record<string, string>
-      >((acc, key) => {
-        const valueNew = (newMetaData as Record<string, string>)[key];
-        const valueOld = (user.metaData as Record<string, string>)[key];
-        return valueNew && valueOld && valueOld !== valueNew
-          ? { ...acc, [key]: valueNew }
-          : acc;
-      }, {});
-      const deleteMetaData = Object.keys(user.metaData).filter(
-        key => !(newMetaData as Record<string, string>)[key],
-      );
-
-      if (Object.keys(createMetaData).length > 0)
-        try {
-          await user.createMetaData(createMetaData);
-        } catch (error) {
-          if (__DEV__) console.warn('createMetaData error', error);
-          captureException(error);
-        }
-      if (Object.keys(updateMetaData).length > 0)
-        try {
-          await user.updateMetaData(updateMetaData);
-        } catch (error) {
-          if (__DEV__) console.warn('updateMetaData error', error);
-          captureException(error);
-        }
-      if (deleteMetaData.length > 0)
-        try {
-          await Promise.all(
-            deleteMetaData.map(key => user.deleteMetaData(key)),
-          );
-        } catch (error) {
-          if (__DEV__) console.warn('deleteMetaData error', error);
-          captureException(error);
-        }
-
-      const updateAvatar =
-        isNewAvatar || isRemoveAvatar ? await updateAvatarChat(user) : user;
-
-      return {
-        ...user,
-        ...updateAvatar,
-        metaData: newMetaData,
-      } as UserSendBirdType;
-    } catch (error) {
-      if (__DEV__) console.warn('updateUser error', error);
-      captureException(error);
-      return user;
-    }
-  };
-
   const loginChat = async () => {
-    const nickname = userDB
-      ? `${userDB?.firstName}${
-          userDB?.lastName && userDB.lastName.length > 0
-            ? ` ${userDB?.lastName}`
-            : ''
-        }`
-      : undefined;
     if (!userID) return;
 
     if (SUPABASE_ENABLED) {
@@ -521,31 +374,7 @@ const SendbirdChatProvider: FunctionComponent<SendbirdChatProviderProps> = ({
       setUserChat(MOCK_USER_CHAT);
       return;
     }
-
-    try {
-      const result =
-        userChat && userChat.userId === userID
-          ? (sdk.currentUser as UserSendBirdType | null)
-          : ((await connect(userID, {
-              accessToken: appConfig.DEFAULT_SENDBIRD_SETTINGS.apiToken,
-              nickname,
-            })) as UserSendBirdType | null);
-      if (!result) return;
-
-      const userWithMetaData = await updateUser(result);
-      if (userDB?.sendBirdId !== userWithMetaData.userId)
-        updateUserDB({ sendBirdId: userWithMetaData.userId });
-
-      setUserChat(userWithMetaData);
-    } catch (error) {
-      customShowError({
-        error: new Error(
-          error + 'Error connecting to chat, posts and friends list',
-        ),
-        showToast,
-      });
-      captureException(error);
-    }
+    // Legacy Sendbird connect flow removed — BACKEND is only mock | supabase.
   };
 
   const loadMessages = async (channelUrl: string, limit = 50) => {
@@ -683,19 +512,9 @@ const SendbirdChatProvider: FunctionComponent<SendbirdChatProviderProps> = ({
 
   const logoutChat = async () => {
     if (!userChat) return;
-    if (SOCIAL_STUBBED) {
-      setUserChat(null);
-      return;
-    }
-
-    try {
-      await disconnect();
-      await sdk.disconnect();
-      setUserChat(null);
-    } catch (error) {
-      if (__DEV__) console.warn('logoutChat error', error);
-      captureException(error);
-    }
+    // Legacy Sendbird disconnect removed — mock/supabase just clear the user
+    // (identical to the previous SOCIAL_STUBBED branch).
+    setUserChat(null);
   };
 
   useEffect(() => {
@@ -772,12 +591,7 @@ const SendbirdChatProvider: FunctionComponent<SendbirdChatProviderProps> = ({
 
 export const useSendbirdChatProvider = () => useContext(sendbirdChatContext);
 
+// Sendbird UIKit container removed — the provider now renders directly.
 export default ({ children }: { children: React.ReactNode }) => (
-  <SendbirdUIKitContainer
-    appId={appConfig.DEFAULT_SENDBIRD_SETTINGS.appId}
-    chatOptions={{ localCacheStorage: mmkv }}
-    platformServices={platformServices}
-  >
-    <SendbirdChatProvider>{children}</SendbirdChatProvider>
-  </SendbirdUIKitContainer>
+  <SendbirdChatProvider>{children}</SendbirdChatProvider>
 );

@@ -14,8 +14,6 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import { MessageTypeFilter } from '@sendbird/chat/message';
-import { useSendbirdChat } from '@sendbird/uikit-react-native';
 import { RouteProp, useRoute } from '@react-navigation/native';
 import { ImagePickerAsset } from 'expo-image-picker';
 import { DocumentPickerAsset } from 'expo-document-picker';
@@ -26,6 +24,13 @@ import { RootMessagesTabParamList } from 'main/navigators/MessagesTabStacks/Mess
 
 // providers
 import { BaseMessageSendBirdType } from 'providers/SendbirdChatProvider/SendbirdChatProvider.types';
+
+// supabase (Backend V2) chat
+import { SUPABASE_ENABLED } from 'services/supabase/backend.config';
+import {
+  getConversationAttachments,
+  resolveThreadId,
+} from 'services/supabase/supabase.chat';
 
 // components
 import BackgroundScreen from 'components/BackgroundScreen/BackgroundScreen';
@@ -50,7 +55,6 @@ const WIDTH = Dimensions.get('window').width;
 const MessagesTabMediaAndDocs: FunctionComponent<
   MessagesTabMediaAndDocsProps
 > = ({ navigation }) => {
-  const { sdk } = useSendbirdChat();
   const route =
     useRoute<
       RouteProp<RootMessagesTabParamList, 'messages-tab-media-and-docs'>
@@ -68,7 +72,7 @@ const MessagesTabMediaAndDocs: FunctionComponent<
   const [loading, setLoading] = useState(true);
 
   const images = useMemo(
-    () => allFiles.filter(file => file.type === 'image/jpeg'),
+    () => allFiles.filter(file => file.type?.startsWith('image')),
     [allFiles],
   );
 
@@ -80,7 +84,7 @@ const MessagesTabMediaAndDocs: FunctionComponent<
   const docs = useMemo(
     () =>
       allFiles.filter(
-        file => file.type !== 'image/jpeg' && file.type !== 'video/mp4',
+        file => !file.type?.startsWith('image') && !file.type?.includes('video'),
       ),
     [allFiles],
   );
@@ -95,14 +99,15 @@ const MessagesTabMediaAndDocs: FunctionComponent<
 
     try {
       setLoading(true);
-      const findChanel = await sdk.groupChannel.getChannel(
-        route.params.channelUrl,
-      );
-      const allFilesChannel = findChanel.createPreviousMessageListQuery({
-        messageTypeFilter: MessageTypeFilter.FILE,
-      });
-      const allFiles =
-        (await allFilesChannel.load()) as BaseMessageSendBirdType[];
+      let allFiles: BaseMessageSendBirdType[] = [];
+      if (SUPABASE_ENABLED) {
+        // Group urls resolve to their conversation thread; DM urls pass through.
+        const threadId = await resolveThreadId(route.params.channelUrl);
+        allFiles = (await getConversationAttachments(
+          threadId,
+        )) as unknown as BaseMessageSendBirdType[];
+      }
+      // Mock mode: no attachment store — empty state renders.
       const thumbnailsVideosArray = allFiles.filter(
         file => file.type && file.type.includes('video'),
       );

@@ -5,10 +5,6 @@ export type UserModel = User & {
   friendsDate?: number;
 };
 
-export type CometChatUser = {
-  uid: string;
-};
-
 export interface RemoteUser {
   save(params: Partial<UserModel>): Promise<UserModel>;
 }

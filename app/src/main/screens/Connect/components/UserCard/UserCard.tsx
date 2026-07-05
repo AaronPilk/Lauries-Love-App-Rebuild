@@ -1,7 +1,7 @@
 import { Region } from 'react-native-maps';
 import { LinearGradient } from 'expo-linear-gradient';
-import { QueryType } from '@sendbird/chat/groupChannel';
-import { useSendbirdChat } from '@sendbird/uikit-react-native';
+import { QueryType } from 'services/legacy-chat.shim';
+import { useSendbirdChat } from 'services/legacy-chat.shim';
 import { Image, Text, TouchableOpacity, View } from 'react-native';
 import { CommonActions, useNavigation } from '@react-navigation/native';
 import React, {

@@ -10,7 +10,7 @@ import {
 } from 'react-native';
 import { Menu } from 'react-native-paper';
 import { LinearGradient } from 'expo-linear-gradient';
-import { useSendbirdChat } from '@sendbird/uikit-react-native';
+import { useSendbirdChat } from 'services/legacy-chat.shim';
 
 // providers
 import { useUserAWSProvider } from 'providers/UserAWSProvider/UserAWSProvider';

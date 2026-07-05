@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Alert } from 'react-native';
-import { useSendbirdChat } from '@sendbird/uikit-react-native';
+import { useSendbirdChat } from 'services/legacy-chat.shim';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { z } from 'zod';
 

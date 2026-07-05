@@ -3,6 +3,7 @@ export type HttpRequest = {
   method: HttpMethod;
   body?: any;
   headers?: any;
+  params?: any; // query params (forwarded to the adapter, e.g. map bbox)
 };
 
 export interface HttpClient<R = any> {

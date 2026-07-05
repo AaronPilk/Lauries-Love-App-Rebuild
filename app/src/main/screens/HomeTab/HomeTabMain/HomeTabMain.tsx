@@ -40,7 +40,6 @@ import {
   IconPlus,
   IconTabHeart,
 } from 'assets/icons-auto/components';
-import Intercom from '@intercom/intercom-react-native';
 import { useIntercom } from 'providers/IntercomProvider/IntercomProvider';
 import { SUPABASE_ENABLED, SUPPORT_PROFILE_ID } from 'services/supabase/backend.config';
 import { findOrCreateDirectConversation } from 'services/supabase/supabase.chat';

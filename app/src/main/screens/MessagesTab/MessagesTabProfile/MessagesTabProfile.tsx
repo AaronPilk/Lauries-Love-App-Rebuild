@@ -1,10 +1,10 @@
 import React, { FunctionComponent, useEffect, useMemo, useState } from 'react';
 import { CommonActions, RouteProp, useRoute } from '@react-navigation/native';
 import { Alert, Text, TouchableOpacity, View } from 'react-native';
-import { useSendbirdChat } from '@sendbird/uikit-react-native';
+import { useSendbirdChat } from 'services/legacy-chat.shim';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { ActivityIndicator } from 'react-native-paper';
-import { QueryType } from '@sendbird/chat/groupChannel';
+import { QueryType } from 'services/legacy-chat.shim';
 
 // types
 import { RootMessagesTabParamList } from 'main/navigators/MessagesTabStacks/MessagesTabStacks.types';

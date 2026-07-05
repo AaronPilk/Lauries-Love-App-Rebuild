@@ -1,4 +1,8 @@
-import * as Auth from 'aws-amplify/auth';
+// aws-amplify removed — structural aliases for the old Cognito output types.
+type ResetPasswordOutput = any;
+type SignUpOutput = any;
+type ConfirmSignUpOutput = any;
+type ConfirmSignInOutput = any;
 
 export interface Authentication {
   resendSignUp(email: string): Promise<unknown>;
@@ -9,18 +13,18 @@ export interface Authentication {
   ): Promise<Authentication.Model>;
   initForgotPassword(
     params: Authentication.ForgotPasswordParams,
-  ): Promise<Auth.ResetPasswordOutput>;
+  ): Promise<ResetPasswordOutput>;
   forgotPasswordSubmit(
     params: Authentication.ForgotPasswordSubmitParams,
   ): Promise<void>;
-  signUp(params: Authentication.SignUpParams): Promise<Auth.SignUpOutput>;
+  signUp(params: Authentication.SignUpParams): Promise<SignUpOutput>;
   signOut(): Promise<void>;
   confirmSignUp(
     params: Authentication.ConfirmSignUpParams,
-  ): Promise<Auth.ConfirmSignUpOutput>;
+  ): Promise<ConfirmSignUpOutput>;
   setNewPassword(
     params: Authentication.SetNewPasswordParams,
-  ): Promise<Auth.ConfirmSignInOutput>;
+  ): Promise<ConfirmSignInOutput>;
   changePassword(params: Authentication.ChangePasswordParams): Promise<void>;
   completePassword(
     params: Authentication.CompleteNewPasswordParams,

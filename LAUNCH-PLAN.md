@@ -25,23 +25,35 @@ Hard rules until then:
 - Payload size limits in Postgres (posts/comments/messages/notifications/bio)
 - Map marker square; groups Join lights up in place
 
-### Remaining build items (in order)
-1. **Media pipeline (Supabase Storage)** — avatars + post images.
-   Buckets: `avatars`, `post-images` with owner-write/public-read policies.
-   Replace `uploadFileStorageAmplify` + `/users/signed-url` path.
-2. **Group chat threads** — conversations keyed by group_id (find-or-create on
-   first open; members = group members). Currently groups open to an empty
-   thread (no crash).
-3. **Notifications accept-friend** — strip last Sendbird calls from
-   useNotificationsScreen.handleConfirm (REST parts already work).
-4. **Payments edge function** — Authorize.Net (or Stripe) charge + insert into
-   payments table with service role. Donations disabled (honest error) until then.
-5. **Push notification fan-out** — edge function on notifications insert ->
-   FCM/APNs via your own Firebase project.
-6. **Rate limiting** — edge-function proxy or pg policies for posts/comments/
-   reactions/notifications (spam protection before public launch).
-7. Cleanup: remove @sendbird/*, CometChat, aws-amplify packages once the
-   above land (kills the UIKit warnings and shrinks the bundle).
+### Remaining build items (updated 2026-07-05 — post Codex-audit remediation)
+DONE since the last revision: media pipeline (avatars + post images + PRIVATE
+chat attachments w/ member-only signed URLs), group chat threads, Supabase
+email OTP verify, atomic DM find-or-create (unique pair key), map viewport
+loading (users_in_bbox RPC), feed infinite scroll + image sizes, DB rate-limit
+triggers, account-deletion edge function (deployed), schema/RLS migrations
+committed to `supabase/migrations/`, and the FULL removal of @sendbird/*,
+aws-amplify, CometChat, Intercom, and aws-sdk packages (UIKit container gone;
+`services/legacy-chat.shim.ts` satisfies dead legacy branches).
+
+Still open:
+1. **Payments edge function** — Stripe charge + insert into payments table
+   with service role. Donations show an honest error until then.
+   BLOCKED ON: Stripe account (test-mode secret key).
+2. **Push notification fan-out** — edge function on notifications insert ->
+   FCM/APNs. FCM tokens are already being saved on profiles.
+   BLOCKED ON: your Firebase project (service-account JSON + config files).
+3. **Resend SMTP** — Supabase Dashboard -> Auth -> Emails. BLOCKED ON: Resend key.
+4. Enable **leaked password protection** (Dashboard -> Auth, one toggle).
+5. **Release-build speed test** on device (the real perf verdict).
+6. Final dead-code sweep: delete the unreachable legacy (`sdk.*`) branches and
+   `legacy-chat.shim.ts` itself once device testing confirms everything.
+
+### After pulling this revision (REQUIRED — native deps changed)
+```
+cd app && yarn install && cd ios && pod install && cd ..
+```
+Then rebuild in Xcode. Removing Sendbird/Amplify/CometChat/Intercom drops
+their pods, shrinks the bundle, and removes their startup work.
 
 ### On-device test checklist (run in supabase mode after each build)
 - [ ] Sign up new account (unique email) -> lands on Community Wall

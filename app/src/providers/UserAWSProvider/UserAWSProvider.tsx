@@ -1,26 +1,3 @@
-import { 
-  signIn, 
-  fetchAuthSession, 
-  getCurrentUser, 
-  resetPassword, 
-  confirmResetPassword, 
-  updateUserAttributes, 
-  confirmUserAttribute, 
-  sendUserAttributeVerificationCode, 
-  updatePassword as updatePasswordAuth, 
-  signOut, 
-  deleteUser,
-  AuthUser,
-  JWT,
-  AuthSession,
-  SignInOutput,
-  UpdateUserAttributesInput,
-  UpdateUserAttributesOutput,
-  ConfirmUserAttributeInput,
-  SendUserAttributeVerificationCodeInput
-} from 'aws-amplify/auth';
-import { Amplify } from 'aws-amplify';
-import { captureException } from '@sentry/react-native';
 import React, {
   createContext,
   FunctionComponent,
@@ -55,6 +32,18 @@ import {
   sbUpdateEmail,
   sbUpdatePassword,
 } from 'services/supabase/supabase.auth';
+
+// aws-amplify removed — the legacy Cognito branches were dead code (BACKEND is
+// only ever 'mock' | 'supabase'). Structural aliases keep the exported API
+// surface identical for consumers.
+type AuthUser = any;
+type JWT = { payload?: any; toString: () => string } | any;
+type AuthSession = any;
+type SignInOutput = any;
+type UpdateUserAttributesInput = any;
+type UpdateUserAttributesOutput = any;
+type ConfirmUserAttributeInput = any;
+type SendUserAttributeVerificationCodeInput = any;
 
 type UserAWSContext = {
   userAWS: AuthUser | null;
@@ -123,30 +112,8 @@ const UserAWSProvider: FunctionComponent<UserAWSProviderProps> = ({
         return null;
       }
     }
-    try {
-      console.log('👤 checkCurrentUserAWS: Fetching auth session...');
-      const authSession = await fetchAuthSession();
-      console.log('👤 checkCurrentUserAWS: Auth session fetched, has tokens:', !!authSession.tokens);
-
-      if (!authSession.tokens) return null;
-
-      console.log('👤 checkCurrentUserAWS: Getting current user...');
-      const currentUser = await getCurrentUser();
-      console.log('👤 checkCurrentUserAWS: Current user fetched:', currentUser.userId);
-
-      setJwtTokenUser(authSession.tokens.accessToken);
-      setUserAWS(currentUser);
-      console.log('👤 checkCurrentUserAWS: State updated with user');
-      return {
-        authSession,
-        currentUser,
-      };
-    } catch (error) {
-      console.log('👤 checkCurrentUserAWS: Error:', error);
-      customShowError({ error, showToast });
-      captureException(error);
-      return null;
-    }
+    // Legacy Cognito branch removed (unreachable — BACKEND is mock | supabase).
+    return null;
   };
 
   const authAWS = async (email: string, password: string, getUserDB = true) => {
@@ -168,25 +135,8 @@ const UserAWSProvider: FunctionComponent<UserAWSProviderProps> = ({
         return null;
       }
     }
-    try {
-      console.log('🔐 authAWS: Starting sign in...');
-      const result = await signIn({
-        username: email,
-        password: password,
-      });
-      console.log('🔐 authAWS: Sign in result:', { isSignedIn: result.isSignedIn, nextStep: result.nextStep });
-      if (result.isSignedIn) {
-        console.log('🔐 authAWS: Fetching current user...');
-        await checkCurrentUserAWS();
-        console.log('🔐 authAWS: Current user fetched successfully');
-      }
-      return result;
-    } catch (error) {
-      console.log('🔐 authAWS: Error during sign in:', error);
-      customShowError({ error, showToast });
-      captureException(error);
-      return null;
-    }
+    // Legacy Cognito branch removed (unreachable — BACKEND is mock | supabase).
+    return null;
   };
 
   const forgotPassword = async ({
@@ -194,9 +144,8 @@ const UserAWSProvider: FunctionComponent<UserAWSProviderProps> = ({
   }: Authentication.ForgotPasswordParams) => {
     if (MOCK_ENABLED) return { isPasswordReset: true } as any;
     if (SUPABASE_ENABLED) return sbForgotPassword(email);
-    return resetPassword({
-      username: email,
-    });
+    // Legacy Cognito branch removed (unreachable — BACKEND is mock | supabase).
+    return null;
   };
 
   const updatePassword = async ({
@@ -207,11 +156,8 @@ const UserAWSProvider: FunctionComponent<UserAWSProviderProps> = ({
     if (MOCK_ENABLED) return true as any;
     if (SUPABASE_ENABLED)
       return sbConfirmPasswordReset(email, verificationCode, newPassword);
-    return confirmResetPassword({
-      username: email,
-      newPassword,
-      confirmationCode: verificationCode,
-    });
+    // Legacy Cognito branch removed (unreachable — BACKEND is mock | supabase).
+    return null;
   };
 
   const updateUserAttributesAWS = async (
@@ -223,43 +169,24 @@ const UserAWSProvider: FunctionComponent<UserAWSProviderProps> = ({
       if (newEmail) await sbUpdateEmail(newEmail);
       return {} as any;
     }
-    try {
-      const result = await updateUserAttributes(data);
-      return result;
-    } catch (error) {
-      customShowError({ error, showToast });
-      captureException(error);
-      return null;
-    }
+    // Legacy Cognito branch removed (unreachable — BACKEND is mock | supabase).
+    return null;
   };
 
   const handleConfirmUserAttribute = async (
     data: ConfirmUserAttributeInput,
   ) => {
     if (MOCK_ENABLED || SUPABASE_ENABLED) return true;
-    try {
-      await confirmUserAttribute(data);
-      await checkCurrentUserAWS();
-      return true;
-    } catch (error) {
-      customShowError({ error, showToast });
-      captureException(error);
-      return false;
-    }
+    // Legacy Cognito branch removed (unreachable — BACKEND is mock | supabase).
+    return false;
   };
 
   const handleSendUserAttributeVerificationCode = async (
     data: SendUserAttributeVerificationCodeInput,
   ) => {
     if (MOCK_ENABLED || SUPABASE_ENABLED) return true;
-    try {
-      await sendUserAttributeVerificationCode(data);
-      return true;
-    } catch (error) {
-      customShowError({ error, showToast });
-      captureException(error);
-      return false;
-    }
+    // Legacy Cognito branch removed (unreachable — BACKEND is mock | supabase).
+    return false;
   };
 
   const updatePasswordAWS = async (
@@ -275,16 +202,8 @@ const UserAWSProvider: FunctionComponent<UserAWSProviderProps> = ({
         return error.name;
       }
     }
-    try {
-      await updatePasswordAuth({
-        oldPassword,
-        newPassword,
-      });
-      return true;
-    } catch (error: any) {
-      customShowError({ error, showToast });
-      return error.name;
-    }
+    // Legacy Cognito branch removed (unreachable — BACKEND is mock | supabase).
+    return false;
   };
 
   const signOutAWS = async () => {
@@ -304,16 +223,8 @@ const UserAWSProvider: FunctionComponent<UserAWSProviderProps> = ({
       setJwtTokenUser(null);
       return true;
     }
-    try {
-      await signOut();
-      setUserAWS(null);
-      setJwtTokenUser(null);
-      return true;
-    } catch (error) {
-      customShowError({ error, showToast });
-      captureException(error);
-      return false;
-    }
+    // Legacy Cognito branch removed (unreachable — BACKEND is mock | supabase).
+    return false;
   };
 
   const deleteAWS = async () => {
@@ -331,16 +242,8 @@ const UserAWSProvider: FunctionComponent<UserAWSProviderProps> = ({
       setJwtTokenUser(null);
       return true;
     }
-    try {
-      await deleteUser();
-      setUserAWS(null);
-      setJwtTokenUser(null);
-      return true;
-    } catch (error) {
-      customShowError({ error, showToast });
-      captureException(error);
-      return false;
-    }
+    // Legacy Cognito branch removed (unreachable — BACKEND is mock | supabase).
+    return false;
   };
 
   const value = useMemo(

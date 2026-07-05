@@ -29,7 +29,7 @@ import UserCard from '../components/UserCard/UserCard';
 import InfoModal from '../components/InfoModal/InfoModal';
 import FiltersModal from '../components/FiltersModal/FiltersModal';
 import { useUserDBProvider } from 'providers/UserDBProvider/UserDBProvider';
-import { useGetUsersReq } from 'presentation/services/react-query/user.query';
+import { useGetUsersInRegionReq } from 'presentation/services/react-query/user.query';
 import { useCountry } from 'presentation/hooks';
 import {
   IconBars3,
@@ -119,7 +119,6 @@ export default function MapScreen() {
   const navigation = useNavigation();
   const mapRef = useRef<MapView>(null);
   const { userDB } = useUserDBProvider();
-  const { data: usersData } = useGetUsersReq();
   const { isWithinBounds } = useMap();
   const route =
     useRoute<
@@ -172,6 +171,12 @@ export default function MapScreen() {
   });
   const [region, setRegion] = useState<Region>();
   const [isShowMarkers, setIsShowMarkers] = useState(false);
+  // Viewport-aware: only profiles inside the visible region are fetched
+  // (users_in_bbox RPC) — scales to any community size. The hook keeps the
+  // previous page while the next viewport loads, so markers never blink out.
+  const { data: usersData } = useGetUsersInRegionReq(
+    region ?? initialRegion ?? null,
+  );
   // Rebuild fix (P1 perf): removed `countRender` state — it incremented on
   // every isShowMarkers flip, forcing an extra full re-render of the map and
   // all markers, and was never read anywhere.

@@ -21,7 +21,7 @@ import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RouteProp, useRoute } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { ImagePickerAsset } from 'expo-image-picker';
-import { useSendbirdChat } from '@sendbird/uikit-react-native';
+import { useSendbirdChat } from 'services/legacy-chat.shim';
 import * as VideoThumbnails from 'expo-video-thumbnails';
 
 // types
@@ -61,6 +61,7 @@ import { SUPABASE_ENABLED } from 'services/supabase/backend.config';
 import {
   resolveThreadId,
   sendChatMessage,
+  sendChatAttachment,
   subscribeToConversation,
 } from 'services/supabase/supabase.chat';
 
@@ -334,11 +335,33 @@ const MessagesTabChatGroup: FunctionComponent<MessagesTabChatGroupProps> = ({
   );
 
   const sendImage = async (message: string) => {
-    // Supabase mode: file attachments are not migrated yet — no-op silently
-    // (close the modals so the UI never hangs), same as MessagesTabChat.
     if (SUPABASE_ENABLED) {
-      setConfirmImage(null);
-      setShowModals(state => ({ ...state, confirmImage: false }));
+      if (!channel || !confirmImage) return;
+      setIsSending(true);
+      try {
+        // Group urls resolve to their (auto-created) conversation thread.
+        const threadId = await resolveThreadId(channel.url);
+        await sendChatAttachment(threadId, confirmImage.uri, confirmImage.mimeType);
+        if (message?.length) await sendChatMessage(threadId, message);
+        await loadMessages(channel.url);
+
+        const myId = userChat?.metaData?.id || userChat?.userId;
+        const userIds = (channel.members || [])
+          .map((member: UserSendBirdType) => member.metaData?.id)
+          .filter(id => id && id !== myId) as string[];
+        if (userIds.length > 0)
+          sendPushNotificationToServer({
+            content: '📷 Photo in group',
+            notifierIds: userIds,
+            redirect: route.params?.channelUrl,
+          });
+      } catch (error) {
+        if (__DEV__) console.warn('Error sending image:', error);
+      } finally {
+        setIsSending(false);
+        setConfirmImage(null);
+        setShowModals(state => ({ ...state, confirmImage: false }));
+      }
       return;
     }
     if (!channel || !confirmImage) return;

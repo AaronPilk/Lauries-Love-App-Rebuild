@@ -1,4 +1,3 @@
-import { getCurrentUser } from 'aws-amplify/auth';
 import { MOCK_ENABLED } from 'mocks/mock.config';
 import { MOCK_AUTH_USER } from 'mocks/mock.auth';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -138,8 +137,9 @@ export default function DiagnosedYearScreen() {
       if (error && showYearField) return;
 
       // Rebuild fix: read the id from the auth provider instead of a direct
-      // Cognito call — works identically in mock, Supabase, and legacy modes.
-      const userId = userAWS?.userId ?? (MOCK_ENABLED ? MOCK_AUTH_USER.userId : (await getCurrentUser()).userId);
+      // Cognito call — works identically in mock and Supabase modes. The
+      // legacy getCurrentUser() fallback is gone with aws-amplify.
+      const userId = userAWS?.userId ?? (MOCK_ENABLED ? MOCK_AUTH_USER.userId : '');
       await updateUserDB({
         cognitoId: userId,
         lastName: null,

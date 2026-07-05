@@ -9,8 +9,6 @@ import {
   View,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
-import { confirmSignUp, resendSignUpCode } from 'aws-amplify/auth';
-import { SUPABASE_ENABLED } from 'services/supabase/backend.config';
 import {
   sbConfirmSignUp,
   sbResendSignUpCode,
@@ -91,8 +89,9 @@ export default function VerifyEmailScreen() {
 
   async function handleResendCode() {
     try {
-      if (SUPABASE_ENABLED) await sbResendSignUpCode(userOnboarding.email);
-      else await resendSignUpCode({ username: userOnboarding.email });
+      // Supabase is the only real backend for this screen — the legacy
+      // Cognito resendSignUpCode path is gone with aws-amplify.
+      await sbResendSignUpCode(userOnboarding.email);
       showToast({ message: 'Code sent successfully', type: 'info' });
       setTimer(30);
     } catch (error) {
@@ -106,12 +105,11 @@ export default function VerifyEmailScreen() {
       // Supabase: verifyOtp confirms the email AND returns a session, so we
       // can run the same downstream flow (authAWS routes to Supabase sign-in
       // in this mode; createUserDB patches the trigger-created profile row).
-      const { isSignUpComplete } = SUPABASE_ENABLED
-        ? await sbConfirmSignUp(userOnboarding.email, code.join(''))
-        : await confirmSignUp({
-            username: userOnboarding.email,
-            confirmationCode: code.join(''),
-          });
+      // Legacy Cognito confirmSignUp path removed with aws-amplify.
+      const { isSignUpComplete } = await sbConfirmSignUp(
+        userOnboarding.email,
+        code.join(''),
+      );
 
       if (isSignUpComplete) {
         const response = await authAWS(userOnboarding.email, password);

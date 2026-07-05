@@ -19,12 +19,6 @@ const DEFAULT_SENTRY_SETTINGS = {
   ],
 };
 
-const DEFAULT_SENDBIRD_SETTINGS = {
-  appId: process.env.EXPO_PUBLIC_SENDBIRD_APP_ID,
-  apiToken: process.env.EXPO_PUBLIC_SENDBIRD_API_TOKEN,
-  apiUrl: process.env.EXPO_PUBLIC_SENDBIRD_API_URL,
-};
-
 export const appConfig = {
   awsRegion: process.env.EXPO_PUBLIC_AWS_REGION,
   userCognitoPoolId: process.env.EXPO_PUBLIC_COGNITO_APP_CLIENT,
@@ -34,14 +28,10 @@ export const appConfig = {
   apiUrl: process.env.EXPO_PUBLIC_API_URL,
   mapKeyId: process.env.EXPO_PUBLIC_MAP_KEY_ID,
   mapKeyValue: process.env.EXPO_PUBLIC_MAP_KEY_VALUE,
-  cometChatAppId: process.env.EXPO_PUBLIC_COMETCHAT_APP_ID,
-  cometChatAppRegion: process.env.EXPO_PUBLIC_COMETCHAT_APP_REGION,
-  cometChatAppAuthKey: process.env.EXPO_PUBLIC_COMETCHAT_APP_AUTH_KEY,
   authorizeNetGatewayId: process.env.EXPO_PUBLIC_AUTHORIZE_NET_GATEWAY_ID,
   authorizeNetEnv: process.env.EXPO_PUBLIC_AUTHORIZE_ENV,
   applePayMerchantId: process.env.EXPO_PUBLIC_APPLE_PAY_MERCHANT_ID,
   DEFAULT_SENTRY_SETTINGS,
-  DEFAULT_SENDBIRD_SETTINGS,
   temp: 64,
 };
 

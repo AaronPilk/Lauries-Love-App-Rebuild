@@ -10,7 +10,7 @@ import {
   Text,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
-import { useSendbirdChat } from '@sendbird/uikit-react-native';
+import { useSendbirdChat } from 'services/legacy-chat.shim';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useIntercom } from 'providers/IntercomProvider/IntercomProvider';
 
@@ -27,7 +27,7 @@ import GroupChannelCardCheckbox from 'main/screens/MessagesTab/components/GroupC
 // styles
 import colors from 'styles/colors';
 import { styles } from './recommended-groups.styles';
-import { GroupChannel } from '@sendbird/chat/groupChannel';
+import { GroupChannel } from 'services/legacy-chat.shim';
 import { useDBProvider } from 'providers/DBProvider/DBProvider';
 import { IconArrowLeft } from 'assets/icons-auto/components';
 import { SUPABASE_ENABLED } from 'services/supabase/backend.config';

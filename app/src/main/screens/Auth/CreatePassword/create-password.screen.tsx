@@ -8,7 +8,6 @@ import {
   TouchableWithoutFeedback,
   View,
 } from 'react-native';
-import { signUp, signIn, signOut } from 'aws-amplify/auth';
 import { MOCK_ENABLED } from 'mocks/mock.config';
 import { setMockSignedIn } from 'mocks/mock.auth';
 import { SUPABASE_ENABLED } from 'services/supabase/backend.config';
@@ -112,37 +111,9 @@ export default function CreatePasswordScreen() {
         setLoading(false);
       }
     }
-    try {
-      setLoading(true);
-      const result = await signUp({
-        username: userOnboarding.email,
-        password: account.password,
-      });
-
-      return result.nextStep.signUpStep;
-    } catch (error: any) {
-      if (__DEV__) console.warn('Error creating account', error);
-      if (error.name === 'UsernameExistsException') {
-        try {
-          const user = await signIn({
-            username: userOnboarding.email,
-            password: account.password,
-          });
-          await signOut();
-          return user.nextStep.signInStep;
-        } catch (error) {
-          if (__DEV__) console.warn('Error signing in', error);
-          setErrors(prevErrors => ({
-            ...prevErrors,
-            confirmPassword: 'An account with the given email already exists.',
-          }));
-          return null;
-        }
-      }
-      return null;
-    } finally {
-      setLoading(false);
-    }
+    // Legacy Cognito signUp/signIn path removed — BACKEND is always
+    // 'mock' or 'supabase', so this line is unreachable.
+    return null;
   }
 
   async function handleOnPress() {
@@ -158,11 +129,7 @@ export default function CreatePasswordScreen() {
       });
     if (result === 'DONE') {
       // Mock: no sign-in needed. Supabase: signUp already returned a session.
-      if (!MOCK_ENABLED && !SUPABASE_ENABLED)
-        await signIn({
-          username: userOnboarding.email,
-          password: account.password,
-        });
+      // (Legacy Cognito signIn call removed with aws-amplify.)
       const user = await checkCurrentUserAWS();
       if (user?.currentUser) {
         const token = user.authSession.tokens?.accessToken;

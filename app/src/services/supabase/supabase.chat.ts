@@ -3,7 +3,11 @@
 // Realtime: postgres_changes subscription on messages per conversation.
 
 import { supabase, currentUserId, assertUuid } from './client';
-import { publicUrlFor } from './supabase.storage';
+import {
+  publicUrlFor,
+  signedUrlsFor,
+  uploadChatAttachment,
+} from './supabase.storage';
 
 // Local cached session read — no network round-trip per request.
 const uid = currentUserId;
@@ -20,11 +24,30 @@ const senderFromProfile = (p: any) => {
   };
 };
 
-const msgShape = (m: any, senderProfile: any) => ({
+const extToMime = (p: string) => {
+  const ext = (p.split('.').pop() || '').toLowerCase();
+  if (ext === 'png') return 'image/png';
+  if (ext === 'gif') return 'image/gif';
+  if (ext === 'webp') return 'image/webp';
+  if (ext === 'pdf') return 'application/pdf';
+  return 'image/jpeg';
+};
+
+// attachmentUrl: signed URL for m.attachment_path (private bucket).
+// With an attachment the legacy shape is a Sendbird FILE message.
+const msgShape = (m: any, senderProfile: any, attachmentUrl?: string | null) => ({
   messageId: m.id,
   message: m.body ?? '',
   createdAt: new Date(m.created_at).getTime(),
-  messageType: 'user',
+  messageType: m.attachment_path ? 'file' : 'user',
+  ...(m.attachment_path
+    ? {
+        url: attachmentUrl ?? '',
+        plainUrl: attachmentUrl ?? '',
+        name: m.attachment_path.split('/').pop() ?? 'attachment',
+        type: extToMime(m.attachment_path),
+      }
+    : {}),
   sender: senderFromProfile(senderProfile),
   reactions: [],
 });
@@ -200,7 +223,16 @@ export async function getConversationMessages(conversationId: string, limit = 10
     .order('created_at', { ascending: false })
     .limit(limit);
   if (error) throw error;
-  return (data ?? []).map(m => msgShape(m, m.sender));
+  // Batch-sign every attachment on the page in ONE storage round-trip.
+  const paths = (data ?? [])
+    .map(m => m.attachment_path)
+    .filter(Boolean) as string[];
+  const signed = paths.length
+    ? await signedUrlsFor('chat-attachments', paths)
+    : {};
+  return (data ?? []).map(m =>
+    msgShape(m, m.sender, m.attachment_path ? signed[m.attachment_path] : null),
+  );
 }
 
 export async function sendChatMessage(conversationId: string, body: string) {
@@ -215,6 +247,56 @@ export async function sendChatMessage(conversationId: string, body: string) {
     .single();
   if (error) throw error;
   return msgShape(data, data.sender);
+}
+
+/**
+ * Send an image/document attachment: upload to the private chat-attachments
+ * bucket, then insert the message row. Returns a legacy FILE-shaped message
+ * with a signed display URL.
+ */
+export async function sendChatAttachment(
+  conversationId: string,
+  localUri: string,
+  mimeType?: string | null,
+) {
+  assertUuid(conversationId, 'conversation id');
+  const me = await uid();
+  if (!me) throw new Error('Not authenticated');
+  const path = await uploadChatAttachment(conversationId, localUri, mimeType);
+  const { data, error } = await supabase
+    .from('messages')
+    .insert({
+      conversation_id: conversationId,
+      sender_id: me,
+      attachment_path: path,
+    })
+    .select(
+      '*, sender:profiles!messages_sender_id_fkey(id, first_name, display_name, avatar_path)',
+    )
+    .single();
+  if (error) throw error;
+  const signed = await signedUrlsFor('chat-attachments', [path]);
+  return msgShape(data, data.sender, signed[path]);
+}
+
+/** Attachment messages for a conversation (Media & Docs screen). */
+export async function getConversationAttachments(conversationId: string) {
+  assertUuid(conversationId, 'conversation id');
+  const { data, error } = await supabase
+    .from('messages')
+    .select(
+      '*, sender:profiles!messages_sender_id_fkey(id, first_name, display_name, avatar_path)',
+    )
+    .eq('conversation_id', conversationId)
+    .not('attachment_path', 'is', null)
+    .order('created_at', { ascending: false })
+    .limit(200);
+  if (error) throw error;
+  const paths = (data ?? []).map(m => m.attachment_path) as string[];
+  const signed = paths.length
+    ? await signedUrlsFor('chat-attachments', paths)
+    : {};
+  return (data ?? []).map(m => msgShape(m, m.sender, signed[m.attachment_path]));
 }
 
 /**
@@ -259,7 +341,14 @@ export function subscribeToConversation(
             senderProfileCache.set(row.sender_id, sender);
           }
         }
-        onMessage(msgShape(row, sender));
+        let attUrl: string | null = null;
+        if (row.attachment_path) {
+          const signed = await signedUrlsFor('chat-attachments', [
+            row.attachment_path,
+          ]).catch(() => ({}) as Record<string, string>);
+          attUrl = signed[row.attachment_path] ?? null;
+        }
+        onMessage(msgShape(row, sender, attUrl));
       },
     )
     .subscribe();

@@ -21,7 +21,7 @@ import { RouteProp, useIsFocused, useRoute } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { ImagePickerAsset } from 'expo-image-picker';
 import { DocumentPickerAsset } from 'expo-document-picker';
-import { useSendbirdChat } from '@sendbird/uikit-react-native';
+import { useSendbirdChat } from 'services/legacy-chat.shim';
 import * as VideoThumbnails from 'expo-video-thumbnails';
 
 // types
@@ -65,6 +65,7 @@ import { PATHS_MESSAGES_TAB } from 'main/navigators/paths';
 import { SUPABASE_ENABLED } from 'services/supabase/backend.config';
 import {
   sendChatMessage,
+  sendChatAttachment,
   subscribeToConversation,
 } from 'services/supabase/supabase.chat';
 
@@ -182,10 +183,30 @@ const MessagesTabChat: FunctionComponent<MessagesTabChatProps> = ({
   };
 
   const sendImage = async (message: string) => {
-    // Supabase mode: file attachments are not migrated yet — no-op silently.
     if (SUPABASE_ENABLED) {
-      setConfirm(state => ({ ...state, image: null }));
-      setShowModals(state => ({ ...state, confirmImage: false }));
+      if (!channel || !confirm.image) return;
+      setIsSending(true);
+      try {
+        await sendChatAttachment(
+          channel.url,
+          confirm.image.uri,
+          confirm.image.mimeType,
+        );
+        if (message?.length) await sendChatMessage(channel.url, message);
+        await loadMessages(channel.url);
+        if (friend?.metaData?.id)
+          sendPushNotificationToServer({
+            content: '📷 Photo',
+            notifierIds: [friend?.metaData?.id || ''],
+            redirect: route.params?.channelUrl,
+          });
+      } catch (error) {
+        if (__DEV__) console.warn('Error sending image:', error);
+      } finally {
+        setIsSending(false);
+        setConfirm(state => ({ ...state, image: null }));
+        setShowModals(state => ({ ...state, confirmImage: false }));
+      }
       return;
     }
     if (!channel || !confirm.image) return;
@@ -227,10 +248,30 @@ const MessagesTabChat: FunctionComponent<MessagesTabChatProps> = ({
   };
 
   const sendDocument = async (message: string) => {
-    // Supabase mode: file attachments are not migrated yet — no-op silently.
     if (SUPABASE_ENABLED) {
-      setConfirm(state => ({ ...state, document: null }));
-      setShowModals(state => ({ ...state, confirmDocument: false }));
+      if (!channel || !confirm.document) return;
+      setIsSending(true);
+      try {
+        await sendChatAttachment(
+          channel.url,
+          confirm.document.uri,
+          confirm.document.mimeType,
+        );
+        if (message?.length) await sendChatMessage(channel.url, message);
+        await loadMessages(channel.url);
+        if (friend?.metaData?.id)
+          sendPushNotificationToServer({
+            content: '📄 Document',
+            notifierIds: [friend?.metaData?.id || ''],
+            redirect: route.params?.channelUrl,
+          });
+      } catch (error) {
+        if (__DEV__) console.warn('Error sending document:', error);
+      } finally {
+        setIsSending(false);
+        setConfirm(state => ({ ...state, document: null }));
+        setShowModals(state => ({ ...state, confirmDocument: false }));
+      }
       return;
     }
     if (!channel || !confirm.document) return;

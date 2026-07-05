@@ -107,12 +107,25 @@ export async function sbUpdateEmail(newEmail: string) {
   return true;
 }
 
-// Account deletion needs the service role — handled by an edge function later.
-// For now: deactivate the profile (RLS-safe) and sign out.
+// REAL account deletion via the delete-account edge function (service role;
+// identity from the caller's JWT — nobody can delete anyone else). Falls back
+// to deactivate+signout if the function is unreachable so the user is never
+// stuck with a live account they asked to remove.
 export async function sbDeactivateAndSignOut() {
   const me = await currentUserId();
   if (me) {
-    await supabase.from('profiles').update({ active: false }).eq('id', me);
+    try {
+      const { error } = await supabase.functions.invoke('delete-account', {
+        method: 'POST',
+      });
+      if (error) throw error;
+      // auth user gone; local session is now orphaned — clear it.
+      await supabase.auth.signOut();
+      return true;
+    } catch (e) {
+      if (__DEV__) console.warn('delete-account failed, deactivating', e);
+      await supabase.from('profiles').update({ active: false }).eq('id', me);
+    }
   }
   await supabase.auth.signOut();
   return true;

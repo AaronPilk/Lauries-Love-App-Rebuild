@@ -5,8 +5,8 @@ import {
   NativeScrollEvent,
   View,
 } from 'react-native';
-import { useSendbirdChat } from '@sendbird/uikit-react-native';
-import { FriendListQuery } from '@sendbird/chat';
+import { useSendbirdChat } from 'services/legacy-chat.shim';
+import { FriendListQuery } from 'services/legacy-chat.shim';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RouteProp, useRoute } from '@react-navigation/native';
 

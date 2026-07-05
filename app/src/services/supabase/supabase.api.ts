@@ -166,7 +166,7 @@ const uid = currentUserId;
 // ---------------------------------------------------------------------------
 export async function supabaseApi(
   url: string,
-  config: { method?: string; data?: any } = {},
+  config: { method?: string; data?: any; params?: any } = {},
 ): Promise<any> {
   const method = (config.method || 'GET').toUpperCase();
   const path = url.replace(/^https?:\/\/[^/]+/, '').split('?')[0];
@@ -249,14 +249,35 @@ export async function supabaseApi(
   if (path === '/users') {
     const me = await uid();
     if (method === 'GET') {
-      // NOTE: capped page for now; /nearby + real pagination replace the old
-      // fetch-everything pattern before launch.
-      const { data, error, count } = await supabase
-        .from('profiles')
-        .select('*', { count: 'exact' })
-        .eq('active', true)
-        .limit(500);
-      if (error) throw error;
+      // Viewport-aware: when the caller passes a bounding box (map screen),
+      // use the users_in_bbox RPC — only profiles actually on screen are
+      // fetched. Without a bbox, fall back to a capped page (list contexts).
+      const q = config?.params ?? {};
+      const hasBbox =
+        q.minLat != null && q.maxLat != null && q.minLng != null && q.maxLng != null;
+      let data: any[] | null = null;
+      let count: number | null = null;
+      if (hasBbox) {
+        const { data: rows, error } = await supabase.rpc('users_in_bbox', {
+          min_lat: Number(q.minLat),
+          min_lng: Number(q.minLng),
+          max_lat: Number(q.maxLat),
+          max_lng: Number(q.maxLng),
+          max_rows: Number(q.limit) || 500,
+        });
+        if (error) throw error;
+        data = rows ?? [];
+        count = data.length;
+      } else {
+        const res = await supabase
+          .from('profiles')
+          .select('*', { count: 'exact' })
+          .eq('active', true)
+          .limit(Number(q.limit) || 500);
+        if (res.error) throw res.error;
+        data = res.data ?? [];
+        count = res.count;
+      }
       // Single-pass, synchronous mapping with a prebuilt definitions Map —
       // no per-row awaits/promises for a 500-profile page.
       const defsById = await getDefinitionsById();
@@ -270,12 +291,15 @@ export async function supabaseApi(
       };
     }
     if (method === 'POST') {
-      // Legacy "create profile" -> fill in the trigger-created row.
+      // Legacy "create profile" -> IDEMPOTENT upsert. The auth trigger
+      // normally creates the row, but if it hasn't landed yet (or the call
+      // retries) this must not depend on row order — upsert wins either way.
       if (!me) throw new Error('Not authenticated');
+      const session = await supabase.auth.getSession();
+      const email = session.data.session?.user?.email ?? '';
       const { data, error } = await supabase
         .from('profiles')
-        .update(toProfilePatch(config.data ?? {}))
-        .eq('id', me)
+        .upsert({ id: me, email, ...toProfilePatch(config.data ?? {}) })
         .select()
         .single();
       if (error) throw error;

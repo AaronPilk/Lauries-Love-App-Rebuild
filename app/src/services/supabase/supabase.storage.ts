@@ -83,3 +83,50 @@ export function publicUrlFor(
   const { data } = supabase.storage.from(bucket).getPublicUrl(path);
   return data.publicUrl ?? null;
 }
+
+/**
+ * Chat attachment upload — PRIVATE bucket. Path convention is
+ * <conversationId>/<uid>-<ts>.<ext>; storage RLS only lets conversation
+ * members read or write under that prefix. Takes the picker's local
+ * file:// uri (same fetch->ArrayBuffer approach as uploadImage).
+ */
+export async function uploadChatAttachment(
+  conversationId: string,
+  localUri: string,
+  mimeType?: string | null,
+): Promise<string> {
+  const me = await currentUserId();
+  if (!me) throw new Error('Not authenticated');
+  const ext = extFromUri(localUri);
+  const path = `${conversationId}/${me}-${Date.now()}.${ext}`;
+  const resp = await fetch(localUri);
+  const arrayBuffer = await resp.arrayBuffer();
+  const { error } = await supabase.storage
+    .from('chat-attachments')
+    .upload(path, arrayBuffer, {
+      contentType: mimeType || contentTypeFor(ext),
+      upsert: false,
+    });
+  if (error) throw error;
+  return path;
+}
+
+/**
+ * Batch-sign private attachment paths (1h expiry). Returns path -> url.
+ * One round-trip for a whole message page instead of one per attachment.
+ */
+export async function signedUrlsFor(
+  bucket: 'chat-attachments',
+  paths: string[],
+): Promise<Record<string, string>> {
+  if (!paths.length) return {};
+  const { data, error } = await supabase.storage
+    .from(bucket)
+    .createSignedUrls(paths, 3600);
+  if (error) throw error;
+  const out: Record<string, string> = {};
+  (data ?? []).forEach(r => {
+    if (r.signedUrl && r.path) out[r.path] = r.signedUrl;
+  });
+  return out;
+}

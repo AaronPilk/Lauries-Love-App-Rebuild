@@ -1,4 +1,3 @@
-import { JWT } from 'aws-amplify/auth';
 import { Platform } from 'react-native';
 // import { useSelector } from 'react-redux';
 import { captureException } from '@sentry/react-native';
@@ -26,6 +25,9 @@ import { useToastProvider } from 'providers/ToastProvider/ToastProvider';
 import { useIntercom } from 'providers/IntercomProvider/IntercomProvider';
 import { useUserAWSProvider } from 'providers/UserAWSProvider/UserAWSProvider';
 import { useCountry } from 'presentation/hooks';
+
+// aws-amplify removed — structural stand-in for the old Cognito JWT type.
+type JWT = { payload?: any; toString: () => string } | any;
 
 type UserDBContext = {
   isLoading: boolean;

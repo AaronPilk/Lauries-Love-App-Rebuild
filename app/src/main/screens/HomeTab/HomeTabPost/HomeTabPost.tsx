@@ -25,8 +25,8 @@ import {
   useNavigation,
   useFocusEffect,
 } from '@react-navigation/native';
-import { useSendbirdChat } from '@sendbird/uikit-react-native';
-import { Sender } from '@sendbird/chat/message';
+import { useSendbirdChat } from 'services/legacy-chat.shim';
+import { Sender } from 'services/legacy-chat.shim';
 
 // types
 import { RootHomeTabParamList } from 'main/navigators/HomeTabStacks/HomeTabStacks.types';

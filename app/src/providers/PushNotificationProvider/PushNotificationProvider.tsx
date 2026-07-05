@@ -9,7 +9,7 @@ import { Alert, Linking, Platform } from 'react-native';
 import messaging from '@react-native-firebase/messaging';
 import { PermissionStatus } from 'expo-image-picker';
 import * as Notifications from 'expo-notifications';
-import { useSendbirdChat } from '@sendbird/uikit-react-native';
+import { useSendbirdChat } from 'services/legacy-chat.shim';
 import {
   CommonActions,
   NavigationProp,

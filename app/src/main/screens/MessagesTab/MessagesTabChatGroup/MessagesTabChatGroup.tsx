@@ -106,6 +106,9 @@ const MessagesTabChatGroup: FunctionComponent<MessagesTabChatGroupProps> = ({
     null,
   );
   const [isSending, setIsSending] = useState(false);
+  // Synchronous re-entry lock: a fast double-tap fires the handler twice
+  // BEFORE setIsSending's re-render lands, sending the attachment twice.
+  const sendLockRef = useRef(false);
   const paddingFooterRef = useRef(
     new Animated.Value(showKeyboard ? 20 : bottom + 10),
   );
@@ -337,6 +340,8 @@ const MessagesTabChatGroup: FunctionComponent<MessagesTabChatGroupProps> = ({
   const sendImage = async (message: string) => {
     if (SUPABASE_ENABLED) {
       if (!channel || !confirmImage) return;
+      if (sendLockRef.current) return; // sync re-entry lock (double-tap)
+      sendLockRef.current = true;
       setIsSending(true);
       try {
         // Group urls resolve to their (auto-created) conversation thread.
@@ -358,6 +363,7 @@ const MessagesTabChatGroup: FunctionComponent<MessagesTabChatGroupProps> = ({
       } catch (error) {
         if (__DEV__) console.warn('Error sending image:', error);
       } finally {
+        sendLockRef.current = false;
         setIsSending(false);
         setConfirmImage(null);
         setShowModals(state => ({ ...state, confirmImage: false }));

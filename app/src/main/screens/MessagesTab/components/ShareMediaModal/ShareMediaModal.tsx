@@ -63,10 +63,12 @@ const ShareMediaModal: FunctionComponent<ShareMediaModalProps> = ({
           ],
         );
 
+      // allowsEditing removed: iOS forces a square "Move and Scale" crop,
+      // mangling the photo's aspect ratio. Send the full frame as shot.
+      // quality bumped 0.1 -> 0.5 (0.1 was visibly muddy on retina screens).
       const result = await ImagePicker.launchCameraAsync({
         mediaTypes: ['images', 'videos'],
-        allowsEditing: true,
-        quality: 0.1,
+        quality: 0.5,
       });
       if (result.canceled) return;
 
@@ -100,7 +102,7 @@ const ShareMediaModal: FunctionComponent<ShareMediaModalProps> = ({
 
       const result = await ImagePicker.launchImageLibraryAsync({
         mediaTypes: 'images',
-        quality: 0.1,
+        quality: 0.5,
       });
       if (result.canceled) return;
 

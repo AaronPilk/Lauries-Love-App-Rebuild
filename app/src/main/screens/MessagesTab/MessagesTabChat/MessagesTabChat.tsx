@@ -119,6 +119,9 @@ const MessagesTabChat: FunctionComponent<MessagesTabChatProps> = ({
     new Animated.Value(showKeyboard ? 20 : bottom + 10),
   );
   const [isSending, setIsSending] = useState(false);
+  // Synchronous re-entry lock: a fast double-tap fires the handler twice
+  // BEFORE setIsSending's re-render lands, sending the attachment twice.
+  const sendLockRef = useRef(false);
   const widthButtonSendRef = useRef(new Animated.Value(0));
 
   const flatListRef = useRef<FlatList<any>>(null);
@@ -185,6 +188,8 @@ const MessagesTabChat: FunctionComponent<MessagesTabChatProps> = ({
   const sendImage = async (message: string) => {
     if (SUPABASE_ENABLED) {
       if (!channel || !confirm.image) return;
+      if (sendLockRef.current) return;
+      sendLockRef.current = true;
       setIsSending(true);
       try {
         await sendChatAttachment(
@@ -203,6 +208,7 @@ const MessagesTabChat: FunctionComponent<MessagesTabChatProps> = ({
       } catch (error) {
         if (__DEV__) console.warn('Error sending image:', error);
       } finally {
+        sendLockRef.current = false;
         setIsSending(false);
         setConfirm(state => ({ ...state, image: null }));
         setShowModals(state => ({ ...state, confirmImage: false }));
@@ -250,6 +256,8 @@ const MessagesTabChat: FunctionComponent<MessagesTabChatProps> = ({
   const sendDocument = async (message: string) => {
     if (SUPABASE_ENABLED) {
       if (!channel || !confirm.document) return;
+      if (sendLockRef.current) return;
+      sendLockRef.current = true;
       setIsSending(true);
       try {
         await sendChatAttachment(
@@ -268,6 +276,7 @@ const MessagesTabChat: FunctionComponent<MessagesTabChatProps> = ({
       } catch (error) {
         if (__DEV__) console.warn('Error sending document:', error);
       } finally {
+        sendLockRef.current = false;
         setIsSending(false);
         setConfirm(state => ({ ...state, document: null }));
         setShowModals(state => ({ ...state, confirmDocument: false }));

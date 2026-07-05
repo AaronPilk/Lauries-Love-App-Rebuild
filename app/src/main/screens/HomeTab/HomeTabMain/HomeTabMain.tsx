@@ -226,6 +226,7 @@ const HomeTabMain: FunctionComponent<HomeTabMainProps> = ({ navigation }) => {
 
   useEffect(() => {
     if (userChat?.userId && isFocused && !loadingStorage && !loadingServer) {
+      feedEndReachedRef.current = false; // fresh load — pagination re-enabled
       getPosts();
       checkGeoLocationCity();
     }
@@ -236,6 +237,32 @@ const HomeTabMain: FunctionComponent<HomeTabMainProps> = ({ navigation }) => {
     const offsetY = event.nativeEvent.contentOffset.y;
     scrollOffsetRef.current = offsetY;
   };
+
+  // --- infinite scroll (supabase mode): keyset pagination on created_at ----
+  const paginatingRef = useRef(false);
+  const feedEndReachedRef = useRef(false);
+  const prevPostsLenRef = useRef(0);
+
+  const handleEndReached = () => {
+    if (!SUPABASE_ENABLED || showResultPage || loadingServer) return;
+    if (paginatingRef.current || feedEndReachedRef.current) return;
+    if (posts.length < 50) return; // less than one full page — nothing older
+    paginatingRef.current = true;
+    prevPostsLenRef.current = posts.length;
+    const oldestMs = posts.reduce(
+      (min, p: any) => Math.min(min, p.createdAt || min),
+      Number.MAX_SAFE_INTEGER,
+    );
+    getPosts(new Date(oldestMs).toISOString());
+  };
+
+  useEffect(() => {
+    if (!paginatingRef.current || loadingServer) return;
+    paginatingRef.current = false;
+    // Page came back empty -> we've reached the beginning of the feed.
+    if (posts.length === prevPostsLenRef.current)
+      feedEndReachedRef.current = true;
+  }, [posts.length, loadingServer]);
 
   useEffect(() => {
     const keyword = debouncedSearch.trim().toLowerCase();
@@ -473,6 +500,8 @@ const HomeTabMain: FunctionComponent<HomeTabMainProps> = ({ navigation }) => {
             }
             onScroll={handleScroll}
             scrollEventThrottle={16}
+            onEndReached={handleEndReached}
+            onEndReachedThreshold={0.5}
           />
         </View>
         <TouchableOpacity

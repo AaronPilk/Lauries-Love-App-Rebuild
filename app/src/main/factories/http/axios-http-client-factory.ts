@@ -37,7 +37,10 @@ export const cometChatClient = axios.create({
 });
 
 client.interceptors.request.use(async (config: any) => {
-  if (MOCK_ENABLED) return config; // no real Cognito session to attach
+  // Mock: no session to attach. Supabase: the adapter handles everything and
+  // Amplify is not configured — calling fetchAuthSession would boot Cognito
+  // machinery on EVERY request for nothing. Skip both.
+  if (MOCK_ENABLED || SUPABASE_ENABLED) return config;
   try {
     const session = await Auth.fetchAuthSession();
     const jwtToken = session.tokens?.accessToken;

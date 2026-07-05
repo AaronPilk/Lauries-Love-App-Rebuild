@@ -22,6 +22,7 @@ import { useSendbirdChatProvider } from 'providers/SendbirdChatProvider/Sendbird
 import { useUserDBProvider } from 'providers/UserDBProvider/UserDBProvider';
 import { useApiProvider } from 'providers/ApiProvider/ApiProvider';
 import { PATHS_MESSAGES_TAB } from 'main/navigators/paths';
+import { SUPABASE_ENABLED } from 'services/supabase/backend.config';
 
 type NotificationTrigger = {
   payload?: {
@@ -199,6 +200,11 @@ const PushNotificationProvider: FunctionComponent<
       //TODO: TESTING sendPushNotification
       //await sendPushNotification();
       if (!userChat?.userId) return false;
+
+      // Supabase mode: the FCM token is already saved on the profile above
+      // (updateUserDB) for the future push edge function. Sendbird is never
+      // connected, so registering the token with it would just throw.
+      if (SUPABASE_ENABLED) return true;
 
       await sdk.registerAPNSPushTokenForCurrentUser(resultToken);
     } catch (error) {

@@ -24,6 +24,14 @@ export const supabase = createClient(url, key, {
   },
 });
 
+const UUID_RE =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+/** Reject non-UUID ids before they reach interpolated PostgREST/realtime filters. */
+export const assertUuid = (v: string, label = 'id') => {
+  if (!UUID_RE.test(v)) throw new Error(`Invalid ${label}`);
+  return v;
+};
+
 /**
  * Current auth user id, read from the LOCALLY CACHED session.
  *

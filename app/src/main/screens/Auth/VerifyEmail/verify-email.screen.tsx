@@ -10,6 +10,11 @@ import {
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { confirmSignUp, resendSignUpCode } from 'aws-amplify/auth';
+import { SUPABASE_ENABLED } from 'services/supabase/backend.config';
+import {
+  sbConfirmSignUp,
+  sbResendSignUpCode,
+} from 'services/supabase/supabase.auth';
 import {
   RouteProp,
   useFocusEffect,
@@ -86,7 +91,8 @@ export default function VerifyEmailScreen() {
 
   async function handleResendCode() {
     try {
-      await resendSignUpCode({ username: userOnboarding.email });
+      if (SUPABASE_ENABLED) await sbResendSignUpCode(userOnboarding.email);
+      else await resendSignUpCode({ username: userOnboarding.email });
       showToast({ message: 'Code sent successfully', type: 'info' });
       setTimer(30);
     } catch (error) {
@@ -97,10 +103,15 @@ export default function VerifyEmailScreen() {
   async function handleContinue() {
     setIsLoading(true);
     try {
-      const { isSignUpComplete } = await confirmSignUp({
-        username: userOnboarding.email,
-        confirmationCode: code.join(''),
-      });
+      // Supabase: verifyOtp confirms the email AND returns a session, so we
+      // can run the same downstream flow (authAWS routes to Supabase sign-in
+      // in this mode; createUserDB patches the trigger-created profile row).
+      const { isSignUpComplete } = SUPABASE_ENABLED
+        ? await sbConfirmSignUp(userOnboarding.email, code.join(''))
+        : await confirmSignUp({
+            username: userOnboarding.email,
+            confirmationCode: code.join(''),
+          });
 
       if (isSignUpComplete) {
         const response = await authAWS(userOnboarding.email, password);

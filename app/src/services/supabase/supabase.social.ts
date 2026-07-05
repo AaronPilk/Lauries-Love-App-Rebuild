@@ -72,7 +72,13 @@ export async function getFeedPosts(limit = 50, before?: string) {
       firstMessage: p.body,
       commentQty: p.comments?.[0]?.count ?? 0,
       likes: likesByPost[p.id] ?? [],
+      // Legacy Sendbird emitted three sizes; Storage serves one original.
+      // Emit ALL legacy keys so every consumer (feed uses _sm, post detail
+      // uses _md, viewers use _lg) renders the image. Real thumbnail
+      // variants can come later via Supabase image transforms.
       image_sm: publicUrlFor('post-images', p.image_path) ?? '',
+      image_md: publicUrlFor('post-images', p.image_path) ?? '',
+      image_lg: publicUrlFor('post-images', p.image_path) ?? '',
       visibility: p.visibility,
       groupId: p.group_id,
       groupName: p.group?.name ?? null,

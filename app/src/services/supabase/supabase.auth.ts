@@ -34,6 +34,24 @@ export async function sbSignUp(email: string, password: string) {
   };
 }
 
+// Verify the signup email-confirmation code (6-digit OTP). On success
+// Supabase returns a live session — no separate sign-in needed.
+export async function sbConfirmSignUp(email: string, code: string) {
+  const { data, error } = await supabase.auth.verifyOtp({
+    email,
+    token: code,
+    type: 'signup',
+  });
+  if (error) throw error;
+  return { isSignUpComplete: true, session: data.session };
+}
+
+export async function sbResendSignUpCode(email: string) {
+  const { error } = await supabase.auth.resend({ type: 'signup', email });
+  if (error) throw error;
+  return true;
+}
+
 export async function sbCurrentSession() {
   const { data } = await supabase.auth.getSession();
   if (!data.session) return null;

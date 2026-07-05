@@ -2,7 +2,7 @@
 // ApiProvider calls this when BACKEND === 'supabase', so the 540-file screen
 // layer keeps working unchanged while we retire the old REST API.
 
-import { supabase, currentUserId } from './client';
+import { supabase, currentUserId, assertUuid } from './client';
 
 // ---------------------------------------------------------------------------
 // Shape mappers: Postgres rows -> the legacy API shapes the app expects
@@ -156,13 +156,7 @@ function toProfilePatch(data: Record<string, any>) {
   return patch;
 }
 
-const UUID_RE =
-  /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-/** Reject non-UUID ids before they reach interpolated PostgREST filters. */
-const assertUuid = (v: string, label = 'id') => {
-  if (!UUID_RE.test(v)) throw new Error(`Invalid ${label}`);
-  return v;
-};
+// Shared UUID guard lives in ./client (also used by chat realtime filters).
 
 // Local cached session read — no network round-trip per request.
 const uid = currentUserId;
@@ -389,9 +383,13 @@ export async function supabaseApi(
     }
     if (method === 'POST') {
       const d = config.data ?? {};
+      const me = await uid();
+      if (!me) throw new Error('Not authenticated');
+      // SECURITY: sender is ALWAYS the authenticated user — never trust a
+      // client-supplied senderId (spoofable). Enforced here and by RLS.
       const { error } = await supabase.from('notifications').insert({
         recipient_id: d.notifierId,
-        sender_id: d.senderId,
+        sender_id: me,
         entity_type: d.entityType,
         content: d.content ?? null,
         meta: d.meta ?? {},
@@ -401,7 +399,10 @@ export async function supabaseApi(
     }
   }
   if (path === '/notifications/send-push-notification') {
-    return { ok: true }; // push fan-out moves to an edge function later
+    // Honest stub: delivery is NOT implemented yet (edge function pending).
+    // Non-throwing so in-app notification flows aren't blocked on push.
+    if (__DEV__) console.warn('[supabase] push delivery not implemented yet');
+    return { ok: false, msg: 'push delivery pending (edge function)' };
   }
   const notifMatch = /^\/notifications\/([^/]+)$/.exec(path);
   if (notifMatch && (method === 'PUT' || method === 'PATCH')) {

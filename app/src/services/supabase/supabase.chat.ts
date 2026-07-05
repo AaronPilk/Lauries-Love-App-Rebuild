@@ -2,7 +2,7 @@
 // Legacy Sendbird channel/message shapes preserved so screens stay unchanged.
 // Realtime: postgres_changes subscription on messages per conversation.
 
-import { supabase, currentUserId } from './client';
+import { supabase, currentUserId, assertUuid } from './client';
 import { publicUrlFor } from './supabase.storage';
 
 // Local cached session read — no network round-trip per request.
@@ -114,46 +114,20 @@ export async function getMyConversations(meIdHint?: string) {
   );
 }
 
-/** Find (or create) the 1:1 conversation with another profile. */
+/**
+ * Find (or create) the 1:1 conversation with another profile.
+ * Atomic in the DB: find_or_create_direct_conversation() computes a canonical
+ * pair key (unique index) so two devices tapping "message" simultaneously
+ * always land in the SAME conversation — no check-then-insert race.
+ */
 export async function findOrCreateDirectConversation(otherProfileId: string) {
-  const me = await uid();
-  if (!me) throw new Error('Not authenticated');
-
-  // Existing direct conversation containing BOTH of us?
-  const { data: mine } = await supabase
-    .from('conversation_members')
-    .select('conversation_id, conversations!inner(is_group)')
-    .eq('profile_id', me)
-    .eq('conversations.is_group', false);
-  const myConvIds = (mine ?? []).map((r: any) => r.conversation_id);
-
-  if (myConvIds.length > 0) {
-    const { data: shared } = await supabase
-      .from('conversation_members')
-      .select('conversation_id')
-      .eq('profile_id', otherProfileId)
-      .in('conversation_id', myConvIds)
-      .limit(1);
-    if (shared && shared.length > 0) return shared[0].conversation_id as string;
-  }
-
-  // Create conversation + both memberships (RLS: creator may add members).
-  const { data: conv, error } = await supabase
-    .from('conversations')
-    .insert({ is_group: false, created_by: me })
-    .select()
-    .single();
+  assertUuid(otherProfileId);
+  const { data, error } = await supabase.rpc(
+    'find_or_create_direct_conversation',
+    { other_profile: otherProfileId },
+  );
   if (error) throw error;
-
-  const { error: memberError } = await supabase
-    .from('conversation_members')
-    .insert([
-      { conversation_id: conv.id, profile_id: me },
-      { conversation_id: conv.id, profile_id: otherProfileId },
-    ]);
-  if (memberError) throw memberError;
-
-  return conv.id as string;
+  return data as string;
 }
 
 /**
@@ -257,6 +231,8 @@ export function subscribeToConversation(
   conversationId: string,
   onMessage: (msg: any) => void,
 ) {
+  // The filter string below is interpolated — never let a non-UUID through.
+  assertUuid(conversationId, 'conversation id');
   const channel = supabase
     .channel(`conv-${conversationId}`)
     .on(

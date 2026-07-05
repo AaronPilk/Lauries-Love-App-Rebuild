@@ -30,6 +30,13 @@ import {
   IconTabUser,
 } from 'assets/icons-auto/components';
 
+// backend v2
+import { SUPABASE_ENABLED } from 'services/supabase/backend.config';
+import {
+  getGroupMembers,
+  leaveGroup,
+} from 'services/supabase/supabase.social';
+
 // constants
 import { PATHS_MESSAGES_TAB } from 'main/navigators/paths';
 
@@ -50,11 +57,36 @@ const MessagesTabDetailsGroup: FunctionComponent<
       RouteProp<RootMessagesTabParamList, 'messages-tab-details-group'>
     >();
   const { sdk } = useSendbirdChat();
-  const { getChannels } = useSendbirdChatProvider();
+  const { getChannels, groupChannels } = useSendbirdChatProvider();
   const [channel, setChannel] = useState<GroupChannelSendBirdType | null>(null);
 
   const fetchChannel = async () => {
     if (!route.params?.channelUrl) return;
+
+    if (SUPABASE_ENABLED) {
+      // Supabase mode: the provider cache is the source of truth for the
+      // channel shell; members are re-fetched fresh so the count is right.
+      // No Sendbird SDK calls here.
+      const found = groupChannels.find(
+        c => c.url === route.params?.channelUrl,
+      );
+      if (found) setChannel(found);
+      try {
+        const members = await getGroupMembers(route.params.channelUrl);
+        setChannel({
+          ...(found || {
+            url: route.params.channelUrl,
+            name: '',
+            coverUrl: '',
+          }),
+          members,
+          memberCount: members.length,
+        } as GroupChannelSendBirdType);
+      } catch (error) {
+        if (__DEV__) console.warn('Error fetching group members:', error);
+      }
+      return;
+    }
 
     try {
       const fetchedChannel = await sdk.groupChannel.getChannel(
@@ -66,7 +98,23 @@ const MessagesTabDetailsGroup: FunctionComponent<
     }
   };
 
-  const onLeave = () => {
+  const onLeave = async () => {
+    if (SUPABASE_ENABLED) {
+      // Supabase mode: remove the caller's membership row, refresh the
+      // channel list, then land back on the messages list.
+      try {
+        if (route.params?.channelUrl) await leaveGroup(route.params.channelUrl);
+        await getChannels();
+        navigation.reset({
+          index: 0,
+          routes: [{ name: PATHS_MESSAGES_TAB.messagesTabMain }],
+        });
+      } catch (error) {
+        if (__DEV__) console.warn('Error leaving group:', error);
+      }
+      return;
+    }
+
     channel?.leave().then(async () => {
       await getChannels();
       navigation.reset({
@@ -104,11 +152,14 @@ const MessagesTabDetailsGroup: FunctionComponent<
       ]);
   };
 
+  // Depend on the provider cache length: in Supabase mode the channel comes
+  // from groupChannels, which may still be loading on first mount.
   useEffect(() => {
     fetchChannel();
-  }, []);
+  }, [groupChannels.length]);
 
-  if (!channel) return null;
+  // Never return a blank screen: header + back button stay alive even while
+  // the channel is still resolving (MessagesTabDetails pattern).
   return (
     <>
       <BackgroundScreen type={'messages'}>
@@ -119,14 +170,14 @@ const MessagesTabDetailsGroup: FunctionComponent<
         <View style={styles.container}>
           <View style={styles.userContainer}>
             <AvatarMessagesTab
-              imageUrl={channel.coverUrl}
+              imageUrl={channel?.coverUrl || ''}
               width={120}
               height={120}
             />
             <View style={styles.infoContainer}>
-              <Text style={styles.name}>{channel.name}</Text>
+              <Text style={styles.name}>{channel?.name || ''}</Text>
               <Text style={styles.birthday}>
-                {channel.members.length} Members
+                {channel?.members?.length || 0} Members
               </Text>
             </View>
           </View>

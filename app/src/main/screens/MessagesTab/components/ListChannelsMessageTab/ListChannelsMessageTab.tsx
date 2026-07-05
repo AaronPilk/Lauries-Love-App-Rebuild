@@ -1,6 +1,5 @@
 import React, { FunctionComponent, useMemo } from 'react';
 import { GroupChannel } from 'services/legacy-chat.shim';
-import { useSendbirdChat } from 'services/legacy-chat.shim';
 import {
   View,
   Text,
@@ -82,11 +81,12 @@ const ListChannelsMessageTab: FunctionComponent<
   handleScrollDown,
   joinedUrls,
 }) => {
-  const { sdk } = useSendbirdChat();
   const { userChat } = useSendbirdChatProvider();
 
-  // Sendbird identity in legacy mode; Supabase profile id otherwise.
-  const currentUserId = sdk.currentUser?.userId ?? userChat?.userId ?? null;
+  // Supabase profile id (userChat mirrors the profile). The old
+  // sdk.currentUser fallback was the dead shim proxy — truthy, so it
+  // short-circuited ?? and broke "other member" derivation on DM rows.
+  const currentUserId = userChat?.userId ?? null;
 
   const Layout = useMemo(
     () => (isFullHeight ? View : ScrollView),

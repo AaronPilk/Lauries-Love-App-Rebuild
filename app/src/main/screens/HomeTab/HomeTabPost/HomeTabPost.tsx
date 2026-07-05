@@ -124,9 +124,11 @@ const HomeTabPost: FunctionComponent<HomeTabPostProps> = ({ navigation }) => {
 
   const isActionButtonActive = useMemo(() => postText.length > 0, [postText]);
 
+  // Identity from the REAL profile (reaction arrays store profile ids) —
+  // sdk.currentUser is the dead Sendbird shim proxy.
   const userID = useMemo(
-    () => sdk.currentUser?.userId,
-    [sdk.currentUser?.userId],
+    () => userDB?.id ?? userDB?.cognitoId ?? '',
+    [userDB?.id, userDB?.cognitoId],
   );
 
   const [userPost, ...restComments] = useMemo(() => comments, [comments]);

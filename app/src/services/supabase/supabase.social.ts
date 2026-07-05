@@ -141,6 +141,10 @@ export async function getPostComments(postId: string) {
 
   const postAsMessage = {
     messageId: `post-${post.id}`,
+    // channelUrl is REQUIRED: the detail screen matches its feed post via
+    // messages[0].channelUrl === post.url. Without it, image + like count
+    // never rendered on the detail screen.
+    channelUrl: post.id,
     message: post.body,
     createdAt: new Date(post.created_at).getTime(),
     messageType: 'user',
@@ -178,6 +182,7 @@ export async function getPostComments(postId: string) {
     postAsMessage,
     ...comments.map(c => ({
       messageId: c.id,
+      channelUrl: postId,
       message: c.body,
       createdAt: new Date(c.created_at).getTime(),
       messageType: 'user',
@@ -336,6 +341,49 @@ export async function getMyGroupChannels() {
       true,
     ),
   );
+}
+
+/**
+ * Create a group (atomic RPC: group + creator-as-admin + optional invitees).
+ * Direct INSERTs on groups are blocked by RLS — this is the only entry.
+ * Returns the new group shaped as a legacy channel.
+ */
+export async function createGroup(
+  name: string,
+  options?: { description?: string | null; memberIds?: string[] },
+) {
+  const { data: gid, error } = await supabase.rpc('create_group', {
+    p_name: name,
+    p_description: options?.description ?? null,
+    p_member_ids: options?.memberIds ?? [],
+  });
+  if (error) throw error;
+  const { data: g } = await supabase
+    .from('groups')
+    .select('*, group_members(count)')
+    .eq('id', gid)
+    .single();
+  return groupToChannel(
+    { ...(g ?? { id: gid, name }), member_count: g?.group_members?.[0]?.count ?? 1 },
+    [],
+    true,
+  );
+}
+
+/** Members of one group, shaped as legacy chat members (capped). */
+export async function getGroupMembers(groupId: string, limit = 200) {
+  const { data, error } = await supabase
+    .from('group_members')
+    .select(
+      'member_role, profile:profiles(id, first_name, last_name, display_name, avatar_path)',
+    )
+    .eq('group_id', groupId)
+    .limit(limit);
+  if (error) throw error;
+  return (data ?? []).map((r: any) => ({
+    ...senderFromProfile(r.profile),
+    role: r.member_role,
+  }));
 }
 
 export async function joinGroup(groupId: string) {

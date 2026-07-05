@@ -235,8 +235,9 @@ const UserAWSProvider: FunctionComponent<UserAWSProviderProps> = ({
       return true;
     }
     if (SUPABASE_ENABLED) {
-      // Full auth-user deletion requires the service role (edge function,
-      // Phase B). For now: deactivate profile + sign out.
+      // REAL deletion: sbDeactivateAndSignOut invokes the delete-account
+      // edge function (service role, JWT-verified identity) and falls back
+      // to deactivate+signout only if the function is unreachable.
       await sbDeactivateAndSignOut();
       setUserAWS(null);
       setJwtTokenUser(null);

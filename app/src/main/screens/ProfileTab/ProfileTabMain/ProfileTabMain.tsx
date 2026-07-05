@@ -16,6 +16,7 @@ import { UserDBType } from 'providers/UserDBProvider/UserDBProvider.types';
 
 // providers
 import { useUserDBProvider } from 'providers/UserDBProvider/UserDBProvider';
+import { useUserAWSProvider } from 'providers/UserAWSProvider/UserAWSProvider';
 import { useDBProvider } from 'providers/DBProvider/DBProvider';
 import { usePosthogProvider } from 'providers/PosthogProvider/PosthogProvider';
 
@@ -52,6 +53,7 @@ const ProfileTabMain: FunctionComponent<ClientsMainScreenProps> = ({
   const { onCapture } = usePosthogProvider();
   const { signOutIntercom } = useIntercom();
   const { userDB, updateUserDB, signOutDB, deleteUserDB } = useUserDBProvider();
+  const { deleteAWS } = useUserAWSProvider();
   const {
     db: { designationTypes, diagnosisSubType, diagnosisType },
   } = useDBProvider();
@@ -172,7 +174,11 @@ const ProfileTabMain: FunctionComponent<ClientsMainScreenProps> = ({
   };
 
   const onPressDelete = async () => {
+    // Deactivate profile data first (userDB path), then REALLY delete the
+    // auth account via the delete-account edge function (deleteAWS). The
+    // old code only did the first step — the auth user survived "deletion".
     await deleteUserDB();
+    await deleteAWS();
     if (userDB?.email)
       onCapture({
         typeEvent: 'DeleteAccount',

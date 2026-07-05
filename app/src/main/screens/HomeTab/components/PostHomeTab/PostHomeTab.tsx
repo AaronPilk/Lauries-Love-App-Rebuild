@@ -56,9 +56,12 @@ const PostHomeTab: FunctionComponent<PostHomeTabProps> = ({
   const [likes, setLikes] = useState(0);
   const [isLiked, setIsLiked] = useState(false);
 
+  // Identity from the REAL profile (likes arrays store profile ids).
+  // sdk.currentUser is the dead Sendbird shim proxy — truthy but never a
+  // matching id, which made hearts never render as "liked".
   const userID = useMemo(
-    () => sdk.currentUser?.userId,
-    [sdk.currentUser?.userId],
+    () => userDB?.id ?? userDB?.cognitoId ?? '',
+    [userDB?.id, userDB?.cognitoId],
   );
 
   // Parse post.data once per data change instead of on every focus/render

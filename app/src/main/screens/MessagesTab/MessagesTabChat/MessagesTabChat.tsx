@@ -91,6 +91,7 @@ const MessagesTabChat: FunctionComponent<MessagesTabChatProps> = ({
     groupChannels,
     messages,
     loadMessages,
+    appendMessage,
     setLimit,
     getFriends,
     getChannels,
@@ -558,37 +559,16 @@ const MessagesTabChat: FunctionComponent<MessagesTabChatProps> = ({
     if (findChannel) setChannel(findChannel);
   }, [groupChannels]);
 
-  // Supabase realtime: on every INSERT for this conversation, refresh the
-  // provider thread. loadMessages replaces the whole list keyed by messageId,
-  // so our own sends (also delivered by the subscription) are deduped.
-  // One subscription per channelUrl (cleaned up on unmount/param change); an
-  // in-flight guard coalesces event bursts into at most one queued refetch
-  // instead of stacking a loadMessages round-trip per incoming message.
+  // Supabase realtime: APPEND each incoming message to the provider thread
+  // (deduped by messageId — covers our own sends). No refetch-per-message:
+  // a busy group chat no longer triggers a 100-row round-trip per event.
   useEffect(() => {
     if (!SUPABASE_ENABLED || !route.params?.channelUrl) return;
     const channelUrl = route.params.channelUrl;
-    let active = true;
-    let inFlight = false;
-    let queued = false;
-    const refresh = async () => {
-      if (inFlight) {
-        queued = true;
-        return;
-      }
-      inFlight = true;
-      try {
-        await loadMessages(channelUrl);
-      } finally {
-        inFlight = false;
-        if (queued && active) {
-          queued = false;
-          refresh();
-        }
-      }
-    };
-    const unsubscribe = subscribeToConversation(channelUrl, refresh);
+    const unsubscribe = subscribeToConversation(channelUrl, msg => {
+      appendMessage(channelUrl, msg);
+    });
     return () => {
-      active = false;
       unsubscribe();
     };
   }, [route.params?.channelUrl]);

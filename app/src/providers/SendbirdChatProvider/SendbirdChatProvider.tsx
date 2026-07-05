@@ -51,6 +51,7 @@ type SendbirdChatContext = {
   setLimit: React.Dispatch<React.SetStateAction<number>>;
   getChannels: () => Promise<void>;
   loadMessages: (channelUrl: string, limit?: number) => Promise<BaseMessage[]>;
+  appendMessage: (channelUrl: string, msg: any) => void;
   getMember: (userId: string) => Promise<void>;
   addBlockedUser: (userId: string) => Promise<boolean>;
   removeBlockedUser: (userId: string) => Promise<boolean>;
@@ -419,6 +420,22 @@ const SendbirdChatProvider: FunctionComponent<SendbirdChatProviderProps> = ({
     }
   };
 
+  /**
+   * Realtime delivery: PREPEND one incoming message (threads are stored
+   * newest-first for the inverted FlatList) instead of refetching the whole
+   * page per event. Dedupes by messageId (covers our own sends, which are
+   * already in state from the post-send loadMessages).
+   */
+  const appendMessage = (channelUrl: string, msg: any) => {
+    setMessages(prev => {
+      const current = (prev[channelUrl] ?? []) as any[];
+      if (msg?.messageId != null &&
+          current.some((m: any) => m.messageId === msg.messageId))
+        return prev;
+      return { ...prev, [channelUrl]: [msg, ...current] as any };
+    });
+  };
+
   const getBlockedUsers = async () => {
     if (SOCIAL_STUBBED) return [];
     if (!userChat) return;
@@ -562,6 +579,7 @@ const SendbirdChatProvider: FunctionComponent<SendbirdChatProviderProps> = ({
       getChannels,
       setLimit,
       loadMessages,
+      appendMessage,
       getMember,
       addBlockedUser,
       removeBlockedUser,

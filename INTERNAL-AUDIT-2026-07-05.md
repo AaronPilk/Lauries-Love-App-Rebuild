@@ -1,5 +1,16 @@
 # Internal Max-Agent Audit — July 5, 2026 (post remediation passes 1 + 2)
 
+> **STATUS UPDATE (same day, pass 3):** every P0 and P1 below is FIXED, plus
+> Codex V3's additional HIGHs (Android Intercom native leftover, delete-account
+> UI wiring) and several P2/P3 items (video mime + size, realtime append
+> instead of refetch-per-message, rate-limit composite indexes, env-parser
+> single-sourcing, support-profile env override + graceful failure, README).
+> Group create/details/members now have real Supabase implementations
+> (create_group RPC). New migrations: rls_privacy_v1 + rls_privacy_v2.
+> Still open (unchanged): payments, push fan-out, Resend SMTP, image
+> transforms/CDN, chat history cursor, reaction counts refactor, profiles
+> column-level narrowing (needs staging), tests, final dead-code sweep.
+
 Four specialist agents (correctness, security, performance/scale, structure)
 audited the current HEAD adversarially, file:line evidence required. This is
 the honest state of the app AFTER the Codex-audit remediation and the full

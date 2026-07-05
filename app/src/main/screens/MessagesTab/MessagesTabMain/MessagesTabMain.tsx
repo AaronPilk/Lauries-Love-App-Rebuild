@@ -57,6 +57,7 @@ import { useUserDBProvider } from 'providers/UserDBProvider/UserDBProvider';
 import { useDebouncedValue } from 'utils/useDebouncedValue';
 import LoadingLine from 'components/LoadingLine/LoadingLine';
 import { useSendbirdChat } from 'services/legacy-chat.shim';
+import { SUPABASE_ENABLED } from 'services/supabase/backend.config';
 
 type MessagesTabMainProps = {
   navigation: NativeStackNavigationProp<RootMessagesTabParamList>;
@@ -193,7 +194,7 @@ const MessagesTabMain: FunctionComponent<MessagesTabMainProps> = ({
 }) => {
   const isFocused = useIsFocused();
   const { sdk } = useSendbirdChat();
-  const { userChat, groupChannels, limit, setLimit, getChannels } =
+  const { userChat, groupChannels, messages, limit, setLimit, getChannels } =
     useSendbirdChatProvider();
   const { userDB } = useUserDBProvider();
   const [search, setSearch] = useState('');
@@ -239,27 +240,42 @@ const MessagesTabMain: FunctionComponent<MessagesTabMainProps> = ({
         continue;
       }
       // 2. get latest message
-      try {
-        const fullChannel = await sdk.groupChannel.getChannel(channel.url);
-        const messageQuery = fullChannel.createPreviousMessageListQuery?.({
-          limit: maxMessagesPerChannel,
-          reverse: true,
-        });
-        if (messageQuery) {
-          const messages = await messageQuery.load();
-          matchedMessages = messages.filter(msg => {
-            if (msg.messageType === 'user') {
-              return msg.message?.toLowerCase().includes(lowerKeyword);
-            }
-            // if (msg.messageType === 'file') {
-            //   return msg.name?.toLowerCase().includes(lowerKeyword);
-            // }
-            return false;
-          });
+      if (SUPABASE_ENABLED) {
+        // Search locally cached thread messages + the list preview —
+        // Sendbird's per-channel history query is gone. (Full-text server
+        // search can come later as a messages RPC.)
+        const cached = messages[channel.url] || [];
+        matchedMessages = cached.filter(
+          msg =>
+            msg.messageType === 'user' &&
+            msg.message?.toLowerCase().includes(lowerKeyword),
+        ) as BaseMessage[];
+        if (
+          matchedMessages.length === 0 &&
+          channel.lastMessage?.message?.toLowerCase().includes(lowerKeyword)
+        ) {
+          matchedMessages = [channel.lastMessage as BaseMessage];
         }
-      } catch (e) {
-        if (__DEV__)
-          console.warn('Failed to fetch messages for channel', channel.url, e);
+      } else {
+        try {
+          const fullChannel = await sdk.groupChannel.getChannel(channel.url);
+          const messageQuery = fullChannel.createPreviousMessageListQuery?.({
+            limit: maxMessagesPerChannel,
+            reverse: true,
+          });
+          if (messageQuery) {
+            const loaded = await messageQuery.load();
+            matchedMessages = loaded.filter(msg => {
+              if (msg.messageType === 'user') {
+                return msg.message?.toLowerCase().includes(lowerKeyword);
+              }
+              return false;
+            });
+          }
+        } catch (e) {
+          if (__DEV__)
+            console.warn('Failed to fetch messages for channel', channel.url, e);
+        }
       }
 
       if (matchedMessages.length > 0) {

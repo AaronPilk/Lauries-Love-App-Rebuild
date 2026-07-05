@@ -17,6 +17,13 @@ import {
 } from 'providers/SendbirdChatProvider/SendbirdChatProvider.types';
 import { RootMessagesTabParamList } from 'main/navigators/MessagesTabStacks/MessagesTabStacks.types';
 
+// providers
+import { useSendbirdChatProvider } from 'providers/SendbirdChatProvider/SendbirdChatProvider';
+
+// backend v2
+import { SUPABASE_ENABLED } from 'services/supabase/backend.config';
+import { getGroupMembers } from 'services/supabase/supabase.social';
+
 // components
 import BackgroundScreen from 'components/BackgroundScreen/BackgroundScreen';
 import ListFriendsMessageTab from '../components/ListFriendsMessageTab/ListFriendsMessageTab';
@@ -37,19 +44,30 @@ const MessagesTabMembersGroup: FunctionComponent<
       RouteProp<RootMessagesTabParamList, 'messages-tab-members-group'>
     >();
   const { sdk } = useSendbirdChat();
+  const { friends: providerFriends, userChat } = useSendbirdChatProvider();
   const [channel, setChannel] = useState<GroupChannelSendBirdType | null>(null);
   const [friends, setFriends] = useState<UserSendBirdType[]>([]);
   const [limit, setLimit] = useState(20);
 
+  // Supabase mode: there is no Sendbird connection, so sdk.currentUser is
+  // meaningless — my chat identity is userChat (profile id).
+  const myUserId = SUPABASE_ENABLED
+    ? userChat?.userId
+    : sdk.currentUser?.userId;
+
   const members = useMemo(
     () =>
-      channel?.members.filter(
-        member => member.userId !== sdk.currentUser?.userId,
-      ) || [],
-    [channel],
+      channel?.members?.filter(member => member.userId !== myUserId) || [],
+    [channel, myUserId],
   );
 
   const getFriends = async () => {
+    if (SUPABASE_ENABLED) {
+      // Friends already live on the provider (Supabase-backed); no SDK query.
+      setFriends(providerFriends || []);
+      return;
+    }
+
     const friendListQuery = sdk.createFriendListQuery({
       limit,
     });
@@ -64,6 +82,22 @@ const MessagesTabMembersGroup: FunctionComponent<
   const getCurrentChannel = async () => {
     if (!route.params?.channelUrl) return;
 
+    if (SUPABASE_ENABLED) {
+      // Supabase mode: members come straight from group_members (legacy
+      // member shape: userId/nickname/plainProfileUrl/metaData.id/role).
+      try {
+        const groupMembers = await getGroupMembers(route.params.channelUrl);
+        setChannel({
+          url: route.params.channelUrl,
+          members: groupMembers,
+          memberCount: groupMembers.length,
+        } as unknown as GroupChannelSendBirdType);
+      } catch (error) {
+        if (__DEV__) console.warn('Error fetching group members:', error);
+      }
+      return;
+    }
+
     try {
       const fetchedChannel = await sdk.groupChannel.getChannel(
         route.params.channelUrl,
@@ -75,6 +109,10 @@ const MessagesTabMembersGroup: FunctionComponent<
   };
 
   const addFriend = async (userId: string) => {
+    // Supabase mode: friend requests don't go through the dead Sendbird
+    // proxy — no-op here rather than silently "succeeding".
+    if (SUPABASE_ENABLED) return;
+
     try {
       await sdk.addFriends([userId]);
       getFriends();
@@ -93,9 +131,11 @@ const MessagesTabMembersGroup: FunctionComponent<
     if (members.length >= limit && isEnd) setLimit(limit + 20);
   };
 
+  // providerFriends is in the deps because in Supabase mode the provider
+  // loads friends asynchronously after this screen mounts.
   useEffect(() => {
     getFriends();
-  }, [limit]);
+  }, [limit, providerFriends]);
 
   // The channel does not depend on the friends pagination limit — fetch once.
   useEffect(() => {

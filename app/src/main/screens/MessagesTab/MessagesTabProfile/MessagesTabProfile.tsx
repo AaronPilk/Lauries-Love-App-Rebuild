@@ -144,6 +144,36 @@ const MessagesTabProfile: FunctionComponent<MessagesTabProfileProps> = ({
   };
 
   const getUserSendbird = async () => {
+    if (SUPABASE_ENABLED) {
+      // Sendbird is gone: build the "chat user" straight from the profile.
+      // route userId/cognitoId are both the Supabase profile id.
+      try {
+        const profileId = route.params?.userId || route.params?.cognitoId || '';
+        const userDB = profileId ? await getUserDB(profileId) : null;
+        if (!userDB) {
+          Alert.alert('Error', DEFAULT_ERROR_NOT_FOUND_USER_SENDBIRD, [
+            { text: 'OK', onPress: () => navigation.goBack() },
+          ]);
+          return;
+        }
+        setSelectUserSendbird({
+          userId: userDB.id,
+          nickname: userDB.displayName || userDB.firstName || 'Member',
+          plainProfileUrl: '',
+          isActive: true,
+          metaData: { id: userDB.id, cognitoId: userDB.cognitoId },
+        } as unknown as UserSendBirdType);
+        const profileImgUrl = userDB.profilePicture
+          ? publicUrlFor('avatars', userDB.profilePicture)
+          : null;
+        setSelectUserDB({ ...userDB, profileImgUrl });
+      } catch (error) {
+        if (__DEV__) console.warn('getUser error', error);
+      } finally {
+        setIsLoading(false);
+      }
+      return;
+    }
     try {
       const query = sdk.createApplicationUserListQuery({
         userIdsFilter: [route.params?.cognitoId || ''],

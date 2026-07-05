@@ -24,6 +24,10 @@ import AddMembersCreateGroup from './components/AddMembersCreateGroup/AddMembers
 import NewGroupCreateGroup from './components/NewGroupCreateGroup/NewGroupCreateGroup';
 import GroupImageModal from '../components/GroupImageModal/GroupImageModal';
 
+// backend v2
+import { SUPABASE_ENABLED } from 'services/supabase/backend.config';
+import { createGroup as createGroupSupabase } from 'services/supabase/supabase.social';
+
 // constants
 import { DEFAULT_NEW_GROUP } from './MessagesTabCreateGroup.constants';
 import { PATHS_MESSAGES_TAB } from 'main/navigators/paths';
@@ -92,6 +96,25 @@ const MessagesTabCreateGroup: FunctionComponent<
       }
 
       setIsLoading(true);
+
+      if (SUPABASE_ENABLED) {
+        // Supabase mode: one atomic RPC creates the group + memberships
+        // (caller becomes admin). Selected members are UserSendBirdType —
+        // metaData.id carries the profile id (userId equals it in Supabase
+        // mode, so it's a safe fallback). Cover image upload is legacy-only.
+        const memberIds = newGroup.members.map(
+          member => member.metaData?.id || member.userId,
+        );
+        const supabaseChannel = await createGroupSupabase(newGroup.name, {
+          memberIds,
+        });
+        await getChannels();
+        navigation.navigate(PATHS_MESSAGES_TAB.messagesTabChatGroup, {
+          channelUrl: supabaseChannel.url,
+        });
+        return; // `finally` still clears the loading/create flags
+      }
+
       const userIds = newGroup.members.map(member => member.userId);
       const image = newGroup.image
         ? {

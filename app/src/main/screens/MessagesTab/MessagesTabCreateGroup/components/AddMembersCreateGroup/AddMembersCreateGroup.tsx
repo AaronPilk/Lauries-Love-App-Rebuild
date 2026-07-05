@@ -28,6 +28,8 @@ import styles from './AddMembersCreateGroup.styles';
 import colors from 'styles/colors';
 import { z } from 'zod';
 import { useApiProvider } from 'providers/ApiProvider/ApiProvider';
+import { SUPABASE_ENABLED } from 'services/supabase/backend.config';
+import { useSendbirdChatProvider } from 'providers/SendbirdChatProvider/SendbirdChatProvider';
 
 type AddMembersCreateGroupProps = {
   selectUsers: UserSendBirdType[];
@@ -44,6 +46,7 @@ const AddMembersCreateGroup: FunctionComponent<AddMembersCreateGroupProps> = ({
 }) => {
   const { api } = useApiProvider();
   const { sdk } = useSendbirdChat();
+  const { friends: providerFriends, groupChannels } = useSendbirdChatProvider();
   const [friends, setFriends] = useState<FriendWithStatus[]>([]);
   const [limit, setLimit] = useState(20);
   const [searchText, setSearchText] = useState('');
@@ -74,6 +77,11 @@ const AddMembersCreateGroup: FunctionComponent<AddMembersCreateGroupProps> = ({
   );
 
   const getMyChannels = async () => {
+    if (SUPABASE_ENABLED) {
+      // Provider cache already holds my conversations/groups (plain objects).
+      setMyChannels(groupChannels as GroupChannelSendBirdType[]);
+      return;
+    }
     const query = sdk.groupChannel.createMyGroupChannelListQuery({
       limit: 100,
       includeEmpty: true,
@@ -107,6 +115,15 @@ const AddMembersCreateGroup: FunctionComponent<AddMembersCreateGroupProps> = ({
   };
 
   const getFriends = async () => {
+    if (SUPABASE_ENABLED) {
+      // Friends come from the provider (accepted friendships, legacy-shaped).
+      setFriends(
+        (providerFriends ?? []).map(
+          f => ({ ...f, status: 'accepted' }) as FriendWithStatus,
+        ),
+      );
+      return;
+    }
     const friendListQuery = sdk.createFriendListQuery({
       limit,
     });
@@ -140,11 +157,11 @@ const AddMembersCreateGroup: FunctionComponent<AddMembersCreateGroupProps> = ({
 
   useEffect(() => {
     getFriends();
-  }, [limit]);
+  }, [limit, providerFriends]);
 
   useEffect(() => {
     getMyChannels();
-  }, []);
+  }, [groupChannels.length]);
 
   return (
     <View style={styles.container}>

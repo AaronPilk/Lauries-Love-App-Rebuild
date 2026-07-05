@@ -88,7 +88,7 @@ const MessagesTabChatGroup: FunctionComponent<MessagesTabChatGroupProps> = ({
   const route =
     useRoute<RouteProp<RootMessagesTabParamList, 'messages-tab-chat-group'>>();
   const { sdk } = useSendbirdChat();
-  const { userChat, groupChannels, messages, loadMessages } =
+  const { userChat, groupChannels, messages, loadMessages, appendMessage } =
     useSendbirdChatProvider();
   const { userDB } = useUserDBProvider();
 
@@ -494,38 +494,22 @@ const MessagesTabChatGroup: FunctionComponent<MessagesTabChatGroupProps> = ({
   }, []);
 
   // Supabase realtime: resolve the group url into its conversation thread
-  // once, then refresh the provider thread (keyed by the ORIGINAL group url)
-  // on every INSERT. Same in-flight guard as MessagesTabChat — event bursts
-  // coalesce into at most one queued refetch instead of stacking a
-  // loadMessages round-trip per incoming message.
+  // once, then APPEND each incoming message to the provider thread (keyed by
+  // the ORIGINAL group url; deduped by messageId — covers our own sends).
+  // No refetch-per-message: a busy group chat no longer triggers a full-page
+  // round-trip per event.
   useEffect(() => {
     if (!SUPABASE_ENABLED || !route.params?.channelUrl) return;
     const channelUrl = route.params.channelUrl;
     let active = true;
-    let inFlight = false;
-    let queued = false;
     let unsubscribe: (() => void) | null = null;
-    const refresh = async () => {
-      if (inFlight) {
-        queued = true;
-        return;
-      }
-      inFlight = true;
-      try {
-        await loadMessages(channelUrl);
-      } finally {
-        inFlight = false;
-        if (queued && active) {
-          queued = false;
-          refresh();
-        }
-      }
-    };
     (async () => {
       try {
         const threadId = await resolveThreadId(channelUrl);
         if (!active) return;
-        unsubscribe = subscribeToConversation(threadId, refresh);
+        unsubscribe = subscribeToConversation(threadId, msg => {
+          appendMessage(channelUrl, msg);
+        });
       } catch (error) {
         if (__DEV__) console.warn('Error subscribing to group thread:', error);
       }

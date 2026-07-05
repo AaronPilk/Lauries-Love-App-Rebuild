@@ -29,7 +29,15 @@ const extToMime = (p: string) => {
   if (ext === 'png') return 'image/png';
   if (ext === 'gif') return 'image/gif';
   if (ext === 'webp') return 'image/webp';
+  if (ext === 'heic') return 'image/heic';
   if (ext === 'pdf') return 'application/pdf';
+  // video: without these, .mp4/.mov rendered as broken <Image>s and never
+  // matched the video filters/thumbnails in chat + Media & Docs.
+  if (ext === 'mp4' || ext === 'm4v') return 'video/mp4';
+  if (ext === 'mov') return 'video/quicktime';
+  if (ext === 'webm') return 'video/webm';
+  if (ext === 'doc' || ext === 'docx') return 'application/msword';
+  if (ext === 'txt') return 'text/plain';
   return 'image/jpeg';
 };
 
@@ -46,6 +54,7 @@ const msgShape = (m: any, senderProfile: any, attachmentUrl?: string | null) => 
         plainUrl: attachmentUrl ?? '',
         name: m.attachment_path.split('/').pop() ?? 'attachment',
         type: extToMime(m.attachment_path),
+        size: 0, // byte size isn't stored on the row; consumers treat 0 as unknown
       }
     : {}),
   sender: senderFromProfile(senderProfile),

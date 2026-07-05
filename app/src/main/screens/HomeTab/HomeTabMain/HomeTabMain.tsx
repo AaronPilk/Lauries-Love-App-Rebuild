@@ -17,6 +17,7 @@ import {
   NativeSyntheticEvent,
   NativeScrollEvent,
   InteractionManager,
+  Alert,
 } from 'react-native';
 
 import colors from 'styles/colors';
@@ -216,7 +217,14 @@ const HomeTabMain: FunctionComponent<HomeTabMainProps> = ({ navigation }) => {
           }),
         );
       } catch (error) {
+        // Most likely cause: the support profile isn't seeded in this
+        // environment (SUPPORT_PROFILE_ID / EXPO_PUBLIC_SUPPORT_PROFILE_ID).
+        // Tell the user instead of silently doing nothing.
         if (__DEV__) console.warn('support chat error', error);
+        Alert.alert(
+          'Support unavailable',
+          'Support chat isn’t set up yet. Please try again later.',
+        );
       }
       return;
     }

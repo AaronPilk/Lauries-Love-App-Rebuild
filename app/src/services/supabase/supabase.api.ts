@@ -226,13 +226,28 @@ export async function supabaseApi(
       };
     }
     if (method === 'PUT') {
+      // HONOR the requested status. The schema only stores pending/accepted,
+      // so "rejected" (and anything not "accepted") DELETES the pending row —
+      // previously this branch hardcoded 'accepted' and REJECT silently
+      // accepted the friendship.
+      const requested = (config.data?.status ?? 'accepted') as string;
+      if (requested === 'accepted') {
+        const { error } = await supabase
+          .from('friendships')
+          .update({ status: 'accepted' })
+          .eq('requester_id', otherId)
+          .eq('addressee_id', me);
+        if (error) throw error;
+        return { status: 'accepted' };
+      }
       const { error } = await supabase
         .from('friendships')
-        .update({ status: 'accepted' })
+        .delete()
         .eq('requester_id', otherId)
-        .eq('addressee_id', me);
+        .eq('addressee_id', me)
+        .eq('status', 'pending');
       if (error) throw error;
-      return { status: 'accepted' };
+      return { status: 'rejected' };
     }
     if (method === 'DELETE') {
       const { error } = await supabase

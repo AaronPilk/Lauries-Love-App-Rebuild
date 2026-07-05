@@ -1,6 +1,5 @@
 package com.lauriesloveapp
 import com.facebook.react.common.assets.ReactFontManager
-import com.intercom.reactnative.IntercomModule
 
 import android.app.Application
 import android.content.res.Configuration
@@ -53,8 +52,7 @@ class MainApplication : Application(), ReactApplication {
       load()
     }
     ApplicationLifecycleDispatcher.onApplicationCreate(this)
-  IntercomModule.initialize(this, "YOUR_INTERCOM_ANDROID_API_KEY", "YOUR_INTERCOM_APP_ID")
-}
+  }
 
   override fun onConfigurationChanged(newConfig: Configuration) {
     super.onConfigurationChanged(newConfig)

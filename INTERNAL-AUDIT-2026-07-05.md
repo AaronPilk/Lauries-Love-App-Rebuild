@@ -16,15 +16,34 @@ audited the current HEAD adversarially, file:line evidence required. This is
 the honest state of the app AFTER the Codex-audit remediation and the full
 Sendbird/Amplify/CometChat/Intercom removal.
 
-## Scorecard (1–10, before = agency code at import, after = current HEAD)
+## Scorecard — THIRD/FINAL PASS (4 independent agents, cross-checked vs the original)
 
-| Area | Before | After | Codex's "after" (pre-remediation) |
+| Area | Original agency app | Current HEAD | Notes |
 |---|---|---|---|
-| Correctness (features work as shipped) | 3 | 6 | — |
+| Correctness (features work as shipped) | 4 | 8.5 | all 10 core flows PASS end-to-end |
+| Security | 2.5 | 7.5 | orig had committed Firebase private key + Maps keys |
+| Performance / scale readiness | 2.5 | 6.5 | shippable at 10k w/ monitoring |
+| Structure / maintainability | 5 | 6.5 | held back only by deletable dead weight |
+| **Overall** | **~3.5** | **~7.5** | |
+
+### Earlier-pass scorecard (for history)
+
+| Area | Before | After pass 2 | Codex pre-remediation |
+|---|---|---|---|
+| Correctness | 3 | 6 | — |
 | Security | 2 | 6 | 5.5 |
-| Performance / scale readiness | 3 | 6.5 | 6.5 / 5.5 |
-| Structure / maintainability | 4 | 6 | 6.5 |
-| **Overall** | **3** | **6.5** | **6** |
+| Performance | 3 | 6.5 | 6.5 / 5.5 |
+| Structure | 4 | 6 | 6.5 |
+| Overall | 3 | 6.5 | 6 |
+
+### One HIGH still open (needs staging — do NOT hot-patch)
+`profiles_select using(active)` gates rows but not columns, so a hostile
+authenticated client can `GET /rest/v1/profiles?select=email,phone_number,
+push_token` and scrape member PII directly. The *displayed* leak is already
+closed (users_in_bbox returns a narrowed projection). Fix: split sensitive
+columns into an owner-only `profiles_private` table (or a public_profiles
+view) and repoint reads — invasive, must be validated in staging. This is the
+#1 technical next-step.
 
 Verdict: the spine is solid — auth with OTP, race-free DMs, realtime chat with
 attachments, feed with real pagination, viewport map, RLS everywhere, secrets

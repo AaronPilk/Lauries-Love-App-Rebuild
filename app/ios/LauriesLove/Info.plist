@@ -61,8 +61,6 @@
 	<string>YOUR_GOOGLE_MAPS_API_KEY</string>
 	<key>ITSAppUsesNonExemptEncryption</key>
 	<false/>
-	<key>IntercomRegion</key>
-	<string>US</string>
 	<key>LSApplicationQueriesSchemes</key>
 	<array>
 		<string>fbapi</string>

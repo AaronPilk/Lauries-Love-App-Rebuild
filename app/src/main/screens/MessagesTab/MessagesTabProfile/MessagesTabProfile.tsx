@@ -46,6 +46,7 @@ import { DEFAULT_ERROR_NOT_FOUND_USER_SENDBIRD } from 'providers/SendbirdChatPro
 // supabase (Backend V2) chat
 import { SUPABASE_ENABLED } from 'services/supabase/backend.config';
 import { findOrCreateDirectConversation } from 'services/supabase/supabase.chat';
+import { publicUrlFor } from 'services/supabase/supabase.storage';
 
 // hooks
 import { useCountry } from 'presentation/hooks';
@@ -172,8 +173,12 @@ const MessagesTabProfile: FunctionComponent<MessagesTabProfileProps> = ({
         ? await getUserDB(rightUser.metaData.id)
         : null;
       setSelectUserSendbird(rightUser as UserSendBirdType);
+      // Supabase avatars are public-bucket paths; Amplify signed urls are
+      // legacy-mode only (they fail silently in Supabase mode).
       const profileImgUrl = userDB?.profilePicture
-        ? (await getFileStorageAmplify(userDB.profilePicture))?.href || null
+        ? SUPABASE_ENABLED
+          ? publicUrlFor('avatars', userDB.profilePicture)
+          : (await getFileStorageAmplify(userDB.profilePicture))?.href || null
         : null;
       if (userDB)
         setSelectUserDB({

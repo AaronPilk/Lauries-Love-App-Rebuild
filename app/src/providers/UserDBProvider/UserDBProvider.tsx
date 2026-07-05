@@ -19,6 +19,8 @@ import { UserDBType, UserOnboardingType } from './UserDBProvider.types';
 import { getLocationCity } from 'utils/geolocation';
 import { userDbSchema } from './UserDBProvider.schemas';
 import { getFileStorageAmplify } from 'utils/amplify-storage';
+import { SUPABASE_ENABLED } from 'services/supabase/backend.config';
+import { publicUrlFor } from 'services/supabase/supabase.storage';
 import { useApiProvider } from 'providers/ApiProvider/ApiProvider';
 import { useToastProvider } from 'providers/ToastProvider/ToastProvider';
 import { useIntercom } from 'providers/IntercomProvider/IntercomProvider';
@@ -109,8 +111,13 @@ const UserDBProvider: FunctionComponent<UserDBProviderProps> = ({
 
       updateIntercom({ name, phone });
 
+      // Supabase mode: avatars live in the public 'avatars' bucket — the
+      // Amplify/S3 signed-url path fails silently there and avatars never
+      // render. Legacy mode keeps the S3 signed url.
       const profileImgUrl = result.profilePicture
-        ? (await getFileStorageAmplify(result.profilePicture))?.href || null
+        ? SUPABASE_ENABLED
+          ? publicUrlFor('avatars', result.profilePicture)
+          : (await getFileStorageAmplify(result.profilePicture))?.href || null
         : null;
       setUserDB({
         ...result,
@@ -172,7 +179,9 @@ const UserDBProvider: FunctionComponent<UserDBProviderProps> = ({
         ...updatedUser,
       };
       const profileImgUrl = newUser.profilePicture
-        ? (await getFileStorageAmplify(newUser.profilePicture))?.href || null
+        ? SUPABASE_ENABLED
+          ? publicUrlFor('avatars', newUser.profilePicture)
+          : (await getFileStorageAmplify(newUser.profilePicture))?.href || null
         : null;
       setUserDB({
         ...newUser,

@@ -8,14 +8,17 @@ import { publicUrlFor } from './supabase.storage';
 // Local cached session read — no network round-trip per request.
 const uid = currentUserId;
 
-const senderFromProfile = (p: any) => ({
-  userId: p?.id ?? 'unknown',
-  nickname: p?.display_name || p?.first_name || 'Member',
-  plainProfileUrl: '',
-  profileUrl: '',
-  isActive: true,
-  metaData: { id: p?.id ?? 'unknown' },
-});
+const senderFromProfile = (p: any) => {
+  const avatar = publicUrlFor('avatars', p?.avatar_path) ?? '';
+  return {
+    userId: p?.id ?? 'unknown',
+    nickname: p?.display_name || p?.first_name || 'Member',
+    plainProfileUrl: avatar,
+    profileUrl: avatar,
+    isActive: true,
+    metaData: { id: p?.id ?? 'unknown' },
+  };
+};
 
 // ---------------------------------------------------------------------------
 // FEED

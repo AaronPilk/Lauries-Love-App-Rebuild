@@ -56,6 +56,14 @@ import {
 // constants
 import { PATHS_MESSAGES_TAB } from 'main/navigators/paths';
 
+// supabase (Backend V2) chat
+import { SUPABASE_ENABLED } from 'services/supabase/backend.config';
+import {
+  resolveThreadId,
+  sendChatMessage,
+  subscribeToConversation,
+} from 'services/supabase/supabase.chat';
+
 // styles
 import styles from './MessagesTabChatGroup.styles';
 import colors from 'styles/colors';
@@ -122,6 +130,13 @@ const MessagesTabChatGroup: FunctionComponent<MessagesTabChatGroupProps> = ({
       groupChannel => groupChannel.url === route.params?.channelUrl,
     );
     if (findChannel) setChannel(findChannel);
+
+    if (SUPABASE_ENABLED) {
+      // Supabase mode: the provider cache is the source of truth (group
+      // channels are plain group-shaped objects). No Sendbird SDK fetch or
+      // markAsRead.
+      return;
+    }
 
     try {
       const fetchedChannel = await sdk.groupChannel.getChannel(
@@ -319,6 +334,13 @@ const MessagesTabChatGroup: FunctionComponent<MessagesTabChatGroupProps> = ({
   );
 
   const sendImage = async (message: string) => {
+    // Supabase mode: file attachments are not migrated yet — no-op silently
+    // (close the modals so the UI never hangs), same as MessagesTabChat.
+    if (SUPABASE_ENABLED) {
+      setConfirmImage(null);
+      setShowModals(state => ({ ...state, confirmImage: false }));
+      return;
+    }
     if (!channel || !confirmImage) return;
     setIsSending(true);
     try {
@@ -362,6 +384,33 @@ const MessagesTabChatGroup: FunctionComponent<MessagesTabChatGroupProps> = ({
 
   const sendMessage = async () => {
     if (!channel || !newMessage.length) return;
+    if (SUPABASE_ENABLED) {
+      const body = newMessage;
+      setNewMessage('');
+      try {
+        // Group urls resolve to their (auto-created) conversation thread;
+        // the provider keys messages by the ORIGINAL group url.
+        const threadId = await resolveThreadId(channel.url);
+        await sendChatMessage(threadId, body);
+        await loadMessages(channel.url);
+
+        const myId = userChat?.metaData?.id || userChat?.userId;
+        const userIds = (channel.members || [])
+          .map((member: UserSendBirdType) => member.metaData?.id)
+          .filter(id => id && id !== myId) as string[];
+        if (userIds.length > 0)
+          sendPushNotificationToServer({
+            content: 'New message in group',
+            notifierIds: userIds,
+            redirect: route.params?.channelUrl,
+          });
+
+        trackIntercom('send_message');
+      } catch (error) {
+        if (__DEV__) console.warn('Error sending message:', error);
+      }
+      return;
+    }
     try {
       channel
         .sendUserMessage({
@@ -414,6 +463,49 @@ const MessagesTabChatGroup: FunctionComponent<MessagesTabChatGroupProps> = ({
   useEffect(() => {
     hasScrollToTarget.current = false;
   }, []);
+
+  // Supabase realtime: resolve the group url into its conversation thread
+  // once, then refresh the provider thread (keyed by the ORIGINAL group url)
+  // on every INSERT. Same in-flight guard as MessagesTabChat — event bursts
+  // coalesce into at most one queued refetch instead of stacking a
+  // loadMessages round-trip per incoming message.
+  useEffect(() => {
+    if (!SUPABASE_ENABLED || !route.params?.channelUrl) return;
+    const channelUrl = route.params.channelUrl;
+    let active = true;
+    let inFlight = false;
+    let queued = false;
+    let unsubscribe: (() => void) | null = null;
+    const refresh = async () => {
+      if (inFlight) {
+        queued = true;
+        return;
+      }
+      inFlight = true;
+      try {
+        await loadMessages(channelUrl);
+      } finally {
+        inFlight = false;
+        if (queued && active) {
+          queued = false;
+          refresh();
+        }
+      }
+    };
+    (async () => {
+      try {
+        const threadId = await resolveThreadId(channelUrl);
+        if (!active) return;
+        unsubscribe = subscribeToConversation(threadId, refresh);
+      } catch (error) {
+        if (__DEV__) console.warn('Error subscribing to group thread:', error);
+      }
+    })();
+    return () => {
+      active = false;
+      if (unsubscribe) unsubscribe();
+    };
+  }, [route.params?.channelUrl]);
 
   useEffect(() => {
     const targetMessageId = route.params?.targetMessageId ?? '';

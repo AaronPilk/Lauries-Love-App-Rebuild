@@ -27,6 +27,7 @@ import { getMyGroupChannels } from 'services/supabase/supabase.social';
 import {
   getConversationMessages,
   getMyConversations,
+  resolveThreadId,
 } from 'services/supabase/supabase.chat';
 import { supabase, currentUserId } from 'services/supabase/client';
 import {
@@ -550,14 +551,16 @@ const SendbirdChatProvider: FunctionComponent<SendbirdChatProviderProps> = ({
   const loadMessages = async (channelUrl: string, limit = 50) => {
     if (SUPABASE_ENABLED) {
       try {
+        // Group urls resolve to their (auto-created) group thread.
+        const threadId = await resolveThreadId(channelUrl);
         const msgs = (await getConversationMessages(
-          channelUrl,
+          threadId,
           limit,
         )) as unknown as BaseMessage[];
+        // Key by the URL the screen asked for so it finds its messages.
         setMessages(prev => ({ ...prev, [channelUrl]: msgs as any }));
         return msgs;
       } catch (error) {
-        // Group channels have no conversation yet -> empty thread.
         if (__DEV__) console.log('loadMessages(supabase) empty:', channelUrl);
         setMessages(prev => ({ ...prev, [channelUrl]: [] }));
         return [];

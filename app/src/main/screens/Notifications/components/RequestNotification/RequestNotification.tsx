@@ -11,6 +11,8 @@ import {
 import { formatTime } from 'utils/formats';
 import { getFileStorageAmplify } from 'utils/amplify-storage';
 import { makeAxiosHttpClient } from 'main/factories/http';
+import { SUPABASE_ENABLED } from 'services/supabase/backend.config';
+import { publicUrlFor } from 'services/supabase/supabase.storage';
 
 // components
 import { Notification } from '../../notifications.screen';
@@ -48,6 +50,12 @@ export default function RequestNotification({
   }, []);
 
   async function getProfilePicture() {
+    if (SUPABASE_ENABLED) {
+      // Supabase avatars: public-bucket url — no Amplify signed-url call.
+      const publicUrl = publicUrlFor('avatars', notification.profilePicture);
+      setProfilePicture(publicUrl ? new URL(publicUrl) : undefined);
+      return;
+    }
     const profilePicture = await getFileStorageAmplify(
       notification.profilePicture,
     );

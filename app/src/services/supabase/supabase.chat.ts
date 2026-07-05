@@ -3,18 +3,22 @@
 // Realtime: postgres_changes subscription on messages per conversation.
 
 import { supabase, currentUserId } from './client';
+import { publicUrlFor } from './supabase.storage';
 
 // Local cached session read — no network round-trip per request.
 const uid = currentUserId;
 
-const senderFromProfile = (p: any) => ({
-  userId: p?.id ?? 'unknown',
-  nickname: p?.display_name || p?.first_name || 'Member',
-  plainProfileUrl: '',
-  profileUrl: '',
-  isActive: true,
-  metaData: { id: p?.id ?? 'unknown' },
-});
+const senderFromProfile = (p: any) => {
+  const avatar = publicUrlFor('avatars', p?.avatar_path) ?? '';
+  return {
+    userId: p?.id ?? 'unknown',
+    nickname: p?.display_name || p?.first_name || 'Member',
+    plainProfileUrl: avatar,
+    profileUrl: avatar,
+    isActive: true,
+    metaData: { id: p?.id ?? 'unknown' },
+  };
+};
 
 const msgShape = (m: any, senderProfile: any) => ({
   messageId: m.id,
@@ -150,6 +154,62 @@ export async function findOrCreateDirectConversation(otherProfileId: string) {
   if (memberError) throw memberError;
 
   return conv.id as string;
+}
+
+/**
+ * Group chat thread: ONE conversation per group, membership derived from
+ * group_members (see is_conversation_member in the DB). Find-or-create.
+ */
+export async function findOrCreateGroupConversation(groupId: string) {
+  const { data: existing } = await supabase
+    .from('conversations')
+    .select('id')
+    .eq('group_id', groupId)
+    .maybeSingle();
+  if (existing) return existing.id as string;
+
+  const me = await uid();
+  if (!me) throw new Error('Not authenticated');
+  const { data, error } = await supabase
+    .from('conversations')
+    .insert({ is_group: true, group_id: groupId, created_by: me })
+    .select('id')
+    .single();
+  if (error) {
+    // 23505: another member created it concurrently — fetch theirs.
+    if ((error as any).code === '23505') {
+      const { data: raced } = await supabase
+        .from('conversations')
+        .select('id')
+        .eq('group_id', groupId)
+        .single();
+      if (raced) return raced.id as string;
+    }
+    throw error;
+  }
+  return data.id as string;
+}
+
+/**
+ * The Messages list mixes conversation urls and GROUP urls. Resolve either
+ * into a real conversation id (creating the group thread on first open).
+ */
+export async function resolveThreadId(channelUrl: string) {
+  const { data: conv } = await supabase
+    .from('conversations')
+    .select('id')
+    .eq('id', channelUrl)
+    .maybeSingle();
+  if (conv) return conv.id as string;
+
+  const { data: group } = await supabase
+    .from('groups')
+    .select('id')
+    .eq('id', channelUrl)
+    .maybeSingle();
+  if (group) return findOrCreateGroupConversation(group.id);
+
+  return channelUrl; // unknown — let downstream error surface
 }
 
 /**

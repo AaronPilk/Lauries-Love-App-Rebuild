@@ -19,6 +19,7 @@ import { formatGender } from 'utils/formats';
 import { PATHS_MESSAGES_TAB } from 'main/navigators/paths';
 import { IconMiddleDot } from 'assets/icons-auto/components';
 import { getFileStorageAmplify } from 'utils/amplify-storage';
+import { publicUrlFor } from 'services/supabase/supabase.storage';
 import { useToastProvider } from 'providers/ToastProvider/ToastProvider';
 import { useSendbirdChatProvider } from 'providers/SendbirdChatProvider/SendbirdChatProvider';
 import { DEFAULT_ERROR_NOT_FOUND_USER_SENDBIRD } from 'providers/SendbirdChatProvider/SendbirdChatProvider.constants';
@@ -73,6 +74,16 @@ export default React.memo(function UserCard({
       : undefined;
     if (cached) {
       setProfilePicture(prev => (prev === cached ? prev : cached));
+      return;
+    }
+
+    if (SUPABASE_ENABLED) {
+      // Supabase avatars: public-bucket url — no Amplify signed-url
+      // round-trip (which fails silently in Supabase mode).
+      const publicUrl = publicUrlFor('avatars', user.profilePicture);
+      const url = publicUrl ? new URL(publicUrl) : undefined;
+      if (url) profilePictureCache.set(user.profilePicture, url);
+      setProfilePicture(url);
       return;
     }
 

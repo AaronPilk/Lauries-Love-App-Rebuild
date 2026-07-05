@@ -19,6 +19,8 @@ import { useSendbirdChatProvider } from 'providers/SendbirdChatProvider/Sendbird
 
 // utils
 import { getFileStorageAmplify } from 'utils/amplify-storage';
+import { SUPABASE_ENABLED } from 'services/supabase/backend.config';
+import { publicUrlFor } from 'services/supabase/supabase.storage';
 
 // constants
 import { DEFAULT_ERROR_NOT_FOUND_USER_SENDBIRD } from 'providers/SendbirdChatProvider/SendbirdChatProvider.constants';
@@ -123,8 +125,12 @@ const useFriendsUserDB = ({
         : null;
       await getIsFriend(rightUser.userId);
       setSelectUserSendbird(rightUser as UserSendBirdType);
+      // Supabase avatars are public-bucket paths; Amplify signed urls are
+      // legacy-mode only (they fail silently in Supabase mode).
       const profileImgUrl = userDB?.profilePicture
-        ? (await getFileStorageAmplify(userDB.profilePicture))?.href || null
+        ? SUPABASE_ENABLED
+          ? publicUrlFor('avatars', userDB.profilePicture)
+          : (await getFileStorageAmplify(userDB.profilePicture))?.href || null
         : null;
       if (userDB)
         setSelectUserDB({

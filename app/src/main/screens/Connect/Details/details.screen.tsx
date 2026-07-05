@@ -51,6 +51,7 @@ import { PATHS_MESSAGES_TAB } from 'main/navigators/paths';
 import { DEFAULT_ERROR_NOT_FOUND_USER_SENDBIRD } from 'providers/SendbirdChatProvider/SendbirdChatProvider.constants';
 import { SUPABASE_ENABLED } from 'services/supabase/backend.config';
 import { findOrCreateDirectConversation } from 'services/supabase/supabase.chat';
+import { publicUrlFor } from 'services/supabase/supabase.storage';
 
 // hooks
 import { useCountry } from 'presentation/hooks';
@@ -102,6 +103,12 @@ const DetailsScreen: FunctionComponent<DetailsScreenProps> = ({
   );
 
   async function getProfilePicture() {
+    if (SUPABASE_ENABLED) {
+      // Supabase avatars: public-bucket url — no Amplify signed-url call.
+      const publicUrl = publicUrlFor('avatars', user.profilePicture);
+      setProfilePicture(publicUrl ? new URL(publicUrl) : undefined);
+      return;
+    }
     const profilePicture = await getFileStorageAmplify(user.profilePicture);
     setProfilePicture(profilePicture);
   }

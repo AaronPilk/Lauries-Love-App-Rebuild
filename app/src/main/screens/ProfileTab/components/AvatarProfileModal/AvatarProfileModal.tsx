@@ -24,6 +24,10 @@ import {
 } from 'utils/amplify-storage';
 import { customShowError } from 'utils/other';
 
+// supabase (Backend V2) storage
+import { SUPABASE_ENABLED } from 'services/supabase/backend.config';
+import { uploadImageBase64 } from 'services/supabase/supabase.storage';
+
 // icons
 import {
   IconCameraAvatar,
@@ -59,7 +63,10 @@ const AvatarProfileModal: FunctionComponent<AvatarProfileModalProps> = ({
     setIsLoading(true);
     try {
       if (!userDB.profilePicture) return;
-      await removeFileStorageAmplify(userDB.profilePicture);
+      // Legacy S3 delete only — in Supabase mode clearing the DB pointer is
+      // all that's needed (no Amplify call).
+      if (!SUPABASE_ENABLED)
+        await removeFileStorageAmplify(userDB.profilePicture);
 
       await updateUserDB({ profilePicture: null });
       onClose();
@@ -81,6 +88,22 @@ const AvatarProfileModal: FunctionComponent<AvatarProfileModalProps> = ({
 
       setIsLoading(true);
       const ext = imageAsset.mimeType === 'image/jpeg' ? 'jpg' : 'png';
+
+      if (SUPABASE_ENABLED) {
+        // Supabase Storage: profilePicture stores the returned storage PATH
+        // (same call shape as the legacy S3 key); rendered via publicUrlFor.
+        const path = await uploadImageBase64(
+          'avatars',
+          imageAsset.base64,
+          ext,
+        );
+        const resultUpdate = await updateUserDB({ profilePicture: path });
+        if (!resultUpdate) return;
+
+        onClose();
+        return;
+      }
+
       const arrayBuffer = Uint8Array.from(atob(imageAsset.base64), c =>
         c.charCodeAt(0),
       );

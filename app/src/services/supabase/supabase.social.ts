@@ -324,7 +324,8 @@ export async function toggleReactionOn(
 const groupToChannel = (g: any, members: any[] = [], joined = false) => ({
   url: g.id,
   name: g.name,
-  coverUrl: '',
+  // Covers live in the public avatars bucket (uid-prefixed path).
+  coverUrl: publicUrlFor('avatars', g.cover_path) ?? '',
   memberCount: g.member_count ?? members.length,
   joinedMemberCount: g.member_count ?? members.length,
   createdAt: new Date(g.created_at).getTime(),
@@ -408,12 +409,17 @@ export async function getMyGroupChannels() {
  */
 export async function createGroup(
   name: string,
-  options?: { description?: string | null; memberIds?: string[] },
+  options?: {
+    description?: string | null;
+    memberIds?: string[];
+    coverPath?: string | null;
+  },
 ) {
   const { data: gid, error } = await supabase.rpc('create_group', {
     p_name: name,
     p_description: options?.description ?? null,
     p_member_ids: options?.memberIds ?? [],
+    p_cover_path: options?.coverPath ?? null,
   });
   if (error) throw error;
   const { data: g } = await supabase
@@ -457,10 +463,13 @@ export async function joinGroup(groupId: string) {
 export async function leaveGroup(groupId: string) {
   const me = await uid();
   if (!me) throw new Error('Not authenticated');
-  await supabase
+  const { error } = await supabase
     .from('group_members')
     .delete()
     .eq('group_id', groupId)
     .eq('profile_id', me);
+  // A rejected delete used to return true anyway — the UI reset as if the
+  // user had left while the membership row survived.
+  if (error) throw error;
   return true;
 }

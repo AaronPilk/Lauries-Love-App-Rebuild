@@ -202,10 +202,16 @@ const MessagesTabMediaAndDocs: FunctionComponent<
                       key={`video-${index}`}
                       messageImage={
                         {
+                          // Grid tile: local JPEG thumbnail.
                           url: imageUrl,
                           type: video.type || '',
+                          name: video.name,
                         } as BaseMessageSendBirdType
                       }
+                      // Player/Share/Download need the REAL signed video URL —
+                      // previously the thumbnail was handed to the video player
+                      // (black screen) and the actual video was unreachable.
+                      openUrl={video.url}
                       setOpen={setOpen}
                     />
                   );

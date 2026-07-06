@@ -238,10 +238,20 @@ const UserAWSProvider: FunctionComponent<UserAWSProviderProps> = ({
       // REAL deletion: sbDeactivateAndSignOut invokes the delete-account
       // edge function (service role, JWT-verified identity) and falls back
       // to deactivate+signout only if the function is unreachable.
-      await sbDeactivateAndSignOut();
+      // MUST run while the session is alive — callers may not sign out first.
+      const deleted = await sbDeactivateAndSignOut();
+      if (!deleted) {
+        // Don't lie to the user: the account was only deactivated.
+        showToast({
+          type: 'error',
+          title: 'Account deactivated',
+          message:
+            'We could not fully delete your account right now. Please contact support to complete deletion.',
+        });
+      }
       setUserAWS(null);
       setJwtTokenUser(null);
-      return true;
+      return deleted;
     }
     // Legacy Cognito branch removed (unreachable — BACKEND is mock | supabase).
     return false;

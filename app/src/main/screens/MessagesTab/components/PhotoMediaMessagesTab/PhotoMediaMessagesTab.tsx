@@ -27,6 +27,12 @@ type PhotoMediaMessagesTabProps = {
   ) => void;
   styleContainer?: StyleProp<ViewStyle>;
   isLoading?: boolean;
+  /**
+   * URL to open on tap when it differs from the grid image (videos: the grid
+   * shows a local JPEG thumbnail, but the player/Share/Download need the real
+   * signed video URL). Defaults to messageImage.url.
+   */
+  openUrl?: string;
 };
 
 const PhotoMediaMessagesTab: FunctionComponent<PhotoMediaMessagesTabProps> = ({
@@ -34,6 +40,7 @@ const PhotoMediaMessagesTab: FunctionComponent<PhotoMediaMessagesTabProps> = ({
   setOpen,
   styleContainer,
   isLoading = false,
+  openUrl,
 }) => {
   const [loading, setLoading] = useState(true);
   return (
@@ -44,7 +51,7 @@ const PhotoMediaMessagesTab: FunctionComponent<PhotoMediaMessagesTabProps> = ({
           image: {
             width: 0,
             height: 0,
-            uri: messageImage.url || '',
+            uri: openUrl || messageImage.url || '',
             mimeType: messageImage.type || '',
             name: messageImage.name,
           },

@@ -56,7 +56,6 @@ import { toLocalizedTimeString } from 'utils/formatDate';
 import { useUserDBProvider } from 'providers/UserDBProvider/UserDBProvider';
 import { useDebouncedValue } from 'utils/useDebouncedValue';
 import LoadingLine from 'components/LoadingLine/LoadingLine';
-import { useSendbirdChat } from 'services/legacy-chat.shim';
 import { SUPABASE_ENABLED } from 'services/supabase/backend.config';
 
 type MessagesTabMainProps = {
@@ -193,7 +192,6 @@ const MessagesTabMain: FunctionComponent<MessagesTabMainProps> = ({
   navigation,
 }) => {
   const isFocused = useIsFocused();
-  const { sdk } = useSendbirdChat();
   const { userChat, groupChannels, limit, setLimit, getChannels } =
     useSendbirdChatProvider();
   const { messages } = useChatMessages();
@@ -258,25 +256,15 @@ const MessagesTabMain: FunctionComponent<MessagesTabMainProps> = ({
           matchedMessages = [channel.lastMessage as BaseMessage];
         }
       } else {
-        try {
-          const fullChannel = await sdk.groupChannel.getChannel(channel.url);
-          const messageQuery = fullChannel.createPreviousMessageListQuery?.({
-            limit: maxMessagesPerChannel,
-            reverse: true,
-          });
-          if (messageQuery) {
-            const loaded = await messageQuery.load();
-            matchedMessages = loaded.filter(msg => {
-              if (msg.messageType === 'user') {
-                return msg.message?.toLowerCase().includes(lowerKeyword);
-              }
-              return false;
-            });
-          }
-        } catch (e) {
-          if (__DEV__)
-            console.warn('Failed to fetch messages for channel', channel.url, e);
-        }
+        // Mock mode: search the cached mock thread the same way — the old
+        // Sendbird history query ran against the dead-proxy SDK and silently
+        // matched nothing.
+        const cached = messages[channel.url] || [];
+        matchedMessages = cached.filter(
+          msg =>
+            msg.messageType === 'user' &&
+            msg.message?.toLowerCase().includes(lowerKeyword),
+        ) as BaseMessage[];
       }
 
       if (matchedMessages.length > 0) {

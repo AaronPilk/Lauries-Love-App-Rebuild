@@ -1,14 +1,10 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Alert } from 'react-native';
-import { useSendbirdChat } from 'services/legacy-chat.shim';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { z } from 'zod';
 
 // types
-import {
-  MetaDataUserSendBirdType,
-  UserSendBirdType,
-} from 'providers/SendbirdChatProvider/SendbirdChatProvider.types';
+import { UserSendBirdType } from 'providers/SendbirdChatProvider/SendbirdChatProvider.types';
 import { UserDBType } from './UserDBProvider.types';
 
 // providers
@@ -18,7 +14,6 @@ import { useSendBirdPostsProvider } from 'providers/SendBirdPostsProvider/SendBi
 import { useSendbirdChatProvider } from 'providers/SendbirdChatProvider/SendbirdChatProvider';
 
 // utils
-import { getFileStorageAmplify } from 'utils/amplify-storage';
 import { SUPABASE_ENABLED } from 'services/supabase/backend.config';
 import { publicUrlFor } from 'services/supabase/supabase.storage';
 
@@ -37,7 +32,6 @@ const useFriendsUserDB = ({
   navigation,
 }: FriendsUserDBProps) => {
   const { api } = useApiProvider();
-  const { sdk } = useSendbirdChat();
   const { userDB, getOnlyUserDBById } = useUserDBProvider();
   const { getFriends } = useSendbirdChatProvider();
   const { sendNotification } = useSendBirdPostsProvider();
@@ -84,17 +78,12 @@ const useFriendsUserDB = ({
     }
   };
 
-  const getIsFriend = async (userId: string) => {
-    // Supabase mode: friendship state comes from the friend-requests API
-    // (getRequestedFriend sets `status` = accepted). No Sendbird friend list.
-    if (SUPABASE_ENABLED) return;
-    try {
-      const query = sdk.createFriendListQuery();
-      const friends = await query.next();
-      setIsFriend(friends.some(friend => friend.userId === userId));
-    } catch (error) {
-      if (__DEV__) console.warn('getIsFriend error', error);
-    }
+  const getIsFriend = async (_userId: string) => {
+    // Friendship state comes from the friend-requests API in supabase mode
+    // (getRequestedFriend sets `status` = accepted); mock mode has no friend
+    // store. The old Sendbird fall-through queried the dead-proxy SDK and
+    // setIsFriend(proxy) made isFriend permanently truthy in mock mode.
+    return;
   };
 
   const getUserSendbird = async () => {
@@ -126,48 +115,26 @@ const useFriendsUserDB = ({
       }
       return;
     }
+    // Mock mode: resolve through the mock users API the same way — the old
+    // Sendbird user query ran against the dead-proxy SDK (JSON.parse threw,
+    // the lookup silently failed and selectUserSendbird was never set).
     try {
-      const query = sdk.createApplicationUserListQuery({
-        userIdsFilter: [friendCognitoId],
-      });
-      const users = await query.next();
-      if (users.length === 0)
+      const targetId = friendId || friendCognitoId;
+      const userDB = targetId ? await getUserDB(targetId) : null;
+      if (!userDB) {
         Alert.alert('Error', DEFAULT_ERROR_NOT_FOUND_USER_SENDBIRD, [
-          {
-            text: 'OK',
-            onPress: () => navigation?.goBack(),
-          },
+          { text: 'OK', onPress: () => navigation?.goBack() },
         ]);
-      const firstUser = users[0] as UserSendBirdType;
-      const metaData = firstUser.metaData.userInfo
-        ? (JSON.parse(
-            firstUser.metaData.userInfo,
-          ) as MetaDataUserSendBirdType | null)
-        : null;
-      const rightUser = {
-        ...firstUser,
-        metaData: {
-          ...firstUser.metaData,
-          ...metaData,
-        },
-      };
-      const userDB = rightUser.metaData.id
-        ? await getUserDB(rightUser.metaData.id)
-        : null;
-      await getIsFriend(rightUser.userId);
-      setSelectUserSendbird(rightUser as UserSendBirdType);
-      // Supabase avatars are public-bucket paths; Amplify signed urls are
-      // legacy-mode only (they fail silently in Supabase mode).
-      const profileImgUrl = userDB?.profilePicture
-        ? SUPABASE_ENABLED
-          ? publicUrlFor('avatars', userDB.profilePicture)
-          : (await getFileStorageAmplify(userDB.profilePicture))?.href || null
-        : null;
-      if (userDB)
-        setSelectUserDB({
-          ...userDB,
-          profileImgUrl,
-        });
+        return;
+      }
+      setSelectUserSendbird({
+        userId: userDB.id,
+        nickname: userDB.displayName || userDB.firstName || 'Member',
+        plainProfileUrl: '',
+        isActive: true,
+        metaData: { id: userDB.id },
+      } as unknown as UserSendBirdType);
+      setSelectUserDB({ ...userDB, profileImgUrl: null });
     } catch (error) {
       if (__DEV__) console.warn('getUser error', error);
     } finally {
@@ -222,9 +189,6 @@ const useFriendsUserDB = ({
       });
       if (!response) return { statusCode: 400 };
 
-      if (!SUPABASE_ENABLED && selectUserSendbird)
-        await sdk.addFriends([selectUserSendbird.userId]);
-
       setStatus(response.status);
       return { statusCode: 201 };
     } catch (error) {
@@ -235,10 +199,9 @@ const useFriendsUserDB = ({
     }
   };
 
-  const confirmFriend = async () => {
-    if (!SUPABASE_ENABLED && selectUserSendbird)
-      await sdk.addFriends([selectUserSendbird.userId]);
-  };
+  // Sendbird's separate friend list is gone — the friendships table is the
+  // single source of truth; nothing extra to confirm.
+  const confirmFriend = async () => {};
 
   const removeFriend = async () => {
     setIsLoading(true);
@@ -271,9 +234,6 @@ const useFriendsUserDB = ({
         await sendFriendNotification();
         return;
       }
-      if (!SUPABASE_ENABLED && isFriend)
-        await sdk.deleteFriend(friendCognitoId);
-
       const { statusCode } = await removeFriend();
       if (statusCode !== 204) return;
 

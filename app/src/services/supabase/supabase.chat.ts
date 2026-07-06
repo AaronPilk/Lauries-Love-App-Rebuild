@@ -329,8 +329,15 @@ export function subscribeToConversation(
 ) {
   // The filter string below is interpolated — never let a non-UUID through.
   assertUuid(conversationId, 'conversation id');
+  // Channel topic must be unique PER SUBSCRIBER: two screens on the same
+  // conversation (e.g. support chat opened twice) previously shared the
+  // `conv-<id>` topic, so removeChannel on one unmount killed delivery for
+  // the still-mounted one.
+  const topic = `conv-${conversationId}-${Date.now().toString(36)}${Math.random()
+    .toString(36)
+    .slice(2, 8)}`;
   const channel = supabase
-    .channel(`conv-${conversationId}`)
+    .channel(topic)
     .on(
       'postgres_changes',
       {

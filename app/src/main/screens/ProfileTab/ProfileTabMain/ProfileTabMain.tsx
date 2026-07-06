@@ -52,7 +52,7 @@ const ProfileTabMain: FunctionComponent<ClientsMainScreenProps> = ({
   const { bottom } = useSafeAreaInsets();
   const { onCapture } = usePosthogProvider();
   const { signOutIntercom } = useIntercom();
-  const { userDB, updateUserDB, signOutDB, deleteUserDB } = useUserDBProvider();
+  const { userDB, updateUserDB, signOutDB } = useUserDBProvider();
   const { deleteAWS } = useUserAWSProvider();
   const {
     db: { designationTypes, diagnosisSubType, diagnosisType },
@@ -174,11 +174,7 @@ const ProfileTabMain: FunctionComponent<ClientsMainScreenProps> = ({
   };
 
   const onPressDelete = async () => {
-    // Deactivate profile data first (userDB path), then REALLY delete the
-    // auth account via the delete-account edge function (deleteAWS). The
-    // old code only did the first step — the auth user survived "deletion".
-    await deleteUserDB();
-    await deleteAWS();
+    // Capture analytics BEFORE the account (and session) disappear.
     if (userDB?.email)
       onCapture({
         typeEvent: 'DeleteAccount',
@@ -186,6 +182,16 @@ const ProfileTabMain: FunctionComponent<ClientsMainScreenProps> = ({
           email: userDB.email,
         },
       });
+
+    // ORDER MATTERS (review 2026-07-06): deleteAWS() must run FIRST, while
+    // the session is still alive — it invokes the delete-account edge
+    // function (JWT identity) and the auth-user delete FK-cascades profiles
+    // + profiles_private. The old flow called deleteUserDB() first, which
+    // signed the session out, so the edge function was silently skipped and
+    // the auth user survived every "Delete account".
+    await deleteAWS();
+    // Row is already gone via cascade — just clear local profile state.
+    await signOutDB();
 
     setSelectTypeModal(null);
   };

@@ -366,7 +366,11 @@ const HomeTabMain: FunctionComponent<HomeTabMainProps> = ({ navigation }) => {
   );
 
   const keyExtractor = useCallback(
-    (item: any, index: number) => item.channelUrl ?? `post-${index}`,
+    // Supabase posts carry `url` (legacy Sendbird carried `channelUrl`);
+    // reading only channelUrl made every key fall back to the index, which
+    // recycles the wrong rows when Trending/New re-sorts the list.
+    (item: any, index: number) =>
+      item.url ?? item.channelUrl ?? `post-${index}`,
     [],
   );
 

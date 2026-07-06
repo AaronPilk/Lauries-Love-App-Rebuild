@@ -111,22 +111,30 @@ export async function sbUpdateEmail(newEmail: string) {
 // identity from the caller's JWT — nobody can delete anyone else). Falls back
 // to deactivate+signout if the function is unreachable so the user is never
 // stuck with a live account they asked to remove.
-export async function sbDeactivateAndSignOut() {
+//
+// MUST be called while the session is still alive — do NOT sign out first:
+// currentUserId() reads the cached session and functions.invoke needs the JWT.
+// (Review 2026-07-06: the old flow signed out in deleteUserDB() before this
+// ran, so the edge function was silently skipped and the auth user survived.)
+//
+// Returns true only when the auth user was REALLY deleted; false when we could
+// only deactivate the profile — callers must surface that, not stay silent.
+export async function sbDeactivateAndSignOut(): Promise<boolean> {
   const me = await currentUserId();
+  let deleted = false;
   if (me) {
     try {
       const { error } = await supabase.functions.invoke('delete-account', {
         method: 'POST',
       });
       if (error) throw error;
-      // auth user gone; local session is now orphaned — clear it.
-      await supabase.auth.signOut();
-      return true;
+      deleted = true;
     } catch (e) {
       if (__DEV__) console.warn('delete-account failed, deactivating', e);
       await supabase.from('profiles').update({ active: false }).eq('id', me);
     }
   }
+  // Auth user gone (or profile deactivated) — clear the local session either way.
   await supabase.auth.signOut();
-  return true;
+  return deleted;
 }

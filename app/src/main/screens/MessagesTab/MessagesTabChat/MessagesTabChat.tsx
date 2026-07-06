@@ -21,7 +21,6 @@ import { RouteProp, useIsFocused, useRoute } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { ImagePickerAsset } from 'expo-image-picker';
 import { DocumentPickerAsset } from 'expo-document-picker';
-import { useSendbirdChat } from 'services/legacy-chat.shim';
 import * as VideoThumbnails from 'expo-video-thumbnails';
 
 // types
@@ -73,6 +72,7 @@ import {
 import styles from './MessagesTabChat.styles';
 import colors from 'styles/colors';
 import { useUserDBProvider } from 'providers/UserDBProvider/UserDBProvider';
+import { useToastProvider } from 'providers/ToastProvider/ToastProvider';
 import { toLocalizedDateString, toLocalizedTimeString } from 'utils/formatDate';
 
 type MessagesTabChatProps = {
@@ -85,7 +85,6 @@ const MessagesTabChat: FunctionComponent<MessagesTabChatProps> = ({
   const isFocused = useIsFocused();
   const { bottom } = useSafeAreaInsets();
   const { showKeyboard } = useKeyboardProvider();
-  const { sdk } = useSendbirdChat();
   const {
     userChat,
     groupChannels,
@@ -114,6 +113,7 @@ const MessagesTabChat: FunctionComponent<MessagesTabChatProps> = ({
   };
   const { sendPushNotificationToServer } = usePushNotificationProvider();
   const { userDB } = useUserDBProvider();
+  const { showToast } = useToastProvider();
   const route =
     useRoute<RouteProp<RootMessagesTabParamList, 'messages-tab-chat'>>();
   const [channel, setChannel] = useState<GroupChannelSendBirdType | null>(null);
@@ -150,39 +150,28 @@ const MessagesTabChat: FunctionComponent<MessagesTabChatProps> = ({
   );
 
   const friend: MemberSendBirdType | null = useMemo(() => {
-    // Supabase mode: there is no Sendbird connection, so sdk.currentUser is
-    // null — my chat identity is userChat (profile id).
-    const myUserId = SUPABASE_ENABLED
-      ? userChat?.userId
-      : sdk.currentUser?.userId;
+    // My chat identity is userChat (real profile id in supabase mode, the
+    // mock user in mock mode) — the Sendbird SDK is gone.
+    const myUserId = userChat?.userId;
     return channel?.members.find(member => member.userId !== myUserId) || null;
-  }, [channel, sdk.currentUser?.userId, userChat?.userId]);
+  }, [channel, userChat?.userId]);
 
   const fetchChannel = async () => {
     if (!route.params?.channelUrl) return;
 
+    // The provider cache is the source of truth in BOTH modes (supabase:
+    // conversation/group-shaped objects; mock: plain mock channels). The old
+    // mock fall-through fetched from the dead-proxy SDK and overwrote the
+    // cached channel with the proxy — render-crash risk.
     const findChannel = groupChannels.find(
       channel => channel.url === route.params?.channelUrl,
     );
     if (findChannel) setChannel(findChannel);
 
-    if (SUPABASE_ENABLED) {
-      // Supabase mode: the provider cache is the source of truth (channel
-      // objects are conversation/group-shaped). No Sendbird SDK fetch — if
-      // the conversation isn't cached yet (just created), refresh the list;
-      // the groupChannels effect below picks it up.
-      if (!findChannel) getChannels();
-      return;
-    }
-
-    try {
-      const fetchedChannel = await sdk.groupChannel.getChannel(
-        route.params.channelUrl,
-      );
-      fetchedChannel.markAsRead();
-      setChannel(fetchedChannel);
-    } catch (error) {
-      if (__DEV__) console.warn('Error fetching channel:', error);
+    if (SUPABASE_ENABLED && !findChannel) {
+      // Cache miss (just-created conversation / deep link): refresh the
+      // list; the groupChannels effect below picks it up.
+      getChannels();
     }
   };
 
@@ -209,13 +198,16 @@ const MessagesTabChat: FunctionComponent<MessagesTabChatProps> = ({
       sendLockRef.current = true;
       setIsSending(true);
       try {
-        await sendChatAttachment(
+        const sentAtt = await sendChatAttachment(
           channel.url,
           confirm.image.uri,
           confirm.image.mimeType,
         );
-        if (message?.length) await sendChatMessage(channel.url, message);
-        await loadMessages(channel.url);
+        appendMessage(channel.url, sentAtt);
+        if (message?.length) {
+          const sentTxt = await sendChatMessage(channel.url, message);
+          appendMessage(channel.url, sentTxt);
+        }
         if (friend?.metaData?.id)
           sendPushNotificationToServer({
             content: '📷 Photo',
@@ -223,6 +215,10 @@ const MessagesTabChat: FunctionComponent<MessagesTabChatProps> = ({
             redirect: route.params?.channelUrl,
           });
       } catch (error) {
+        showToast({
+          type: 'error',
+          message: 'Photo failed to send. Please try again.',
+        });
         if (__DEV__) console.warn('Error sending image:', error);
       } finally {
         sendLockRef.current = false;
@@ -232,42 +228,11 @@ const MessagesTabChat: FunctionComponent<MessagesTabChatProps> = ({
       }
       return;
     }
-    if (!channel || !confirm.image) return;
-    setIsSending(true);
-    try {
-      const findChanel = await sdk.groupChannel.getChannel(channel.url);
-      const format = confirm.image.uri.split('.').pop();
-      const name = confirm.image.uri.split('/').pop();
-      findChanel
-        .sendFileMessage({
-          message,
-          file: {
-            name: confirm.image.fileName || name || `image.${format}`,
-            type: confirm.image.mimeType || 'image/jpg',
-            uri: confirm.image.uri,
-          },
-        })
-        .onSucceeded(() => {
-          setIsSending(false);
-          if (friend?.metaData?.id)
-            sendPushNotificationToServer({
-              content: '📷 Photo',
-              notifierIds: [friend?.metaData?.id || ''],
-              redirect: route.params?.channelUrl,
-            });
-        });
-
-      setConfirm(state => ({
-        ...state,
-        image: null,
-      }));
-      setShowModals(state => ({
-        ...state,
-        confirmImage: false,
-      }));
-    } catch (error) {
-      if (__DEV__) console.warn('Error sending image:', error);
-    }
+    // Mock mode: chat is read-only demo data — just dismiss the modal. (The
+    // old Sendbird sendFileMessage branch ran against the dead-proxy SDK: its
+    // onSucceeded never fired, so the spinner hung forever.)
+    setConfirm(state => ({ ...state, image: null }));
+    setShowModals(state => ({ ...state, confirmImage: false }));
   };
 
   const sendDocument = async (message: string) => {
@@ -277,13 +242,16 @@ const MessagesTabChat: FunctionComponent<MessagesTabChatProps> = ({
       sendLockRef.current = true;
       setIsSending(true);
       try {
-        await sendChatAttachment(
+        const sentAtt = await sendChatAttachment(
           channel.url,
           confirm.document.uri,
           confirm.document.mimeType,
         );
-        if (message?.length) await sendChatMessage(channel.url, message);
-        await loadMessages(channel.url);
+        appendMessage(channel.url, sentAtt);
+        if (message?.length) {
+          const sentTxt = await sendChatMessage(channel.url, message);
+          appendMessage(channel.url, sentTxt);
+        }
         if (friend?.metaData?.id)
           sendPushNotificationToServer({
             content: '📄 Document',
@@ -291,6 +259,10 @@ const MessagesTabChat: FunctionComponent<MessagesTabChatProps> = ({
             redirect: route.params?.channelUrl,
           });
       } catch (error) {
+        showToast({
+          type: 'error',
+          message: 'Document failed to send. Please try again.',
+        });
         if (__DEV__) console.warn('Error sending document:', error);
       } finally {
         sendLockRef.current = false;
@@ -300,40 +272,9 @@ const MessagesTabChat: FunctionComponent<MessagesTabChatProps> = ({
       }
       return;
     }
-    if (!channel || !confirm.document) return;
-    setIsSending(true);
-    try {
-      const findChanel = await sdk.groupChannel.getChannel(channel.url);
-      findChanel
-        .sendFileMessage({
-          message,
-          file: {
-            name: confirm.document.name,
-            type: confirm.document.mimeType || 'application/pdf',
-            uri: confirm.document.uri,
-          },
-        })
-        .onSucceeded(() => {
-          setIsSending(false);
-          if (friend?.metaData?.id)
-            sendPushNotificationToServer({
-              content: '📄 Document',
-              notifierIds: [friend?.metaData?.id || ''],
-              redirect: route.params?.channelUrl,
-            });
-        });
-
-      setConfirm(state => ({
-        ...state,
-        document: null,
-      }));
-      setShowModals(state => ({
-        ...state,
-        confirmDocument: false,
-      }));
-    } catch (error) {
-      if (__DEV__) console.warn('Error sending document:', error);
-    }
+    // Mock mode: chat is read-only demo data — just dismiss the modal.
+    setConfirm(state => ({ ...state, document: null }));
+    setShowModals(state => ({ ...state, confirmDocument: false }));
   };
 
   const sendMessage = async () => {
@@ -342,10 +283,12 @@ const MessagesTabChat: FunctionComponent<MessagesTabChatProps> = ({
       const body = newMessage;
       setNewMessage('');
       try {
-        await sendChatMessage(channel.url, body);
-        // Refresh the same provider thread the Sendbird path renders from
-        // (also dedupes against the realtime INSERT for our own send).
-        await loadMessages(channel.url);
+        const sent = await sendChatMessage(channel.url, body);
+        // APPEND the confirmed message (deduped against the realtime INSERT).
+        // Do NOT reload page 1 here — that replaced the thread with the
+        // newest 50 and silently discarded any older history the user had
+        // paged in.
+        appendMessage(channel.url, sent);
         if (friend?.metaData?.id)
           sendPushNotificationToServer({
             content: body,
@@ -353,28 +296,19 @@ const MessagesTabChat: FunctionComponent<MessagesTabChatProps> = ({
             redirect: route.params?.channelUrl,
           });
       } catch (error) {
+        // Give the user their text back — it used to vanish silently.
+        setNewMessage(body);
+        showToast({
+          type: 'error',
+          message: 'Message failed to send. Please try again.',
+        });
         if (__DEV__) console.warn('Error sending message:', error);
       }
       return;
     }
-    try {
-      channel
-        .sendUserMessage({
-          message: newMessage,
-        })
-        .onSucceeded(() => {
-          if (friend?.metaData?.id)
-            sendPushNotificationToServer({
-              content: newMessage,
-              notifierIds: [friend?.metaData?.id || ''],
-              redirect: route.params?.channelUrl,
-            });
-        });
-    } catch (error) {
-      if (__DEV__) console.warn('Error sending message:', error);
-    } finally {
-      setNewMessage('');
-    }
+    // Mock mode: chat is read-only demo data — sending is a no-op. (The old
+    // Sendbird sendUserMessage branch threw against plain mock objects.)
+    setNewMessage('');
   };
 
   const getThumbnails = async () => {
@@ -581,6 +515,8 @@ const MessagesTabChat: FunctionComponent<MessagesTabChatProps> = ({
   useEffect(() => {
     if (!SUPABASE_ENABLED || !route.params?.channelUrl) return;
     const channelUrl = route.params.channelUrl;
+    // New conversation = fresh pagination state ("reached start" is per-thread).
+    reachedStartRef.current = false;
     const unsubscribe = subscribeToConversation(channelUrl, msg => {
       appendMessage(channelUrl, msg);
     });

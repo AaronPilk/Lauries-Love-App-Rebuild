@@ -26,6 +26,7 @@ import GroupImageModal from '../components/GroupImageModal/GroupImageModal';
 // backend v2
 import { SUPABASE_ENABLED } from 'services/supabase/backend.config';
 import { createGroup as createGroupSupabase } from 'services/supabase/supabase.social';
+import { uploadImage } from 'services/supabase/supabase.storage';
 
 // constants
 import { DEFAULT_NEW_GROUP } from './MessagesTabCreateGroup.constants';
@@ -94,12 +95,23 @@ const MessagesTabCreateGroup: FunctionComponent<
         // Supabase mode: one atomic RPC creates the group + memberships
         // (caller becomes admin). Selected members are UserSendBirdType —
         // metaData.id carries the profile id (userId equals it in Supabase
-        // mode, so it's a safe fallback). Cover image upload is legacy-only.
+        // mode, so it's a safe fallback).
         const memberIds = newGroup.members.map(
           member => member.metaData?.id || member.userId,
         );
+        // Cover photo (optional): upload to the public avatars bucket under
+        // the creator's uid prefix; a failed upload shouldn't block creation.
+        let coverPath: string | null = null;
+        if (newGroup.image) {
+          try {
+            coverPath = await uploadImage('avatars', newGroup.image);
+          } catch (e) {
+            if (__DEV__) console.warn('group cover upload failed', e);
+          }
+        }
         const supabaseChannel = await createGroupSupabase(newGroup.name, {
           memberIds,
+          coverPath,
         });
         await getChannels();
         navigation.navigate(PATHS_MESSAGES_TAB.messagesTabChatGroup, {

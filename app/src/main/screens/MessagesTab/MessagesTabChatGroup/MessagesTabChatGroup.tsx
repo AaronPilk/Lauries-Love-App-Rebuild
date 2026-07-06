@@ -21,7 +21,6 @@ import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RouteProp, useRoute } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { ImagePickerAsset } from 'expo-image-picker';
-import { useSendbirdChat } from 'services/legacy-chat.shim';
 import * as VideoThumbnails from 'expo-video-thumbnails';
 
 // types
@@ -64,6 +63,8 @@ import {
   sendChatAttachment,
   subscribeToConversation,
 } from 'services/supabase/supabase.chat';
+import { getGroupMembers } from 'services/supabase/supabase.social';
+import { useToastProvider } from 'providers/ToastProvider/ToastProvider';
 
 // styles
 import styles from './MessagesTabChatGroup.styles';
@@ -87,13 +88,13 @@ const MessagesTabChatGroup: FunctionComponent<MessagesTabChatGroupProps> = ({
   const { sendPushNotificationToServer } = usePushNotificationProvider();
   const route =
     useRoute<RouteProp<RootMessagesTabParamList, 'messages-tab-chat-group'>>();
-  const { sdk } = useSendbirdChat();
   const {
     userChat,
     groupChannels,
     loadMessages,
     loadOlderMessages,
     appendMessage,
+    getChannels,
   } = useSendbirdChatProvider();
   const { messages } = useChatMessages();
   const loadingOlderRef = useRef(false);
@@ -112,6 +113,7 @@ const MessagesTabChatGroup: FunctionComponent<MessagesTabChatGroupProps> = ({
     }
   };
   const { userDB } = useUserDBProvider();
+  const { showToast } = useToastProvider();
 
   const [thumbnails, setThumbnails] = useState<Record<string, string>>({});
   const [open, setOpen] = useState<
@@ -147,30 +149,20 @@ const MessagesTabChatGroup: FunctionComponent<MessagesTabChatGroupProps> = ({
   const fetchChannel = async () => {
     if (!route.params?.channelUrl) return;
 
-    // Render immediately from the already-loaded channel list (same pattern
-    // as MessagesTabChat); the fresh SDK fetch below replaces it when ready.
-    // In mock mode channels are plain objects, so no SDK methods are called
-    // on this cached instance.
+    // The provider cache is the source of truth in BOTH modes (supabase:
+    // group-shaped objects; mock: plain mock channels). The old mock
+    // fall-through fetched from the dead-proxy SDK and overwrote the cached
+    // channel with the proxy — render-crash risk.
     const findChannel = groupChannels.find(
       groupChannel => groupChannel.url === route.params?.channelUrl,
     );
     if (findChannel) setChannel(findChannel);
 
-    if (SUPABASE_ENABLED) {
-      // Supabase mode: the provider cache is the source of truth (group
-      // channels are plain group-shaped objects). No Sendbird SDK fetch or
-      // markAsRead.
-      return;
-    }
-
-    try {
-      const fetchedChannel = await sdk.groupChannel.getChannel(
-        route.params.channelUrl,
-      );
-      fetchedChannel.markAsRead();
-      setChannel(fetchedChannel);
-    } catch (error) {
-      if (__DEV__) console.warn('Error fetching channel:', error);
+    if (SUPABASE_ENABLED && !findChannel) {
+      // Cache miss (cold start / push deep-link): refresh the list; the
+      // groupChannels catch-up effect below picks it up. Without this the
+      // screen rendered `null` forever — blank screen, no back button.
+      getChannels();
     }
   };
 
@@ -358,6 +350,24 @@ const MessagesTabChatGroup: FunctionComponent<MessagesTabChatGroupProps> = ({
     [],
   );
 
+  // channel.members is intentionally NOT populated by the group mapper (the
+  // per-channel roster fan-out was a perf problem on the list screen), so
+  // recipients must be resolved lazily AT SEND TIME. Before this, userIds was
+  // always [] and group message notifications were never sent.
+  const getGroupRecipientIds = async (): Promise<string[]> => {
+    if (!channel?.url) return [];
+    const myId = userChat?.metaData?.id || userChat?.userId;
+    try {
+      const members = await getGroupMembers(channel.url);
+      return members
+        .map((m: any) => m?.metaData?.id)
+        .filter((id: string) => id && id !== myId) as string[];
+    } catch (error) {
+      if (__DEV__) console.warn('Error resolving group recipients:', error);
+      return [];
+    }
+  };
+
   const sendImage = async (message: string) => {
     if (SUPABASE_ENABLED) {
       if (!channel || !confirmImage) return;
@@ -367,14 +377,19 @@ const MessagesTabChatGroup: FunctionComponent<MessagesTabChatGroupProps> = ({
       try {
         // Group urls resolve to their (auto-created) conversation thread.
         const threadId = await resolveThreadId(channel.url);
-        await sendChatAttachment(threadId, confirmImage.uri, confirmImage.mimeType);
-        if (message?.length) await sendChatMessage(threadId, message);
-        await loadMessages(channel.url);
+        const sentAtt = await sendChatAttachment(
+          threadId,
+          confirmImage.uri,
+          confirmImage.mimeType,
+        );
+        // APPEND (deduped) — reloading page 1 discarded paged-in history.
+        appendMessage(channel.url, sentAtt);
+        if (message?.length) {
+          const sentTxt = await sendChatMessage(threadId, message);
+          appendMessage(channel.url, sentTxt);
+        }
 
-        const myId = userChat?.metaData?.id || userChat?.userId;
-        const userIds = (channel.members || [])
-          .map((member: UserSendBirdType) => member.metaData?.id)
-          .filter(id => id && id !== myId) as string[];
+        const userIds = await getGroupRecipientIds();
         if (userIds.length > 0)
           sendPushNotificationToServer({
             content: '📷 Photo in group',
@@ -382,6 +397,10 @@ const MessagesTabChatGroup: FunctionComponent<MessagesTabChatGroupProps> = ({
             redirect: route.params?.channelUrl,
           });
       } catch (error) {
+        showToast({
+          type: 'error',
+          message: 'Photo failed to send. Please try again.',
+        });
         if (__DEV__) console.warn('Error sending image:', error);
       } finally {
         sendLockRef.current = false;
@@ -391,45 +410,11 @@ const MessagesTabChatGroup: FunctionComponent<MessagesTabChatGroupProps> = ({
       }
       return;
     }
-    if (!channel || !confirmImage) return;
-    setIsSending(true);
-    try {
-      const findChanel = await sdk.groupChannel.getChannel(channel.url);
-      const format = confirmImage.uri.split('.').pop();
-      const name = confirmImage.uri.split('/').pop();
-      findChanel
-        .sendFileMessage({
-          message,
-          file: {
-            name: confirmImage.fileName || name || `image.${format}`,
-            type: confirmImage.mimeType || 'image/jpg',
-            uri: confirmImage.uri,
-          },
-        })
-        .onSucceeded(() => {
-          setIsSending(false);
-          const userIdsAll = findChanel.members.map(
-            (member: UserSendBirdType) => member.metaData.id,
-          );
-          const userIds = userIdsAll.filter(
-            id => id && id !== userChat?.metaData.id,
-          ) as string[];
-          if (userIds.length > 0)
-            sendPushNotificationToServer({
-              content: 'New message in group',
-              notifierIds: userIds,
-              redirect: route.params?.channelUrl,
-            });
-        });
-
-      setConfirmImage(null);
-      setShowModals(state => ({
-        ...state,
-        confirmImage: false,
-      }));
-    } catch (error) {
-      if (__DEV__) console.warn('Error sending image:', error);
-    }
+    // Mock mode: chat is read-only demo data — just dismiss the modal. (The
+    // old Sendbird sendFileMessage branch ran against the dead-proxy SDK: its
+    // onSucceeded never fired, so the spinner hung forever.)
+    setConfirmImage(null);
+    setShowModals(state => ({ ...state, confirmImage: false }));
   };
 
   const sendMessage = async () => {
@@ -441,13 +426,11 @@ const MessagesTabChatGroup: FunctionComponent<MessagesTabChatGroupProps> = ({
         // Group urls resolve to their (auto-created) conversation thread;
         // the provider keys messages by the ORIGINAL group url.
         const threadId = await resolveThreadId(channel.url);
-        await sendChatMessage(threadId, body);
-        await loadMessages(channel.url);
+        const sent = await sendChatMessage(threadId, body);
+        // APPEND (deduped) — reloading page 1 discarded paged-in history.
+        appendMessage(channel.url, sent);
 
-        const myId = userChat?.metaData?.id || userChat?.userId;
-        const userIds = (channel.members || [])
-          .map((member: UserSendBirdType) => member.metaData?.id)
-          .filter(id => id && id !== myId) as string[];
+        const userIds = await getGroupRecipientIds();
         if (userIds.length > 0)
           sendPushNotificationToServer({
             content: 'New message in group',
@@ -457,39 +440,18 @@ const MessagesTabChatGroup: FunctionComponent<MessagesTabChatGroupProps> = ({
 
         trackIntercom('send_message');
       } catch (error) {
+        // Give the user their text back — it used to vanish silently.
+        setNewMessage(body);
+        showToast({
+          type: 'error',
+          message: 'Message failed to send. Please try again.',
+        });
         if (__DEV__) console.warn('Error sending message:', error);
       }
       return;
     }
-    try {
-      channel
-        .sendUserMessage({
-          message: newMessage,
-        })
-        .onSucceeded(() => {
-          const userIdsAll = channel.members.map(
-            (member: UserSendBirdType) => member.metaData.id,
-          );
-
-          const userIds = userIdsAll.filter(
-            id => id !== userChat?.metaData.id,
-          ) as string[];
-
-          if (userIds.length > 0) {
-            sendPushNotificationToServer({
-              content: 'New message in group',
-              notifierIds: userIds,
-              redirect: route.params?.channelUrl,
-            });
-          }
-
-          trackIntercom('send_message');
-        });
-    } catch (error) {
-      if (__DEV__) console.warn('Error sending message:', error);
-    } finally {
-      setNewMessage('');
-    }
+    // Mock mode: chat is read-only demo data — sending is a no-op.
+    setNewMessage('');
   };
 
   useEffect(() => {
@@ -510,6 +472,17 @@ const MessagesTabChatGroup: FunctionComponent<MessagesTabChatGroupProps> = ({
       loadMessages(route.params?.channelUrl || '');
   }, []);
 
+  // Supabase mode: pick the channel up from the provider cache once the
+  // refreshed list arrives (fetchChannel may run before getChannels resolves,
+  // e.g. on a cold start / push deep-link). Same pattern as MessagesTabChat.
+  useEffect(() => {
+    if (!SUPABASE_ENABLED || channel) return;
+    const findChannel = groupChannels.find(
+      c => c.url === route.params?.channelUrl,
+    );
+    if (findChannel) setChannel(findChannel);
+  }, [groupChannels]);
+
   useEffect(() => {
     hasScrollToTarget.current = false;
   }, []);
@@ -522,6 +495,8 @@ const MessagesTabChatGroup: FunctionComponent<MessagesTabChatGroupProps> = ({
   useEffect(() => {
     if (!SUPABASE_ENABLED || !route.params?.channelUrl) return;
     const channelUrl = route.params.channelUrl;
+    // New group = fresh pagination state ("reached start" is per-thread).
+    reachedStartRef.current = false;
     let active = true;
     let unsubscribe: (() => void) | null = null;
     (async () => {

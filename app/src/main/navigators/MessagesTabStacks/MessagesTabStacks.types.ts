@@ -59,4 +59,8 @@ export type RootMessagesTabParamList = {
     cognitoId: string;
     userId: string;
   };
+  [PATHS_MESSAGES_TAB.messagesTabSupportTicket]?: Record<
+    string,
+    string | number | boolean
+  >;
 };

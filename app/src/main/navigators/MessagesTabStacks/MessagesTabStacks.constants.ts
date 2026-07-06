@@ -13,6 +13,7 @@ import MessagesTabMediaAndDocs from 'main/screens/MessagesTab/MessagesTabMediaAn
 import MessagesTabJoinGroup from 'main/screens/MessagesTab/MessagesTabJoinGroup/MessagesTabJoinGroup';
 import MessagesTabMembersGroup from 'main/screens/MessagesTab/MessagesTabMembersGroup/MessagesTabMembersGroup';
 import MessagesTabProfile from 'main/screens/MessagesTab/MessagesTabProfile/MessagesTabProfile';
+import MessagesTabSupportTicket from 'main/screens/MessagesTab/MessagesTabSupportTicket/MessagesTabSupportTicket';
 
 // paths
 import { PATHS_MESSAGES_TAB } from '../paths';
@@ -110,6 +111,14 @@ export const LIST_MESSAGES_TAB_SCREENS: Array<{
     name: PATHS_MESSAGES_TAB.messagesTabProfile,
     title: PATHS_MESSAGES_TAB.messagesTabProfile,
     component: MessagesTabProfile,
+    headerShown: false,
+    gestureEnabled: false,
+  },
+  {
+    id: PATHS_MESSAGES_TAB.messagesTabSupportTicket,
+    name: PATHS_MESSAGES_TAB.messagesTabSupportTicket,
+    title: PATHS_MESSAGES_TAB.messagesTabSupportTicket,
+    component: MessagesTabSupportTicket,
     headerShown: false,
     gestureEnabled: false,
   },

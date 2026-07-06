@@ -17,7 +17,6 @@ import {
   NativeSyntheticEvent,
   NativeScrollEvent,
   InteractionManager,
-  Alert,
 } from 'react-native';
 
 import colors from 'styles/colors';
@@ -42,8 +41,7 @@ import {
   IconTabHeart,
 } from 'assets/icons-auto/components';
 import { useIntercom } from 'providers/IntercomProvider/IntercomProvider';
-import { SUPABASE_ENABLED, SUPPORT_PROFILE_ID } from 'services/supabase/backend.config';
-import { findOrCreateDirectConversation } from 'services/supabase/supabase.chat';
+import { SUPABASE_ENABLED } from 'services/supabase/backend.config';
 import InputSearch from 'components/InputSearch/InputSearch';
 import { useDebouncedValue } from 'utils/useDebouncedValue';
 
@@ -195,37 +193,23 @@ const HomeTabMain: FunctionComponent<HomeTabMainProps> = ({ navigation }) => {
 
   async function handleIntercom() {
     if (SUPABASE_ENABLED) {
-      // Support runs on OUR chat now (no Intercom): open a direct
-      // conversation with the official support account.
-      try {
-        const convId = await findOrCreateDirectConversation(SUPPORT_PROFILE_ID);
-        // Same stack shape the Connect flows use: Messages list UNDER the
-        // chat, so back returns to the list and the tab isn't hijacked.
-        navigation.dispatch(
-          CommonActions.navigate({
-            name: 'Messages',
-            state: {
-              routes: [
-                { name: 'messages-tab-main' },
-                {
-                  name: 'messages-tab-chat',
-                  params: { channelUrl: convId, userId: SUPPORT_PROFILE_ID },
-                },
-              ],
-              index: 1,
-            },
-          }),
-        );
-      } catch (error) {
-        // Most likely cause: the support profile isn't seeded in this
-        // environment (SUPPORT_PROFILE_ID / EXPO_PUBLIC_SUPPORT_PROFILE_ID).
-        // Tell the user instead of silently doing nothing.
-        if (__DEV__) console.warn('support chat error', error);
-        Alert.alert(
-          'Support unavailable',
-          'Support chat isn’t set up yet. Please try again later.',
-        );
-      }
+      // Support runs on OUR chat now (no Intercom). Instead of dropping the
+      // user straight into a blank DM, take them through a short guided ticket
+      // form (category → subject → description); on submit it logs the ticket
+      // AND posts a formatted summary into the support DM, then lands them in
+      // that chat. Messages list stays UNDER it, so back returns to the list.
+      navigation.dispatch(
+        CommonActions.navigate({
+          name: 'Messages',
+          state: {
+            routes: [
+              { name: 'messages-tab-main' },
+              { name: 'messages-tab-support-ticket' },
+            ],
+            index: 1,
+          },
+        }),
+      );
       return;
     }
     openIntercom();

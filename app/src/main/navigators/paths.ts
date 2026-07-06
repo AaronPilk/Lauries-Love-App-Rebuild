@@ -10,6 +10,7 @@ export const PATHS_MESSAGES_TAB = {
   messagesTabJoinGroup: 'messages-tab-join-group',
   messagesTabMembersGroup: 'messages-tab-members-group',
   messagesTabProfile: 'messages-tab-profile',
+  messagesTabSupportTicket: 'messages-tab-support-ticket',
 } as const;
 
 export const PATHS_PROFILE_TAB = {

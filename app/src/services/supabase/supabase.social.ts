@@ -286,13 +286,20 @@ const groupToChannel = (g: any, members: any[] = [], joined = false) => ({
 });
 
 export async function getAllGroups() {
-  const { data, error } = await supabase
-    .from('groups')
-    .select('*, group_members(count)')
-    .order('name');
+  // Rosters are gated to co-members (privacy), so the embedded group_members
+  // count would read 0 for groups you're not in. Pull counts via the
+  // group_member_counts() RPC instead (counts aren't sensitive; rosters are).
+  const [{ data, error }, { data: counts }] = await Promise.all([
+    supabase.from('groups').select('*').order('name'),
+    supabase.rpc('group_member_counts'),
+  ]);
   if (error) throw error;
+  const countByGroup: Record<string, number> = {};
+  (counts ?? []).forEach((r: any) => {
+    countByGroup[r.group_id] = Number(r.member_count) || 0;
+  });
   return (data ?? []).map(g =>
-    groupToChannel({ ...g, member_count: g.group_members?.[0]?.count ?? 0 }),
+    groupToChannel({ ...g, member_count: countByGroup[g.id] ?? 0 }),
   );
 }
 

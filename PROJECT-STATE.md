@@ -42,7 +42,7 @@ feed natively, and removed every rented vendor.
   (`app/src/providers/SendbirdChatProvider/SendbirdChatProvider.types.ts`) keep
   the remaining unreachable legacy branches compiling.
 
-## 3. What's been built (all live on Supabase, verified on device)
+## 3. What's been built (live on Supabase, running on device — formal QA pass NOT yet executed; see LAUNCH-PLAN.md 31-item checklist, 0 checked)
 
 - **Auth:** Supabase Auth, email OTP verification (`sbConfirmSignUp`), atomic
   idempotent profile upsert (no orphan accounts), real account deletion via the
@@ -63,7 +63,7 @@ feed natively, and removed every rented vendor.
   profiles, avatars (Storage), support chat button (env-overridable
   SUPPORT_PROFILE_ID with graceful failure).
 
-## 4. Database — all committed to `supabase/migrations/` (18 files)
+## 4. Database — all committed to `supabase/migrations/` (16 SQL files)
 
 Full schema + RLS is version-controlled. Key security model:
 - RLS on every table using `(select auth.uid())` init-plan pattern.

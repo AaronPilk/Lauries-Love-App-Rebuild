@@ -25,6 +25,7 @@ the SQL editor.
 | rls_privacy_v2_write_gates | comment/react writes also require visibility of the target content |
 | storage_listing_hardening_v1 | avatars/post-images bucket read restricted to authenticated (no anon listing) |
 | profiles_private_pii_v1 | sensitive PII (email/phone/push_token/zip/device) split into owner-only profiles_private table — closes the direct-PostgREST scrape path |
+| group_roster_privacy_v1 | group_members roster gated to co-members (was world-readable → diagnosis inference); member counts stay public via group_member_counts() RPC |
 
 Security invariants the client depends on (all enforced here, not in JS):
 writes are owner-scoped (`auth.uid()`), notification sender can never be

@@ -31,7 +31,7 @@ import { useSendBirdPostsProvider } from 'providers/SendBirdPostsProvider/SendBi
 // backend v2
 import { SUPABASE_ENABLED } from 'services/supabase/backend.config';
 import { createPost } from 'services/supabase/supabase.social';
-import { uploadImageBase64 } from 'services/supabase/supabase.storage';
+import { uploadImageBase64, publicUrlFor } from 'services/supabase/supabase.storage';
 
 // components
 import BackgroundScreen from 'components/BackgroundScreen/BackgroundScreen';
@@ -293,7 +293,11 @@ const HomeTabCreatePost: FunctionComponent<HomeTabCreatePostProps> = ({
               <View style={styles.textInputContainer}>
                 <View style={styles.avatarContainer}>
                   <AvatarMessagesTab
-                    imageUrl={sdk.currentUser?.profileUrl || ''}
+                    imageUrl={
+                      SUPABASE_ENABLED
+                        ? publicUrlFor('avatars', userDB?.profilePicture) || ''
+                        : sdk.currentUser?.profileUrl || ''
+                    }
                     width={49}
                     height={49}
                   />

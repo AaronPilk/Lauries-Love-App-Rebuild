@@ -9,7 +9,6 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import { useSendbirdChat } from 'services/legacy-chat.shim';
 import { useIsFocused } from '@react-navigation/native';
 
 // types
@@ -38,8 +37,6 @@ import { PATHS_MESSAGES_TAB } from 'main/navigators/paths';
 // styles
 import styles from './MessagesTabCreateChat.styles';
 import colors from 'styles/colors';
-import { useApiProvider } from 'providers/ApiProvider/ApiProvider';
-import { z } from 'zod';
 
 // supabase (Backend V2) chat
 import { SUPABASE_ENABLED } from 'services/supabase/backend.config';
@@ -56,36 +53,14 @@ type FriendWithStatus = UserSendBirdType & {
 const MessagesTabCreateChat: FunctionComponent<MessagesTabCreateChatProps> = ({
   navigation,
 }) => {
-  const { api } = useApiProvider();
   const isFocused = useIsFocused();
-  const { sdk } = useSendbirdChat();
-  const { groupChannels, getChannels, getFriends: getFriendsProvider } =
+  const { getChannels, getFriends: getFriendsProvider } =
     useSendbirdChatProvider();
   const [friends, setFriends] = useState<FriendWithStatus[]>([]);
   const [limit, setLimit] = useState(100);
   const [search, setSearch] = useState('');
   const [isLoading, setIsLoading] = useState(true);
   const [isEnd, setIsEnd] = useState(true);
-
-  const getFriendStatus = async (friendId: string) => {
-    try {
-      const result = await api(`/users/${friendId}/friend-requests`, {
-        config: {
-          method: 'GET',
-        },
-        schema: z.array(z.object({ status: z.string() })),
-      });
-      if (!result || result.length === 0) {
-        return;
-      }
-
-      const { status } = result[0];
-
-      return status as 'pending' | 'accepted';
-    } catch (error) {
-      if (__DEV__) console.warn('Error getting requested friend', error);
-    }
-  };
 
   const getFriends = async () => {
     setIsLoading(true);
@@ -104,29 +79,6 @@ const MessagesTabCreateChat: FunctionComponent<MessagesTabCreateChatProps> = ({
       }
       return;
     }
-    const friendListQuery = sdk.createFriendListQuery({
-      limit,
-    });
-    try {
-      const resultFriends =
-        (await friendListQuery.next()) as UserSendBirdType[];
-
-      const friendsWithStatus = await Promise.all(
-        resultFriends.map(async friend => {
-          const friendId = friend?.metaData?.id as string;
-
-          const status = await getFriendStatus(friendId);
-          return { ...friend, status } as FriendWithStatus;
-        }),
-      );
-
-      setFriends(friendsWithStatus);
-    } catch (error) {
-      if (__DEV__) console.warn('Error getting friends', error);
-    } finally {
-      setIsEnd(false);
-      setIsLoading(false);
-    }
   };
 
   const onSelectFriend = async (userId: string) => {
@@ -144,33 +96,6 @@ const MessagesTabCreateChat: FunctionComponent<MessagesTabCreateChatProps> = ({
         if (__DEV__) console.warn('Error creating channel', error);
       }
       return;
-    }
-    try {
-      const findChannel = groupChannels.find(
-        channel =>
-          channel.members.length === 2 &&
-          channel.members.find(member => member.userId === userId),
-      );
-      if (findChannel)
-        return navigation.navigate(PATHS_MESSAGES_TAB.messagesTabChat, {
-          channelUrl: findChannel.url,
-          userId,
-        });
-
-      const channel = await sdk.groupChannel.createChannelWithUserIds(
-        [userId],
-        true,
-      );
-      await channel.createMetaData({
-        type: 'chat',
-      });
-      getChannels();
-      return navigation.navigate(PATHS_MESSAGES_TAB.messagesTabChat, {
-        channelUrl: channel.url,
-        userId,
-      });
-    } catch (error) {
-      if (__DEV__) console.warn('Error creating channel', error);
     }
   };
 

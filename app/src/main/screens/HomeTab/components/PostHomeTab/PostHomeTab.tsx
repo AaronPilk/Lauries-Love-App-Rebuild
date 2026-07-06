@@ -1,6 +1,5 @@
 import { LinearGradient } from 'expo-linear-gradient';
 import { View, Text, TouchableOpacity, Image } from 'react-native';
-import { useSendbirdChat } from 'services/legacy-chat.shim';
 import { useNavigation } from '@react-navigation/native';
 import React, {
   FunctionComponent,
@@ -17,11 +16,7 @@ import { useToastProvider } from 'providers/ToastProvider/ToastProvider';
 import { useGetUsersReq } from 'presentation/services/react-query/user.query';
 import { useSendBirdPostsProvider } from 'providers/SendBirdPostsProvider/SendBirdPostsProvider';
 import AvatarMessagesTab from 'main/screens/MessagesTab/components/AvatarMessagesTab/AvatarMessagesTab';
-import {
-  GroupChannelSendBirdType,
-  MetaDataUserSendBirdType,
-  UserSendBirdType,
-} from 'providers/SendbirdChatProvider/SendbirdChatProvider.types';
+import { GroupChannelSendBirdType } from 'providers/SendbirdChatProvider/SendbirdChatProvider.types';
 import { useUserDBProvider } from 'providers/UserDBProvider/UserDBProvider';
 import { toLocalizedDateString } from 'utils/formatDate';
 
@@ -46,7 +41,6 @@ const PostHomeTab: FunctionComponent<PostHomeTabProps> = ({
   onPressPost,
   isSearchMode = false,
 }) => {
-  const { sdk } = useSendbirdChat();
   const { userDB } = useUserDBProvider();
   const navigation = useNavigation();
   const { showToast } = useToastProvider();
@@ -141,7 +135,7 @@ const PostHomeTab: FunctionComponent<PostHomeTabProps> = ({
     // the "Read More" path uses. The legacy build only synced Sendbird
     // channel metadata here (no navigation); that sync is gone with Sendbird.
     onPressPost(post.url, true);
-  }, [sdk, comment, post.url, onPressPost]);
+  }, [comment, post.url, onPressPost]);
 
   const toggleReactionUserMessage = useCallback(async () => {
     if (SUPABASE_ENABLED) {
@@ -188,66 +182,9 @@ const PostHomeTab: FunctionComponent<PostHomeTabProps> = ({
       }
       return;
     }
-
-    if (!post || !userID) return;
-
-    try {
-      const channel = await sdk.groupChannel.getChannel(post.url);
-
-      await channel.join();
-
-      // Fetch current likes from metadata
-      const currentLikes = JSON.parse(channel.data).likes || [];
-
-      // Update likes array based on current reaction state
-      const updatedLikes = currentLikes.includes(userID)
-        ? // Remove userID if already liked
-          currentLikes.filter((id: string) => id !== userID)
-        : // Add userID if not liked yet
-          [...currentLikes, userID];
-
-      setLikes(updatedLikes.length);
-
-      setIsLiked(state => !state);
-
-      const existingData = JSON.parse(channel.data || '{}');
-
-      const updatedData = {
-        ...existingData,
-        likes: updatedLikes,
-      };
-
-      await channel.updateChannel({
-        data: JSON.stringify(updatedData),
-      });
-
-      const notifierId = (
-        post.lastMessage?.sender?.metaData as MetaDataUserSendBirdType
-      )?.id;
-      const currentUser = sdk.currentUser as UserSendBirdType;
-      const senderId = currentUser.metaData.id;
-      const isFounder = channel.creator?.userId === userID;
-
-      if (!isFounder && notifierId && senderId) {
-        sendNotification({
-          notifierId,
-          senderId,
-          entityType: 'NEW_LIKE',
-          type: 'post',
-          content: message,
-          meta: {
-            id: post.url,
-            redirectUrl: `sendbird/${post.url}`,
-          },
-        });
-      }
-    } catch (error) {
-      if (__DEV__) console.warn('Error toggling reaction:', error);
-    }
   }, [
     post,
     userID,
-    sdk,
     message,
     sendNotification,
     userDB?.cognitoId,

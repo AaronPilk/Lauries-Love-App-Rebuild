@@ -17,7 +17,6 @@ import {
   Image,
 } from 'react-native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import { useSendbirdChat } from 'services/legacy-chat.shim';
 
 // types
 import { RootHomeTabParamList } from 'main/navigators/HomeTabStacks/HomeTabStacks.types';
@@ -25,7 +24,6 @@ import { RootHomeTabParamList } from 'main/navigators/HomeTabStacks/HomeTabStack
 // providers
 import { useToastProvider } from 'providers/ToastProvider/ToastProvider';
 import { useUserDBProvider } from 'providers/UserDBProvider/UserDBProvider';
-import { useDBProvider } from 'providers/DBProvider/DBProvider';
 import { useSendBirdPostsProvider } from 'providers/SendBirdPostsProvider/SendBirdPostsProvider';
 
 // backend v2
@@ -58,10 +56,6 @@ import PostImageModal, {
   ImageUploadItem,
 } from '../components/PostImageModal/PostImageModal';
 
-import { makeAxiosHttpClient } from 'main/factories/http';
-import axios from 'axios';
-import { getSizedImageUrls } from 'utils/imageUrlUtils';
-
 type HomeTabCreatePostProps = {
   navigation: NativeStackNavigationProp<RootHomeTabParamList>;
 };
@@ -69,7 +63,6 @@ type HomeTabCreatePostProps = {
 const HomeTabCreatePost: FunctionComponent<HomeTabCreatePostProps> = ({
   navigation,
 }) => {
-  const { sdk } = useSendbirdChat();
   const { showToast } = useToastProvider();
   const [focused, setFocused] = useState(false);
   const [postText, setPostText] = useState('');
@@ -80,9 +73,6 @@ const HomeTabCreatePost: FunctionComponent<HomeTabCreatePostProps> = ({
   const [isLoading, setIsLoading] = useState(false);
   const { userDB } = useUserDBProvider();
   const { getPosts } = useSendBirdPostsProvider();
-  const {
-    db: { diagnosisType },
-  } = useDBProvider();
 
   const isActionButtonActive = useMemo(() => postText.length > 0, [postText]);
 
@@ -128,94 +118,6 @@ const HomeTabCreatePost: FunctionComponent<HomeTabCreatePostProps> = ({
         setIsLoading(false);
         return;
       }
-
-      const roleName = userDB?.role?.description?.toLowerCase();
-      const cancerType = (userDB?.diagnosisTypes ?? [])
-        .map(id => {
-          const match = diagnosisType.find(d => d.id === id);
-          return match?.description?.toLowerCase();
-        })
-        .filter(Boolean);
-
-      // upload image if selected
-      let smImageUrl = '';
-      let mdImageUrl = '';
-      if (selectedImage) {
-        const ext = selectedImage.ext;
-        const arrayBuffer = Uint8Array.from(atob(selectedImage.base64), c =>
-          c.charCodeAt(0),
-        );
-        const urlResponse = await makeAxiosHttpClient().request({
-          url: `/users/signed-url?ext=${ext}&userId=${userDB?.id}`,
-          method: 'get',
-        });
-        if (urlResponse.statusCode !== 200)
-          throw new Error('Failed to get signed URL');
-        const { s3Url, uploadUrl } = urlResponse.body;
-        const cleanAxios = axios.create();
-        const contentType = selectedImage.mimeType;
-        const uploadRes = await cleanAxios.put(uploadUrl, arrayBuffer, {
-          headers: {
-            'Content-Type': contentType,
-          },
-        });
-        if (uploadRes.status >= 200 && uploadRes.status < 300) {
-          const sizedUrls = getSizedImageUrls(s3Url);
-          smImageUrl = sizedUrls.sm;
-          mdImageUrl = sizedUrls.md;
-        } else {
-          throw new Error('Image upload failed');
-        }
-      }
-
-      const channel = await sdk.groupChannel.createChannel({
-        isPublic: true,
-        isDiscoverable: true,
-        isEphemeral: false,
-        data: JSON.stringify({
-          type: 'post',
-          visibility: visibility,
-          recommendedGroups: [roleName, cancerType[0]],
-          likes: [],
-          commentQty: 0,
-          firstMessage: '',
-          firstMessageId: '',
-          image_sm: smImageUrl,
-          image_md: mdImageUrl,
-        }),
-      });
-
-      await channel.createMetaData({
-        type: 'post',
-      });
-
-      channel
-        .sendUserMessage({
-          message: postText,
-        })
-        .onSucceeded(async message => {
-          const existingData = JSON.parse(channel.data || '{}');
-
-          const updatedData = {
-            ...existingData,
-            firstMessage: message.message.toString(),
-            firstMessageId: message.messageId.toString(),
-          };
-
-          await channel.updateChannel({
-            data: JSON.stringify(updatedData),
-          });
-
-          navigation.navigate(PATHS_HOME_TAB.homeTabMain);
-          setIsLoading(false);
-        })
-        .onFailed(error => {
-          setIsLoading(false);
-          customShowError({
-            error,
-            showToast,
-          });
-        });
     } catch (error) {
       if (__DEV__) console.warn('Error creating post', error);
       setIsLoading(false);
@@ -294,9 +196,7 @@ const HomeTabCreatePost: FunctionComponent<HomeTabCreatePostProps> = ({
                 <View style={styles.avatarContainer}>
                   <AvatarMessagesTab
                     imageUrl={
-                      SUPABASE_ENABLED
-                        ? publicUrlFor('avatars', userDB?.profilePicture) || ''
-                        : sdk.currentUser?.profileUrl || ''
+                      publicUrlFor('avatars', userDB?.profilePicture) || ''
                     }
                     width={49}
                     height={49}

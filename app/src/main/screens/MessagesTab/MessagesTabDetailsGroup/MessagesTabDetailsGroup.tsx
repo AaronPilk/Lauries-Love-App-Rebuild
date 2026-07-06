@@ -9,7 +9,6 @@ import {
 } from 'react-native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RouteProp, useRoute } from '@react-navigation/native';
-import { useSendbirdChat } from 'services/legacy-chat.shim';
 
 // types
 import { RootMessagesTabParamList } from 'main/navigators/MessagesTabStacks/MessagesTabStacks.types';
@@ -56,7 +55,6 @@ const MessagesTabDetailsGroup: FunctionComponent<
     useRoute<
       RouteProp<RootMessagesTabParamList, 'messages-tab-details-group'>
     >();
-  const { sdk } = useSendbirdChat();
   const { getChannels, groupChannels } = useSendbirdChatProvider();
   const [channel, setChannel] = useState<GroupChannelSendBirdType | null>(null);
 
@@ -87,15 +85,6 @@ const MessagesTabDetailsGroup: FunctionComponent<
       }
       return;
     }
-
-    try {
-      const fetchedChannel = await sdk.groupChannel.getChannel(
-        route.params.channelUrl,
-      );
-      setChannel(fetchedChannel);
-    } catch (error) {
-      if (__DEV__) console.warn('Error fetching channel:', error);
-    }
   };
 
   const onLeave = async () => {
@@ -114,14 +103,6 @@ const MessagesTabDetailsGroup: FunctionComponent<
       }
       return;
     }
-
-    channel?.leave().then(async () => {
-      await getChannels();
-      navigation.reset({
-        index: 0,
-        routes: [{ name: PATHS_MESSAGES_TAB.messagesTabMain }],
-      });
-    });
   };
 
   const onLeaveGroup = () => {

@@ -5,8 +5,6 @@ import {
   NativeScrollEvent,
   View,
 } from 'react-native';
-import { useSendbirdChat } from 'services/legacy-chat.shim';
-import { FriendListQuery } from 'services/legacy-chat.shim';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RouteProp, useRoute } from '@react-navigation/native';
 
@@ -43,17 +41,13 @@ const MessagesTabMembersGroup: FunctionComponent<
     useRoute<
       RouteProp<RootMessagesTabParamList, 'messages-tab-members-group'>
     >();
-  const { sdk } = useSendbirdChat();
   const { friends: providerFriends, userChat } = useSendbirdChatProvider();
   const [channel, setChannel] = useState<GroupChannelSendBirdType | null>(null);
   const [friends, setFriends] = useState<UserSendBirdType[]>([]);
   const [limit, setLimit] = useState(20);
 
-  // Supabase mode: there is no Sendbird connection, so sdk.currentUser is
-  // meaningless — my chat identity is userChat (profile id).
-  const myUserId = SUPABASE_ENABLED
-    ? userChat?.userId
-    : sdk.currentUser?.userId;
+  // There is no Sendbird connection — my chat identity is userChat (profile id).
+  const myUserId = userChat?.userId;
 
   const members = useMemo(
     () =>
@@ -66,16 +60,6 @@ const MessagesTabMembersGroup: FunctionComponent<
       // Friends already live on the provider (Supabase-backed); no SDK query.
       setFriends(providerFriends || []);
       return;
-    }
-
-    const friendListQuery = sdk.createFriendListQuery({
-      limit,
-    });
-    try {
-      const friends = (await friendListQuery.next()) as UserSendBirdType[];
-      setFriends(friends);
-    } catch (error) {
-      if (__DEV__) console.warn('Error getting friends', error);
     }
   };
 
@@ -97,28 +81,11 @@ const MessagesTabMembersGroup: FunctionComponent<
       }
       return;
     }
-
-    try {
-      const fetchedChannel = await sdk.groupChannel.getChannel(
-        route.params.channelUrl,
-      );
-      setChannel(fetchedChannel);
-    } catch (error) {
-      if (__DEV__) console.warn('Error fetching channel:', error);
-    }
   };
 
-  const addFriend = async (userId: string) => {
-    // Supabase mode: friend requests don't go through the dead Sendbird
-    // proxy — no-op here rather than silently "succeeding".
+  const addFriend = async (_userId: string) => {
+    // Friend requests don't go through the dead Sendbird proxy — no-op.
     if (SUPABASE_ENABLED) return;
-
-    try {
-      await sdk.addFriends([userId]);
-      getFriends();
-    } catch (error) {
-      if (__DEV__) console.warn('Error adding friend', error);
-    }
   };
 
   const handleScrollDown = ({

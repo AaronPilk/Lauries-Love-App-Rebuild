@@ -9,7 +9,6 @@ import { ScrollView, Dimensions } from 'react-native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { PaperProvider } from 'react-native-paper';
 import { ImagePickerAsset } from 'expo-image-picker';
-import { useSendbirdChat } from 'services/legacy-chat.shim';
 
 // types
 import { RootMessagesTabParamList } from 'main/navigators/MessagesTabStacks/MessagesTabStacks.types';
@@ -45,7 +44,6 @@ type MessagesTabCreateGroupProps = {
 const MessagesTabCreateGroup: FunctionComponent<
   MessagesTabCreateGroupProps
 > = ({ navigation }) => {
-  const { sdk } = useSendbirdChat();
   const { getChannels } = useSendbirdChatProvider();
   const [selectedTab, setSelectedTab] = useState(0);
   const [newGroup, setNewGroup] = useState(DEFAULT_NEW_GROUP);
@@ -85,12 +83,7 @@ const MessagesTabCreateGroup: FunctionComponent<
 
   const createGroup = async () => {
     try {
-      if (
-        !sdk ||
-        !newGroup.name ||
-        !newGroup.permissions ||
-        isLoading
-      ) {
+      if (!newGroup.name || !newGroup.permissions || isLoading) {
         setIsCreateGroup(false);
         return;
       }
@@ -114,48 +107,6 @@ const MessagesTabCreateGroup: FunctionComponent<
         });
         return; // `finally` still clears the loading/create flags
       }
-
-      const userIds = newGroup.members.map(member => member.userId);
-      const image = newGroup.image
-        ? {
-            uri: newGroup.image,
-            name:
-              newGroup.image.split('/').pop() ||
-              `image-group.${newGroup.image.split('.').pop()}`,
-            type: `image/${newGroup.image.split('.').pop()}`,
-          }
-        : undefined;
-      const channel =
-        newGroup.permissions === 'public'
-          ? await sdk.groupChannel.createChannel({
-              isPublic: true,
-              isDiscoverable: true,
-              isEphemeral: false,
-              name: newGroup.name,
-              data: JSON.stringify({
-                type: 'post',
-              }),
-              invitedUserIds: userIds,
-              coverImage: image,
-            })
-          : await sdk.groupChannel.createChannelWithUserIds(
-              userIds,
-              false,
-              newGroup.name,
-              image,
-              JSON.stringify({
-                type: newGroup.permissions,
-                isPrivate: newGroup.permissions === 'private',
-              }),
-            );
-      await channel.createMetaData({
-        type: 'group',
-      });
-      getChannels();
-
-      navigation.navigate(PATHS_MESSAGES_TAB.messagesTabChatGroup, {
-        channelUrl: channel.url,
-      });
     } catch (error) {
       if (__DEV__) console.warn('error', error);
     } finally {

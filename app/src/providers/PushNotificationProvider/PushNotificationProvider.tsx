@@ -9,7 +9,6 @@ import { Alert, Linking, Platform } from 'react-native';
 import messaging from '@react-native-firebase/messaging';
 import { PermissionStatus } from 'expo-image-picker';
 import * as Notifications from 'expo-notifications';
-import { useSendbirdChat } from 'services/legacy-chat.shim';
 import {
   CommonActions,
   NavigationProp,
@@ -22,7 +21,6 @@ import { useSendbirdChatProvider } from 'providers/SendbirdChatProvider/Sendbird
 import { useUserDBProvider } from 'providers/UserDBProvider/UserDBProvider';
 import { useApiProvider } from 'providers/ApiProvider/ApiProvider';
 import { PATHS_MESSAGES_TAB } from 'main/navigators/paths';
-import { SUPABASE_ENABLED } from 'services/supabase/backend.config';
 
 type NotificationTrigger = {
   payload?: {
@@ -58,7 +56,6 @@ const PushNotificationProvider: FunctionComponent<
   const { api } = useApiProvider();
   const { userDB, updateUserDB } = useUserDBProvider();
   const { userChat } = useSendbirdChatProvider();
-  const { sdk } = useSendbirdChat();
   const { permissions, requestPermissionsNotificationFirebase } =
     usePermissionsProvider();
   const [token, setToken] = useState<string | null>(null);
@@ -201,12 +198,9 @@ const PushNotificationProvider: FunctionComponent<
       //await sendPushNotification();
       if (!userChat?.userId) return false;
 
-      // Supabase mode: the FCM token is already saved on the profile above
-      // (updateUserDB) for the future push edge function. Sendbird is never
-      // connected, so registering the token with it would just throw.
-      if (SUPABASE_ENABLED) return true;
-
-      await sdk.registerAPNSPushTokenForCurrentUser(resultToken);
+      // The FCM token is saved on the profile above (updateUserDB) for the
+      // push edge function. There is no legacy chat SDK to register with.
+      return true;
     } catch (error) {
       if (__DEV__) console.warn('Error in getToken', error);
       return false;

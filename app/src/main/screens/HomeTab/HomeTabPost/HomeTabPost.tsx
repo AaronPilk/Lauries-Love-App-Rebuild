@@ -25,7 +25,6 @@ import {
   useNavigation,
   useFocusEffect,
 } from '@react-navigation/native';
-import { useSendbirdChat } from 'services/legacy-chat.shim';
 import { Sender } from 'services/legacy-chat.shim';
 
 // types
@@ -33,7 +32,6 @@ import { RootHomeTabParamList } from 'main/navigators/HomeTabStacks/HomeTabStack
 import {
   BaseMessageSendBirdType,
   MetaDataUserSendBirdType,
-  UserSendBirdType,
 } from 'providers/SendbirdChatProvider/SendbirdChatProvider.types';
 import { useKeyboardProvider } from 'providers/KeyboardProvider/KeyboardProvider';
 import { useGetUsersReq } from 'presentation/services/react-query/user.query';
@@ -57,9 +55,6 @@ import {
   IconSend,
   IconTabHeart,
 } from 'assets/icons-auto/components';
-
-// constants
-import { DEFAULT_COMMENT_POST } from './HomeTabPost.constants';
 
 // styles
 import styles from './HomeTabPost.styles';
@@ -93,7 +88,6 @@ const HomeTabPost: FunctionComponent<HomeTabPostProps> = ({ navigation }) => {
     posts,
     sendNotification,
   } = useSendBirdPostsProvider();
-  const { sdk } = useSendbirdChat();
   const { showToast } = useToastProvider();
   const [likes, setLikes] = useState(0);
   const [isLiked, setIsLiked] = useState(false);
@@ -247,78 +241,6 @@ const HomeTabPost: FunctionComponent<HomeTabPostProps> = ({ navigation }) => {
       }
       return;
     }
-
-    const tempComment = {
-      ...DEFAULT_COMMENT_POST,
-      messageId: new Date().getTime(),
-      message: postText,
-      createdAt: new Date().getTime(),
-      sender: {
-        ...DEFAULT_COMMENT_POST.sender,
-        userId: userID || '',
-        nickname: sdk.currentUser?.nickname || '',
-        profileUrl: sdk.currentUser?.profileUrl || '',
-      } as Sender,
-    } as BaseMessageSendBirdType;
-
-    setComments(state => [...state, tempComment]);
-    setPostText('');
-    inputRef.current?.blur();
-
-    try {
-      const channel = await sdk.groupChannel.getChannel(
-        route.params?.channelUrl,
-      );
-      const isJoined = channel.members.some(member => member.userId === userID);
-      if (!isJoined) await channel.join();
-
-      channel
-        .sendUserMessage({
-          message: tempComment.message,
-        })
-        .onSucceeded(async () => {
-          const notifierId = (
-            userPost.sender?.metaData as MetaDataUserSendBirdType
-          )?.id;
-
-          const senderId = (sdk.currentUser as UserSendBirdType).metaData.id;
-          const isFounder = channel.creator?.userId === userID;
-
-          getPost(route.params?.channelUrl || '');
-
-          const existingData = JSON.parse(channel.data || '{}');
-
-          const updatedData = {
-            ...existingData,
-            commentQty: parseInt(existingData.commentQty) + 1,
-          };
-
-          await channel.updateChannel({
-            data: JSON.stringify(updatedData),
-          });
-
-          if (!isFounder && notifierId && senderId && route.params?.channelUrl)
-            sendNotification({
-              notifierId,
-              senderId,
-              entityType: 'NEW_MESSAGE',
-              type: 'post',
-              content: tempComment.message,
-              meta: {
-                id: route.params.channelUrl,
-                redirectUrl: `sendbird/${route.params.channelUrl}`,
-              },
-            });
-        })
-        .onFailed(error => {
-          customShowError({
-            error,
-            showToast,
-          });
-        });
-    } catch (error) {
-      if (__DEV__) console.warn('Error creating comment', error);
-    }
   };
 
   const toggleReactionUserMessage = async (
@@ -375,82 +297,6 @@ const HomeTabPost: FunctionComponent<HomeTabPostProps> = ({ navigation }) => {
       toggleReaction(channelUrl, message);
       return;
     }
-
-    if (!route.params?.channelUrl || !userID) return;
-
-    const isReactionTemp = reactions[message.messageId]?.some(
-      reaction => reaction === userID,
-    );
-    setReactions(state => {
-      const ids = state[message.messageId] || [];
-      return {
-        ...state,
-        [message.messageId]: ids.includes(userID)
-          ? ids.filter(id => id !== userID)
-          : [...ids, userID],
-      };
-    });
-
-    toggleReaction(route.params?.channelUrl, message);
-
-    sdk.groupChannel
-      .getChannel(route.params?.channelUrl)
-      .then(async channel => {
-        const isFounder = channel.creator?.userId === userID;
-
-        const notifierId = (
-          userPost.sender?.metaData as MetaDataUserSendBirdType
-        )?.id;
-
-        const senderId = (sdk.currentUser as UserSendBirdType).metaData.id;
-
-        await channel.join();
-
-        // Fetch current likes from metadata
-        const currentLikes = JSON.parse(channel.data).likes || [];
-
-        // Update likes array based on current reaction state
-        const updatedLikes = currentLikes.includes(userID)
-          ? // Remove userID if already liked
-            currentLikes.filter((id: string) => id !== userID)
-          : // Add userID if not liked yet
-            [...currentLikes, userID];
-
-        setLikes(updatedLikes.length);
-
-        setIsLiked(state => !state);
-
-        const existingData = JSON.parse(channel.data || '{}');
-
-        const updatedData = {
-          ...existingData,
-          likes: updatedLikes,
-        };
-
-        await channel.updateChannel({
-          data: JSON.stringify(updatedData),
-        });
-
-        if (
-          !isReactionTemp &&
-          !isFounder &&
-          notifierId &&
-          senderId &&
-          route.params?.channelUrl
-        )
-          sendNotification({
-            notifierId,
-            senderId,
-            entityType: 'NEW_LIKE',
-            type: isPost ? 'post' : 'comment',
-            content: message.message,
-            meta: {
-              id: route.params.channelUrl,
-              commentId: isPost ? undefined : message.messageId.toString(),
-              redirectUrl: `sendbird/${route.params.channelUrl}/${message.messageId}`,
-            },
-          });
-      });
   };
 
   const goToUserProfile = async (sender: Sender) => {

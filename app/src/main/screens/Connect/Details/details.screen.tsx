@@ -9,7 +9,6 @@ import {
   View,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
-import { useSendbirdChat } from 'services/legacy-chat.shim';
 import {
   CommonActions,
   RouteProp,
@@ -19,13 +18,8 @@ import {
 
 import { ConnectStackParamList } from 'types/navigation';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import { QueryType } from 'services/legacy-chat.shim';
 
 // types
-import {
-  GroupChannelSendBirdType,
-  UserSendBirdType,
-} from 'providers/SendbirdChatProvider/SendbirdChatProvider.types';
 import { User } from '../Map/map.screen';
 
 // providers
@@ -48,7 +42,6 @@ import {
 
 // constants
 import { PATHS_MESSAGES_TAB } from 'main/navigators/paths';
-import { DEFAULT_ERROR_NOT_FOUND_USER_SENDBIRD } from 'providers/SendbirdChatProvider/SendbirdChatProvider.constants';
 import { SUPABASE_ENABLED } from 'services/supabase/backend.config';
 import { findOrCreateDirectConversation } from 'services/supabase/supabase.chat';
 import { publicUrlFor } from 'services/supabase/supabase.storage';
@@ -68,8 +61,7 @@ const DetailsScreen: FunctionComponent<DetailsScreenProps> = ({
   navigation: navigationProps,
 }) => {
   const navigation = useNavigation();
-  const { sdk } = useSendbirdChat();
-  const { groupChannels, getChannels } = useSendbirdChatProvider();
+  const { getChannels } = useSendbirdChatProvider();
   const { showToast } = useToastProvider();
   const route =
     useRoute<
@@ -111,42 +103,6 @@ const DetailsScreen: FunctionComponent<DetailsScreenProps> = ({
     }
     const profilePicture = await getFileStorageAmplify(user.profilePicture);
     setProfilePicture(profilePicture);
-  }
-
-  async function getUserId(id: string) {
-    try {
-      const queryFilter = sdk.createApplicationUserListQuery({
-        metaDataKeyFilter: 'id',
-        metaDataValuesFilter: [id],
-        limit: 100,
-      });
-      const queryStandard = sdk.createFriendListQuery({
-        limit: 100,
-      });
-
-      const users = (await queryFilter.next()) as UserSendBirdType[];
-      const userList =
-        users.length > 0
-          ? users
-          : ((await queryStandard.next()) as UserSendBirdType[]);
-
-      const user = userList.find(user => {
-        if (user.metaData?.userInfo) {
-          const isCurrentJson = user.metaData.userInfo.endsWith('}');
-          const userInfo = JSON.parse(
-            isCurrentJson
-              ? user.metaData.userInfo
-              : `${user.metaData.userInfo}"}`,
-          );
-          return userInfo.id === id;
-        }
-      });
-      if (!user) return null;
-
-      return user.userId;
-    } catch (error) {
-      throw new Error(`Error getting user: ${error}`);
-    }
   }
 
   function toChatUser(channelUrl: string, userId: string) {
@@ -196,68 +152,6 @@ const DetailsScreen: FunctionComponent<DetailsScreenProps> = ({
       } finally {
         setIsLoadingSendMessage(false);
       }
-    }
-
-    try {
-      setIsLoadingSendMessage(true);
-      const userId = await getUserId(user.id);
-      if (!userId && !user.cognitoId) {
-        showToast({
-          type: 'info',
-          message: DEFAULT_ERROR_NOT_FOUND_USER_SENDBIRD,
-        });
-        return null;
-      }
-
-      const userSendBird = await sdk
-        .createApplicationUserListQuery({
-          userIdsFilter: [
-            ...(userId ? [userId] : []),
-            ...(user.cognitoId ? [user.cognitoId] : []),
-          ],
-        })
-        .next();
-      if (!userSendBird.length) {
-        showToast({
-          type: 'info',
-          message: DEFAULT_ERROR_NOT_FOUND_USER_SENDBIRD,
-        });
-        return null;
-      }
-
-      const queryChannel = sdk.groupChannel.createMyGroupChannelListQuery({
-        userIdsFilter: {
-          userIds: [user.cognitoId],
-          includeMode: false,
-          queryType: QueryType.AND,
-        },
-        metadataKey: 'type',
-        metadataValues: ['chat'],
-      });
-      const channels =
-        (await queryChannel.next()) as GroupChannelSendBirdType[];
-
-      const findChannel = [...channels, ...groupChannels].find(
-        channel =>
-          channel.members.length === 2 &&
-          channel.members.find(member => member.userId === user.cognitoId) &&
-          channel.cachedMetaData.type === 'chat',
-      );
-      if (findChannel) return toChatUser(findChannel.url, user.cognitoId);
-
-      const channel = await sdk.groupChannel.createChannelWithUserIds(
-        [user.cognitoId],
-        true,
-      );
-      await channel.createMetaData({
-        type: 'chat',
-      });
-      getChannels();
-      return toChatUser(channel.url, user.cognitoId);
-    } catch (error) {
-      throw new Error(`Error sending message: ${error}`);
-    } finally {
-      setIsLoadingSendMessage(false);
     }
   }
 

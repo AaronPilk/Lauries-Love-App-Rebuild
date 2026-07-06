@@ -1,4 +1,4 @@
-import React, { FunctionComponent, useEffect, useMemo, useState } from 'react';
+import React, { FunctionComponent, useMemo, useState } from 'react';
 import {
   View,
   Text,
@@ -10,10 +10,8 @@ import {
 } from 'react-native';
 import { Menu } from 'react-native-paper';
 import { LinearGradient } from 'expo-linear-gradient';
-import { useSendbirdChat } from 'services/legacy-chat.shim';
 
 // providers
-import { useUserAWSProvider } from 'providers/UserAWSProvider/UserAWSProvider';
 import { UserSendBirdType } from 'providers/SendbirdChatProvider/SendbirdChatProvider.types';
 
 // icons
@@ -50,27 +48,7 @@ const NewGroupCreateGroup: FunctionComponent<NewGroupCreateGroupProps> = ({
   setNewGroup,
   setIsShowImageModal,
 }) => {
-  const { userAWS } = useUserAWSProvider();
-  const { sdk } = useSendbirdChat();
-  const [friends, setFriends] = useState<UserSendBirdType[]>([]);
-  const [limit, setLimit] = useState(20);
   const [visible, setVisible] = useState(false);
-
-  const getUsersWithImageUrl = async () => {
-    const userIdsFilter = newGroup.members.map(member => member.userId);
-    const query = sdk.createApplicationUserListQuery({
-      userIdsFilter,
-    });
-    try {
-      const newUsers = (await query.next()) as UserSendBirdType[];
-      const rightUsers = newUsers.filter(
-        user => user.userId !== userAWS?.userId,
-      );
-      setFriends(rightUsers);
-    } catch (error) {
-      if (__DEV__) console.warn('Error getting users', error);
-    }
-  };
 
   const toggleMenu = () => {
     setVisible(!visible);
@@ -112,10 +90,6 @@ const NewGroupCreateGroup: FunctionComponent<NewGroupCreateGroupProps> = ({
     ),
     [newGroup.permissions, visible],
   );
-
-  useEffect(() => {
-    getUsersWithImageUrl();
-  }, [limit, newGroup.members]);
 
   return (
     <ScrollView scrollEnabled={false} contentContainerStyle={styles.container}>

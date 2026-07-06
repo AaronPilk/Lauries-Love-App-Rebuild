@@ -10,7 +10,6 @@ import {
   Text,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
-import { useSendbirdChat } from 'services/legacy-chat.shim';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useIntercom } from 'providers/IntercomProvider/IntercomProvider';
 
@@ -36,7 +35,6 @@ import { MOCK_ENABLED } from 'mocks/mock.config';
 import { joinMockGroup } from 'mocks/mock.sendbird';
 
 export default function RecommendedGroupsScreen() {
-  const { sdk } = useSendbirdChat();
   const { userDB } = useUserDBProvider();
   const { trackIntercom } = useIntercom();
   const { onPressBack } = useAuth();
@@ -80,9 +78,6 @@ export default function RecommendedGroupsScreen() {
             await joinGroup(ch.url); // Backend V2: group_members insert
           } else if (MOCK_ENABLED) {
             joinMockGroup(ch.url); // registers so Groups/Messages show it
-          } else {
-            const channel = await sdk.groupChannel.getChannel(ch.url);
-            await channel.join();
           }
         }
       }

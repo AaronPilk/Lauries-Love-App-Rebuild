@@ -1,17 +1,12 @@
 import React, { FunctionComponent, useEffect, useMemo, useState } from 'react';
 import { CommonActions, RouteProp, useRoute } from '@react-navigation/native';
 import { Alert, Text, TouchableOpacity, View } from 'react-native';
-import { useSendbirdChat } from 'services/legacy-chat.shim';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { ActivityIndicator } from 'react-native-paper';
-import { QueryType } from 'services/legacy-chat.shim';
 
 // types
 import { RootMessagesTabParamList } from 'main/navigators/MessagesTabStacks/MessagesTabStacks.types';
-import {
-  MetaDataUserSendBirdType,
-  UserSendBirdType,
-} from 'providers/SendbirdChatProvider/SendbirdChatProvider.types';
+import { UserSendBirdType } from 'providers/SendbirdChatProvider/SendbirdChatProvider.types';
 import { UserDBType } from 'providers/UserDBProvider/UserDBProvider.types';
 
 // providers
@@ -26,9 +21,6 @@ import BackgroundScreen from 'components/BackgroundScreen/BackgroundScreen';
 import Button from 'components/Button/Button';
 import AvatarProfile from 'main/screens/ProfileTab/components/AvatarProfile/AvatarProfile';
 import AvatarMessagesTab from '../components/AvatarMessagesTab/AvatarMessagesTab';
-
-// utils
-import { getFileStorageAmplify } from 'utils/amplify-storage';
 
 // icons
 import {
@@ -63,7 +55,6 @@ type MessagesTabProfileProps = {
 const MessagesTabProfile: FunctionComponent<MessagesTabProfileProps> = ({
   navigation,
 }) => {
-  const { sdk } = useSendbirdChat();
   const { getChannels } = useSendbirdChatProvider();
   const { getOnlyUserDBById } = useUserDBProvider();
   const route =
@@ -174,52 +165,6 @@ const MessagesTabProfile: FunctionComponent<MessagesTabProfileProps> = ({
       }
       return;
     }
-    try {
-      const query = sdk.createApplicationUserListQuery({
-        userIdsFilter: [route.params?.cognitoId || ''],
-      });
-      const users = await query.next();
-      if (users.length === 0)
-        Alert.alert('Error', DEFAULT_ERROR_NOT_FOUND_USER_SENDBIRD, [
-          {
-            text: 'OK',
-            onPress: () => navigation.goBack(),
-          },
-        ]);
-      const firstUser = users[0] as UserSendBirdType;
-      const metaData = firstUser.metaData.userInfo
-        ? (JSON.parse(
-            firstUser.metaData.userInfo,
-          ) as MetaDataUserSendBirdType | null)
-        : null;
-      const rightUser = {
-        ...firstUser,
-        metaData: {
-          ...firstUser.metaData,
-          ...metaData,
-        },
-      };
-      const userDB = rightUser.metaData.id
-        ? await getUserDB(rightUser.metaData.id)
-        : null;
-      setSelectUserSendbird(rightUser as UserSendBirdType);
-      // Supabase avatars are public-bucket paths; Amplify signed urls are
-      // legacy-mode only (they fail silently in Supabase mode).
-      const profileImgUrl = userDB?.profilePicture
-        ? SUPABASE_ENABLED
-          ? publicUrlFor('avatars', userDB.profilePicture)
-          : (await getFileStorageAmplify(userDB.profilePicture))?.href || null
-        : null;
-      if (userDB)
-        setSelectUserDB({
-          ...userDB,
-          profileImgUrl,
-        });
-    } catch (error) {
-      if (__DEV__) console.warn('getUser error', error);
-    } finally {
-      setIsLoading(false);
-    }
   };
 
   const openChat = async () => {
@@ -241,46 +186,6 @@ const MessagesTabProfile: FunctionComponent<MessagesTabProfileProps> = ({
         if (__DEV__) console.warn('openChat error', error);
       }
       return;
-    }
-    try {
-      const query = sdk.groupChannel.createMyGroupChannelListQuery({
-        userIdsFilter: {
-          userIds: [selectUserSendbird?.userId || ''],
-          includeMode: false,
-          queryType: QueryType.AND,
-        },
-      });
-      const channels = await query.next();
-      const privateChannel = channels.find(
-        channel =>
-          channel.isDistinct &&
-          channel.members.length === 2 &&
-          channel.members.some(
-            member => member.userId === selectUserSendbird?.userId,
-          ) &&
-          channel.members.some(
-            member => member.userId === sdk.currentUser?.userId,
-          ),
-      );
-      if (privateChannel)
-        return navigation.navigate('messages-tab-chat', {
-          channelUrl: privateChannel.url,
-        });
-
-      const channel = await sdk.groupChannel.createChannelWithUserIds(
-        [selectUserSendbird?.userId || ''],
-        true,
-      );
-      await channel.createMetaData({
-        type: 'chat',
-      });
-      getChannels();
-      return navigation.navigate(PATHS_MESSAGES_TAB.messagesTabChat, {
-        channelUrl: channel.url,
-        userId: selectUserSendbird?.userId || '',
-      });
-    } catch (error) {
-      if (__DEV__) console.warn('openChat error', error);
     }
   };
 

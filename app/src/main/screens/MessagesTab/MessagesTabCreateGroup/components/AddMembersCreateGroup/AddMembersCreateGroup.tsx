@@ -8,7 +8,6 @@ import {
   Image,
   ScrollView,
 } from 'react-native';
-import { useSendbirdChat } from 'services/legacy-chat.shim';
 
 // types
 import {
@@ -26,8 +25,6 @@ import { IconClose } from 'assets/icons-auto/components';
 // styles
 import styles from './AddMembersCreateGroup.styles';
 import colors from 'styles/colors';
-import { z } from 'zod';
-import { useApiProvider } from 'providers/ApiProvider/ApiProvider';
 import { SUPABASE_ENABLED } from 'services/supabase/backend.config';
 import { useSendbirdChatProvider } from 'providers/SendbirdChatProvider/SendbirdChatProvider';
 
@@ -44,8 +41,6 @@ const AddMembersCreateGroup: FunctionComponent<AddMembersCreateGroupProps> = ({
   selectUsers,
   setSelectUsers,
 }) => {
-  const { api } = useApiProvider();
-  const { sdk } = useSendbirdChat();
   const { friends: providerFriends, groupChannels } = useSendbirdChatProvider();
   const [friends, setFriends] = useState<FriendWithStatus[]>([]);
   const [limit, setLimit] = useState(20);
@@ -82,36 +77,6 @@ const AddMembersCreateGroup: FunctionComponent<AddMembersCreateGroupProps> = ({
       setMyChannels(groupChannels as GroupChannelSendBirdType[]);
       return;
     }
-    const query = sdk.groupChannel.createMyGroupChannelListQuery({
-      limit: 100,
-      includeEmpty: true,
-    });
-    try {
-      const channels = (await query.next()) as GroupChannelSendBirdType[];
-      setMyChannels(channels);
-    } catch (error) {
-      if (__DEV__) console.warn('Error getting channels', error);
-    }
-  };
-
-  const getFriendStatus = async (friendId: string) => {
-    try {
-      const result = await api(`/users/${friendId}/friend-requests`, {
-        config: {
-          method: 'GET',
-        },
-        schema: z.array(z.object({ status: z.string() })),
-      });
-      if (!result || result.length === 0) {
-        return;
-      }
-
-      const { status } = result[0];
-
-      return status as 'pending' | 'accepted';
-    } catch (error) {
-      if (__DEV__) console.warn('Error getting requested friend', error);
-    }
   };
 
   const getFriends = async () => {
@@ -123,25 +88,6 @@ const AddMembersCreateGroup: FunctionComponent<AddMembersCreateGroupProps> = ({
         ),
       );
       return;
-    }
-    const friendListQuery = sdk.createFriendListQuery({
-      limit,
-    });
-    try {
-      const resultFriends =
-        (await friendListQuery.next()) as UserSendBirdType[];
-
-      const friendsWithStatus = await Promise.all(
-        resultFriends.map(async friend => {
-          const friendId = friend?.metaData?.id as string;
-          const status = await getFriendStatus(friendId);
-          return { ...friend, status } as FriendWithStatus;
-        }),
-      );
-
-      setFriends(friendsWithStatus);
-    } catch (error) {
-      if (__DEV__) console.warn('Error getting friends', error);
     }
   };
 

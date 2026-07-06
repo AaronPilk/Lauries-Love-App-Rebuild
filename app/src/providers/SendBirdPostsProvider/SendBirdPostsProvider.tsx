@@ -1,7 +1,5 @@
 import { z } from 'zod';
 import { captureException } from '@sentry/react-native';
-import { useSendbirdChat } from 'services/legacy-chat.shim';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import React, {
   createContext,
   FunctionComponent,
@@ -11,7 +9,6 @@ import React, {
   useState,
 } from 'react';
 
-import { useDBProvider } from 'providers/DBProvider/DBProvider';
 import { useApiProvider } from 'providers/ApiProvider/ApiProvider';
 import { MOCK_ENABLED } from 'mocks/mock.config';
 import { SUPABASE_ENABLED } from 'services/supabase/backend.config';
@@ -75,14 +72,10 @@ type SendBirdPostsProviderProps = {
 
 export const sendBirdPostsContext = createContext({} as SendBirdPostsContext);
 
-const KEY_POSTS_STORAGE = 'KEY_POSTS_STORAGE';
-const KEY_COMMENTS_STORAGE = 'KEY_COMMENTS_STORAGE';
-
 const SendBirdPostsProvider: FunctionComponent<SendBirdPostsProviderProps> = ({
   children,
 }) => {
   const { api } = useApiProvider();
-  const { sdk } = useSendbirdChat();
   const { userChat } = useSendbirdChatProvider();
   const [posts, setPosts] = useState<GroupChannel[]>([]);
   const [comments, setComments] = useState<
@@ -92,54 +85,6 @@ const SendBirdPostsProvider: FunctionComponent<SendBirdPostsProviderProps> = ({
   const [loadingStorage, setLoadingStorage] = useState(true);
   const [limit, setLimit] = useState(100);
   const { userDB } = useUserDBProvider();
-  const {
-    db: { diagnosisType },
-  } = useDBProvider();
-
-  const getCommentsPosts = async (newPosts?: GroupChannel[]) => {
-    const currentPosts = newPosts || posts;
-    try {
-      const promises = await Promise.all(
-        currentPosts.map(async post => {
-          try {
-            const query = post.createPreviousMessageListQuery({
-              reverse: false,
-              includeReactions: true,
-              limit: 100,
-            });
-            const messages = await query.load();
-            return {
-              url: post.url,
-              messages,
-            };
-          } catch (error) {
-            // eslint-disable-next-line no-console
-            if (__DEV__)
-              console.log(
-                `Error fetching messages for post: ${post.url}`,
-                error,
-              );
-            captureException(error);
-            return { url: post.url, messages: [] };
-          }
-        }),
-      );
-
-      const newMessages = promises.reduce(
-        (acc, { url, messages }) => ({
-          ...acc,
-          [url]: messages,
-        }),
-        {},
-      );
-
-      setComments(newMessages);
-      AsyncStorage.setItem(KEY_COMMENTS_STORAGE, JSON.stringify(newMessages));
-    } catch (error) {
-      if (__DEV__) console.warn('Error getting first message post', error);
-      captureException(error);
-    }
-  };
 
   const getFilteringUserInfo = async () => {
     if (SUPABASE_ENABLED) {
@@ -169,84 +114,6 @@ const SendBirdPostsProvider: FunctionComponent<SendBirdPostsProviderProps> = ({
       );
       return (matches.length > 0 ? matches : MOCK_GROUPS.slice(0, 4)) as any;
     }
-    try {
-      const removeTrailingDots = (str: string) => {
-        const index = str.indexOf('...');
-        return index !== -1 ? str.slice(0, index) : str;
-      };
-      const roleName = userDB?.role?.description?.toLowerCase();
-      const cancerType = (userDB?.diagnosisTypes || [])
-        .map(diagnosis => {
-          const diagnosisId = diagnosis?.id ? diagnosis?.id : diagnosis;
-          const match = diagnosisType.find(d => d.id === diagnosisId);
-          return match?.description
-            ? removeTrailingDots(match.description.toLowerCase())
-            : null;
-        })
-        .filter(Boolean);
-
-      const searchParams = [roleName, cancerType[0]].filter(Boolean);
-      if (searchParams.length === 0) {
-        console.warn('There are no valid search parameters.');
-        return;
-      }
-      const queries = searchParams
-        .filter(
-          (param): param is string => param !== null && param !== undefined,
-        )
-        .map(param =>
-          sdk.groupChannel.createPublicGroupChannelListQuery({
-            includeEmpty: true,
-            limit: 2,
-            metadataKey: 'recommendation',
-            channelNameContainsFilter: param,
-          }),
-        );
-
-      const results = await Promise.all(queries.map(query => query.next()));
-      const allChannels = results.flat();
-      return allChannels;
-    } catch (error) {
-      console.warn('Error fetching recommended groups:', error);
-      captureException(error);
-    }
-  };
-
-  const filterChannelsByUserPreferences = (posts?: GroupChannel[]) => {
-    if (!posts || posts.length === 0) {
-      console.warn('No posts to filter');
-      return [];
-    }
-
-    const roleName = userDB?.role?.description?.toLowerCase();
-    const diagnosisTypes = userDB?.diagnosisTypes ?? [];
-    const cancerType = diagnosisTypes
-      .map(id => {
-        const match = diagnosisType.find(d => d.id === id);
-        return match?.description?.toLowerCase();
-      })
-      .filter(Boolean);
-
-    const filteredPosts = posts.filter(post => {
-      const metadata = post.data ? JSON.parse(post.data) : {};
-      const { visibility, recommendedGroups } = metadata;
-
-      if (!visibility || visibility !== 'group') return true;
-      if (visibility === 'group') {
-        if (!recommendedGroups || recommendedGroups.length === 0) return false;
-
-        const validGroups = recommendedGroups.filter(
-          (group: null | undefined) => group !== null && group !== undefined,
-        );
-        const matches = validGroups.some((group: string) =>
-          [roleName, cancerType[0]].includes(group?.toLowerCase()),
-        );
-        return matches;
-      }
-      return false;
-    });
-
-    return filteredPosts;
   };
 
   const getPosts = async (before?: string) => {
@@ -280,55 +147,6 @@ const SendBirdPostsProvider: FunctionComponent<SendBirdPostsProviderProps> = ({
       setLoadingServer(false);
       return;
     }
-    setLoadingServer(true);
-    const query = sdk.groupChannel.createPublicGroupChannelListQuery({
-      limit,
-      metadataKey: 'type',
-      metadataValues: ['post'],
-      // channelUrlsFilter: [
-      //   'sendbird_group_channel_313225436_232182b3bc056d89b3e650fd210b2fa5b4e3ad50',
-      // ],
-    });
-
-    try {
-      const channels = await query.next();
-      if (channels.length === 0) return;
-
-      const filteredChannels = filterChannelsByUserPreferences(channels);
-      // await getCommentsPosts(filteredChannels);
-      setPosts(filteredChannels);
-      AsyncStorage.setItem(KEY_POSTS_STORAGE, JSON.stringify(filteredChannels));
-    } catch (error) {
-      if (__DEV__) console.warn('getPosts error:', error);
-      captureException(error);
-    } finally {
-      setLoadingServer(false);
-    }
-  };
-
-  const storageDB = async () => {
-    try {
-      setLoadingStorage(true);
-      const postsStorageJSON = await AsyncStorage.getItem(KEY_POSTS_STORAGE);
-      const commentsStorageJSON = await AsyncStorage.getItem(
-        KEY_COMMENTS_STORAGE,
-      );
-      const postsStorage = postsStorageJSON
-        ? JSON.parse(postsStorageJSON)
-        : null;
-      const commentsStorage = commentsStorageJSON
-        ? JSON.parse(commentsStorageJSON)
-        : null;
-
-      if (postsStorage) setPosts(postsStorage);
-      if (commentsStorage) setComments(commentsStorage);
-    } catch (error) {
-      if (__DEV__) console.warn('Error getting storageDB', error);
-      captureException(error);
-    } finally {
-      setLoadingStorage(false);
-      setLoadingServer(true);
-    }
   };
 
   const toggleReaction = async (
@@ -345,35 +163,6 @@ const SendBirdPostsProvider: FunctionComponent<SendBirdPostsProviderProps> = ({
       return;
     }
     if (MOCK_ENABLED) return; // demo: reactions are local-only in components
-    if (!postUrl || !userChat) return;
-    setLoadingServer(true);
-
-    try {
-      const channel = await sdk.groupChannel.getChannel(postUrl);
-      const isJoined = channel.members.some(
-        member => member.userId === userChat.userId,
-      );
-      if (!isJoined) await channel.join();
-
-      const hasReacted = messagePost.reactions.some(
-        reaction =>
-          reaction.key === 'smile' &&
-          reaction.sampledUserIds.some(userId => userId === userChat.userId),
-      );
-      const reactionEvent = hasReacted
-        ? await channel.deleteReaction(messagePost, 'smile')
-        : await channel.addReaction(messagePost, 'smile');
-      messagePost.applyReactionEvent(reactionEvent);
-      const isFounder = channel.creator?.userId === userChat.userId;
-      if (!isFounder) await channel.leave();
-
-      // await getCommentsPosts();
-    } catch (error) {
-      if (__DEV__) console.warn('Error toggling reaction', error);
-      captureException(error);
-    } finally {
-      setLoadingServer(false);
-    }
   };
 
   const getPost = async (channelUrl: string) => {
@@ -395,21 +184,7 @@ const SendBirdPostsProvider: FunctionComponent<SendBirdPostsProviderProps> = ({
       setComments({ ...comments, [channelUrl]: mockMessages });
       return mockMessages;
     }
-    try {
-      const channel = await sdk.groupChannel.getChannel(channelUrl);
-      const query = channel.createPreviousMessageListQuery({
-        reverse: false,
-        includeReactions: true,
-        limit: 100,
-      });
-      const messages = await query.load();
-      setComments({ ...comments, [channelUrl]: messages });
-      return messages as BaseMessageSendBirdType[];
-    } catch (error) {
-      if (__DEV__) console.warn('Error getting post', error);
-      captureException(error);
-      return [];
-    }
+    return [];
   };
 
   const sendNotification = async (data: {
@@ -463,7 +238,6 @@ const SendBirdPostsProvider: FunctionComponent<SendBirdPostsProviderProps> = ({
       setLoadingServer(false);
       return;
     }
-    if (userChat?.userId) storageDB().then(getPosts);
   }, [userChat?.userId, limit]);
 
   const value = useMemo(
@@ -489,9 +263,7 @@ const SendBirdPostsProvider: FunctionComponent<SendBirdPostsProviderProps> = ({
       limit,
       userChat,
       userDB,
-      diagnosisType,
       api,
-      sdk,
     ],
   );
 

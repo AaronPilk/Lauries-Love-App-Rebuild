@@ -1,5 +1,4 @@
 import { ScrollView, View } from 'react-native';
-import { useSendbirdChat } from 'services/legacy-chat.shim';
 import React, {
   FunctionComponent,
   useCallback,
@@ -33,7 +32,6 @@ type MessagesTabJoinGroupProps = {
 const MessagesTabJoinGroup: FunctionComponent<MessagesTabJoinGroupProps> = ({
   navigation,
 }) => {
-  const { sdk } = useSendbirdChat();
   const { trackIntercom } = useIntercom();
   const [search, setSearch] = useState('');
   const [channels, setChannels] = useState<GroupChannelSendBirdType[]>([]);
@@ -65,31 +63,6 @@ const MessagesTabJoinGroup: FunctionComponent<MessagesTabJoinGroupProps> = ({
       }
       return;
     }
-
-    const queryPublic = sdk.groupChannel.createPublicGroupChannelListQuery({
-      includeEmpty: true,
-      limit: 50,
-      channelNameContainsFilter: search,
-      metadataKey: 'type',
-      metadataValues: ['group'],
-    });
-    setLoading(true);
-    try {
-      const channelsBatch =
-        (await queryPublic.next()) as GroupChannelSendBirdType[];
-        
-      if (!channelsBatch.length) throw new Error('No channels found');
-
-      const filteredChannels = channelsBatch.filter(
-        channel => channel.cachedMetaData?.type === 'group',
-      );
-
-      setChannels(filteredChannels);
-    } catch (error) {
-      if (__DEV__) console.warn('getChannelsHandler', error);
-    } finally {
-      setLoading(false);
-    }
   };
 
   const getRecommendedChannelsHandler = async () => {
@@ -118,27 +91,8 @@ const MessagesTabJoinGroup: FunctionComponent<MessagesTabJoinGroupProps> = ({
         }
         return;
       }
-
-      try {
-        const channel = await sdk.groupChannel.getChannel(channelUrl);
-        if (!channel) return;
-
-        const data = JSON.parse(channel.data ?? '{}') as {
-          isPrivate?: boolean;
-        };
-        const isPrivate = data.isPrivate ?? false;
-        if (isPrivate) return;
-
-        const result = await channel.join();
-        if (!result) return;
-
-        setJustJoined(prev => [...prev, channel.url]);
-        trackIntercom('join_group');
-      } catch (error) {
-        if (__DEV__) console.warn('onPressJoinGroup', error);
-      }
     },
-    [sdk, trackIntercom, navigation, getChannels],
+    [trackIntercom, navigation, getChannels],
   );
 
   const onPressCreateGroup = useCallback(

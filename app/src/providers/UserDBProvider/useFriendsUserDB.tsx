@@ -85,6 +85,9 @@ const useFriendsUserDB = ({
   };
 
   const getIsFriend = async (userId: string) => {
+    // Supabase mode: friendship state comes from the friend-requests API
+    // (getRequestedFriend sets `status` = accepted). No Sendbird friend list.
+    if (SUPABASE_ENABLED) return;
     try {
       const query = sdk.createFriendListQuery();
       const friends = await query.next();
@@ -95,6 +98,34 @@ const useFriendsUserDB = ({
   };
 
   const getUserSendbird = async () => {
+    if (SUPABASE_ENABLED) {
+      // Load the friend's profile straight from Supabase (friendId is the
+      // profile id) — no Sendbird user query.
+      try {
+        const targetId = friendId || friendCognitoId;
+        const userDB = targetId ? await getUserDB(targetId) : null;
+        if (userDB) {
+          setSelectUserSendbird({
+            userId: userDB.id,
+            nickname: userDB.displayName || userDB.firstName || 'Member',
+            plainProfileUrl: '',
+            isActive: true,
+            metaData: { id: userDB.id },
+          } as unknown as UserSendBirdType);
+          setSelectUserDB({
+            ...userDB,
+            profileImgUrl: userDB.profilePicture
+              ? publicUrlFor('avatars', userDB.profilePicture)
+              : null,
+          });
+        }
+      } catch (error) {
+        if (__DEV__) console.warn('getUser error', error);
+      } finally {
+        setIsLoading(false);
+      }
+      return;
+    }
     try {
       const query = sdk.createApplicationUserListQuery({
         userIdsFilter: [friendCognitoId],
@@ -191,7 +222,8 @@ const useFriendsUserDB = ({
       });
       if (!response) return { statusCode: 400 };
 
-      if (selectUserSendbird) await sdk.addFriends([selectUserSendbird.userId]);
+      if (!SUPABASE_ENABLED && selectUserSendbird)
+        await sdk.addFriends([selectUserSendbird.userId]);
 
       setStatus(response.status);
       return { statusCode: 201 };
@@ -204,7 +236,8 @@ const useFriendsUserDB = ({
   };
 
   const confirmFriend = async () => {
-    if (selectUserSendbird) await sdk.addFriends([selectUserSendbird.userId]);
+    if (!SUPABASE_ENABLED && selectUserSendbird)
+      await sdk.addFriends([selectUserSendbird.userId]);
   };
 
   const removeFriend = async () => {
@@ -238,7 +271,8 @@ const useFriendsUserDB = ({
         await sendFriendNotification();
         return;
       }
-      if (isFriend) await sdk.deleteFriend(friendCognitoId);
+      if (!SUPABASE_ENABLED && isFriend)
+        await sdk.deleteFriend(friendCognitoId);
 
       const { statusCode } = await removeFriend();
       if (statusCode !== 204) return;

@@ -148,12 +148,32 @@ export async function getPostComments(postId: string) {
     .single();
   if (postError) throw postError;
 
-  const { data: postLikes } = await supabase
-    .from('reactions')
-    .select('user_id')
-    .eq('entity_type', 'post')
-    .eq('entity_id', postId);
-  const likerIds = (postLikes ?? []).map(r => r.user_id);
+  // Do NOT pull every liker (a viral post = thousands of rows, and this
+  // re-runs whenever a comment is liked). The displayed count comes from
+  // post.like_count; we only need a bounded sample for avatars + whether the
+  // caller liked it (so the heart state is correct).
+  const me = await uid();
+  const [{ data: sample }, myLike] = await Promise.all([
+    supabase
+      .from('reactions')
+      .select('user_id')
+      .eq('entity_type', 'post')
+      .eq('entity_id', postId)
+      .limit(30),
+    me
+      ? supabase
+          .from('reactions')
+          .select('id', { head: true, count: 'exact' })
+          .eq('entity_type', 'post')
+          .eq('entity_id', postId)
+          .eq('user_id', me)
+      : Promise.resolve({ count: 0 } as any),
+  ]);
+  const likerIds = (sample ?? []).map(r => r.user_id);
+  // Ensure the caller's own id is present if they liked (for .includes checks).
+  if (me && (myLike?.count ?? 0) > 0 && !likerIds.includes(me)) {
+    likerIds.push(me);
+  }
 
   const postAsMessage = {
     messageId: `post-${post.id}`,

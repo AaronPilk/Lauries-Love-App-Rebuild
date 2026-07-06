@@ -1,0 +1,73 @@
+import { StyleSheet } from 'react-native';
+import colors from 'styles/colors';
+
+export default StyleSheet.create({
+  container: { flex: 1, paddingHorizontal: 16 },
+  stats: { flexDirection: 'row', gap: 8, marginTop: 8, marginBottom: 14 },
+  stat: {
+    flex: 1,
+    backgroundColor: colors.neutral[100],
+    borderWidth: 1,
+    borderColor: colors.neutral[300],
+    borderRadius: 12,
+    paddingVertical: 10,
+    alignItems: 'center',
+  },
+  statN: { fontSize: 20, fontWeight: '700', color: colors.neutral[900] },
+  statL: {
+    fontSize: 11,
+    color: colors.neutral[600],
+    textTransform: 'uppercase',
+    letterSpacing: 0.3,
+    marginTop: 2,
+  },
+  filters: { flexDirection: 'row', gap: 8, marginBottom: 12, flexWrap: 'wrap' },
+  chip: {
+    paddingVertical: 7,
+    paddingHorizontal: 14,
+    borderRadius: 999,
+    borderWidth: 1,
+    borderColor: colors.neutral[300],
+    backgroundColor: colors.neutral[100],
+  },
+  chipActive: {
+    borderColor: colors.primary[500],
+    backgroundColor: colors.primary[100],
+  },
+  chipText: { fontSize: 13, color: colors.neutral[700] },
+  chipTextActive: { color: colors.primary[500], fontWeight: '600' },
+  card: {
+    backgroundColor: colors.neutral[100],
+    borderWidth: 1,
+    borderColor: colors.neutral[300],
+    borderRadius: 14,
+    padding: 14,
+    marginBottom: 10,
+  },
+  cardTop: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+    gap: 10,
+  },
+  subject: {
+    flex: 1,
+    fontSize: 15,
+    fontWeight: '600',
+    color: colors.neutral[900],
+  },
+  meta: { fontSize: 12, color: colors.neutral[600], marginTop: 6 },
+  badge: {
+    paddingVertical: 3,
+    paddingHorizontal: 10,
+    borderRadius: 999,
+    fontSize: 12,
+    fontWeight: '600',
+    overflow: 'hidden',
+  },
+  bopen: { backgroundColor: '#fff3d6', color: '#c47a00' },
+  binprogress: { backgroundColor: '#e3efff', color: '#1f6feb' },
+  bclosed: { backgroundColor: '#e5f6e9', color: '#3f8f4f' },
+  empty: { textAlign: 'center', color: colors.neutral[600], marginTop: 60 },
+  loader: { marginTop: 60 },
+});

@@ -33,6 +33,13 @@ import BackgroundScreen from 'components/BackgroundScreen/BackgroundScreen';
 import InputProfileTabModal from '../components/InputProfileTabModal/InputProfileTabModal';
 import DeleteProfileModal from '../components/DeleteProfileModal/DeleteProfileModal';
 import AddressProfileModal from '../components/AddressProfileModal/AddressProfileModal';
+import ButtonModalTabs from 'components/ButtonModalTabs/ButtonModalTabs';
+
+// icons
+import { IconMessages } from 'assets/icons-auto/components';
+
+// backend
+import { getIsSupportStaff } from 'services/supabase/supabase.support';
 
 // constants
 import { AGE_OPTIONS, GENDER_OPTIONS } from '../ProfileTab.constants';
@@ -59,6 +66,18 @@ const ProfileTabMain: FunctionComponent<ClientsMainScreenProps> = ({
   } = useDBProvider();
   const [selectTypeModal, setSelectTypeModal] =
     useState<ItemsProfileTabType | null>(null);
+  // Support agents (owners) get an extra inbox entry; hidden for everyone else.
+  const [isStaff, setIsStaff] = useState(false);
+
+  useEffect(() => {
+    let active = true;
+    getIsSupportStaff()
+      .then(v => active && setIsStaff(v))
+      .catch(() => {});
+    return () => {
+      active = false;
+    };
+  }, []);
 
   const getOptions = (values: DefinitionType[]) =>
     values.map(item => ({
@@ -229,6 +248,19 @@ const ProfileTabMain: FunctionComponent<ClientsMainScreenProps> = ({
               />
               <ProfileBlock setSelectTypeModal={setSelectTypeModal} />
             </View>
+            {isStaff && (
+              <View style={{ marginTop: 8 }}>
+                <ButtonModalTabs
+                  Icon={IconMessages}
+                  label="Support inbox"
+                  onPress={() =>
+                    navigation.navigate(
+                      PATHS_PROFILE_TAB.profileTabSupportInbox,
+                    )
+                  }
+                />
+              </View>
+            )}
             <SettingsBlock setSelectTypeModal={setSelectTypeModal} />
           </View>
         </ScrollView>

@@ -98,3 +98,114 @@ export const SUPPORT_CATEGORIES = [
   'Feedback',
   'Other',
 ] as const;
+
+// ---------------------------------------------------------------------------
+// STAFF / AGENT SIDE (in-app support inbox — gated by support_staff RLS)
+// ---------------------------------------------------------------------------
+
+export type StaffMember = { id: string; name: string };
+
+export type SupportTicket = {
+  id: string;
+  category: string;
+  subject: string;
+  description: string;
+  status: 'open' | 'in_progress' | 'closed';
+  assignedTo: string | null;
+  assigneeName: string | null;
+  conversationId: string | null;
+  createdAt: string;
+  reporterId: string | null;
+  reporterName: string;
+  reporterEmail: string | null;
+  reporterPhone: string | null;
+};
+
+const staffName = (p: any) =>
+  p ? p.display_name || p.first_name || 'Member' : 'Member';
+
+/** Is the current user a support agent? (RPC is SECURITY DEFINER, auth-only.) */
+export async function getIsSupportStaff(): Promise<boolean> {
+  const me = await currentUserId();
+  if (!me) return false;
+  const { data, error } = await supabase.rpc('is_support_staff');
+  if (error) {
+    if (__DEV__) console.warn('is_support_staff check failed', error);
+    return false;
+  }
+  return data === true;
+}
+
+/** Staff list for the assignee picker (RLS returns rows only to staff). */
+export async function listSupportStaff(): Promise<StaffMember[]> {
+  const { data, error } = await supabase
+    .from('support_staff')
+    .select('profile_id, profiles(first_name, display_name)');
+  if (error) throw error;
+  return (data ?? []).map((s: any) => ({
+    id: s.profile_id,
+    name: staffName(s.profiles),
+  }));
+}
+
+/** All tickets (staff-only via RLS), newest first, with reporter + assignee. */
+export async function getSupportTickets(): Promise<SupportTicket[]> {
+  const { data, error } = await supabase
+    .from('support_tickets')
+    .select(TICKET_SELECT)
+    .order('created_at', { ascending: false });
+  if (error) throw error;
+  return (data ?? []).map(mapTicket);
+}
+
+const TICKET_SELECT = `id, category, subject, description, status, assigned_to, conversation_id, created_at,
+       reporter:profiles!support_tickets_user_id_fkey(id, first_name, display_name, profiles_private(email, phone_number)),
+       assignee:profiles!support_tickets_assigned_to_fkey(first_name, display_name)`;
+
+function mapTicket(t: any): SupportTicket {
+  const priv = t.reporter?.profiles_private ?? null;
+  return {
+    id: t.id,
+    category: t.category,
+    subject: t.subject,
+    description: t.description,
+    status: t.status,
+    assignedTo: t.assigned_to ?? null,
+    assigneeName: t.assignee ? staffName(t.assignee) : null,
+    conversationId: t.conversation_id ?? null,
+    createdAt: t.created_at,
+    reporterId: t.reporter?.id ?? null,
+    reporterName: staffName(t.reporter),
+    reporterEmail: priv?.email ?? null,
+    reporterPhone: priv?.phone_number ?? null,
+  };
+}
+
+/** One ticket by id (staff-only via RLS). */
+export async function getSupportTicketById(
+  ticketId: string,
+): Promise<SupportTicket | null> {
+  const { data, error } = await supabase
+    .from('support_tickets')
+    .select(TICKET_SELECT)
+    .eq('id', ticketId)
+    .maybeSingle();
+  if (error) throw error;
+  return data ? mapTicket(data) : null;
+}
+
+/** Triage: update status and/or assignee (staff-only via RLS). */
+export async function updateSupportTicketTriage(
+  ticketId: string,
+  patch: { status?: SupportTicket['status']; assignedTo?: string | null },
+): Promise<void> {
+  const row: Record<string, any> = {};
+  if (patch.status !== undefined) row.status = patch.status;
+  if (patch.assignedTo !== undefined) row.assigned_to = patch.assignedTo;
+  if (Object.keys(row).length === 0) return;
+  const { error } = await supabase
+    .from('support_tickets')
+    .update(row)
+    .eq('id', ticketId);
+  if (error) throw error;
+}

@@ -1,0 +1,72 @@
+import { StyleSheet } from 'react-native';
+import colors from 'styles/colors';
+
+export default StyleSheet.create({
+  container: { flex: 1, paddingHorizontal: 16 },
+  scroll: { paddingBottom: 140 },
+  subject: {
+    fontSize: 20,
+    fontWeight: '700',
+    color: colors.neutral[900],
+    marginTop: 8,
+  },
+  cat: { fontSize: 13, color: colors.neutral[600], marginBottom: 16 },
+  k: {
+    fontSize: 12,
+    textTransform: 'uppercase',
+    letterSpacing: 0.4,
+    color: colors.neutral[600],
+    marginBottom: 6,
+    marginTop: 18,
+  },
+  desc: {
+    fontSize: 15,
+    lineHeight: 22,
+    color: colors.neutral[900],
+    backgroundColor: colors.neutral[100],
+    borderWidth: 1,
+    borderColor: colors.neutral[300],
+    borderRadius: 12,
+    padding: 12,
+  },
+  contact: { fontSize: 15, color: colors.neutral[900], marginBottom: 2 },
+  link: { color: colors.secondary[600] },
+  mono: { fontSize: 12, color: colors.neutral[600] },
+  segment: { flexDirection: 'row', gap: 8 },
+  segBtn: {
+    flex: 1,
+    paddingVertical: 10,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: colors.neutral[300],
+    backgroundColor: colors.neutral[100],
+    alignItems: 'center',
+  },
+  segActive: {
+    borderColor: colors.primary[500],
+    backgroundColor: colors.primary[100],
+  },
+  segText: { fontSize: 13, color: colors.neutral[700] },
+  segTextActive: { color: colors.primary[500], fontWeight: '700' },
+  assigneeRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+  },
+  pill: {
+    paddingVertical: 8,
+    paddingHorizontal: 14,
+    borderRadius: 999,
+    borderWidth: 1,
+    borderColor: colors.neutral[300],
+    backgroundColor: colors.neutral[100],
+  },
+  pillActive: {
+    borderColor: colors.primary[500],
+    backgroundColor: colors.primary[100],
+  },
+  pillText: { fontSize: 13, color: colors.neutral[700] },
+  pillTextActive: { color: colors.primary[500], fontWeight: '600' },
+  actions: { marginTop: 26, gap: 10 },
+  loader: { marginTop: 80 },
+});

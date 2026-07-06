@@ -21,6 +21,8 @@ export const PATHS_PROFILE_TAB = {
   profileTabUpdatePassword: 'profile-tab-update-password',
   profileTabUpdateFullName: 'profile-tab-update-full-name',
   profileTabQR: 'profile-tab-qr',
+  profileTabSupportInbox: 'profile-tab-support-inbox',
+  profileTabSupportTicket: 'profile-tab-support-ticket',
 } as const;
 
 export const PATHS_DONATE_TAB = {

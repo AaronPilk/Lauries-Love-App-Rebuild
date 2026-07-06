@@ -1,0 +1,310 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Laurie's Love — Support Desk</title>
+<style>
+  :root{
+    --bg:#f6f5f5; --card:#fff; --ink:#262626; --muted:#737373; --line:#e0e0e0;
+    --brand:#911766; --brand-soft:#f4e8f1; --accent:#8134ce;
+    --open:#c47a00; --open-bg:#fff3d6; --prog:#1f6feb; --prog-bg:#e3efff;
+    --closed:#3f8f4f; --closed-bg:#e5f6e9; --danger:#bb3a31;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;background:var(--bg);color:var(--ink)}
+  button{font:inherit;cursor:pointer}
+  input,select,textarea{font:inherit}
+  .hidden{display:none!important}
+
+  /* login */
+  .login-wrap{min-height:100vh;display:flex;align-items:center;justify-content:center;padding:24px}
+  .login-card{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:32px;width:100%;max-width:380px;box-shadow:0 8px 30px rgba(0,0,0,.06)}
+  .login-card h1{font-size:20px;margin:0 0 4px}
+  .login-card p{color:var(--muted);margin:0 0 20px;font-size:14px}
+  .field{margin-bottom:14px}
+  .field label{display:block;font-size:13px;color:var(--muted);margin-bottom:6px}
+  .field input{width:100%;padding:11px 12px;border:1px solid var(--line);border-radius:10px}
+  .btn{background:var(--brand);color:#fff;border:none;border-radius:10px;padding:11px 16px;font-weight:600;width:100%}
+  .btn.secondary{background:#fff;color:var(--ink);border:1px solid var(--line);width:auto}
+  .btn.small{width:auto;padding:7px 12px;font-weight:500}
+  .err{color:var(--danger);font-size:13px;margin-top:10px;min-height:16px}
+
+  /* app */
+  header.top{background:var(--card);border-bottom:1px solid var(--line);padding:14px 20px;display:flex;align-items:center;gap:14px;position:sticky;top:0;z-index:5}
+  header.top .brand{font-weight:700;color:var(--brand)}
+  header.top .who{margin-left:auto;color:var(--muted);font-size:13px}
+  .wrap{max-width:1200px;margin:0 auto;padding:20px}
+  .stats{display:flex;gap:10px;margin-bottom:16px;flex-wrap:wrap}
+  .stat{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:12px 16px;min-width:110px}
+  .stat .n{font-size:24px;font-weight:700}
+  .stat .l{font-size:12px;color:var(--muted);text-transform:uppercase;letter-spacing:.4px}
+  .toolbar{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:14px;align-items:center}
+  .toolbar select,.toolbar input{padding:9px 11px;border:1px solid var(--line);border-radius:10px;background:#fff}
+  .toolbar input.search{flex:1;min-width:180px}
+  table{width:100%;border-collapse:collapse;background:var(--card);border:1px solid var(--line);border-radius:12px;overflow:hidden}
+  th,td{text-align:left;padding:12px 14px;border-bottom:1px solid var(--line);font-size:14px;vertical-align:top}
+  th{background:#faf9f9;font-size:12px;text-transform:uppercase;letter-spacing:.4px;color:var(--muted)}
+  tr.row{cursor:pointer}
+  tr.row:hover{background:#faf7fb}
+  td.subject{font-weight:600;max-width:320px}
+  td .sub-cat{display:block;color:var(--muted);font-weight:400;font-size:12px;margin-top:2px}
+  .badge{display:inline-block;padding:3px 10px;border-radius:999px;font-size:12px;font-weight:600;white-space:nowrap}
+  .b-open{background:var(--open-bg);color:var(--open)}
+  .b-in_progress{background:var(--prog-bg);color:var(--prog)}
+  .b-closed{background:var(--closed-bg);color:var(--closed)}
+  .empty{padding:40px;text-align:center;color:var(--muted)}
+
+  /* drawer */
+  .drawer-bg{position:fixed;inset:0;background:rgba(0,0,0,.35);display:flex;justify-content:flex-end;z-index:20}
+  .drawer{background:var(--card);width:min(480px,100%);height:100%;overflow:auto;padding:24px}
+  .drawer h2{margin:0 0 2px;font-size:18px}
+  .drawer .cat{color:var(--muted);font-size:13px;margin-bottom:18px}
+  .drawer .block{margin-bottom:18px}
+  .drawer .block .k{font-size:12px;text-transform:uppercase;letter-spacing:.4px;color:var(--muted);margin-bottom:5px}
+  .drawer .desc{white-space:pre-wrap;line-height:1.5;background:#faf9f9;border:1px solid var(--line);border-radius:10px;padding:12px}
+  .drawer .row2{display:flex;gap:12px}
+  .drawer .row2 .block{flex:1}
+  .drawer select{width:100%;padding:10px;border:1px solid var(--line);border-radius:10px;background:#fff}
+  .drawer .contact a{color:var(--accent)}
+  .drawer-actions{display:flex;gap:10px;margin-top:8px}
+  .close-x{float:right;border:none;background:none;font-size:22px;color:var(--muted);cursor:pointer;line-height:1}
+  .saved{color:var(--closed);font-size:13px;margin-left:auto;align-self:center}
+  .mono{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:12px;color:var(--muted)}
+</style>
+</head>
+<body>
+
+<!-- LOGIN -->
+<div id="login" class="login-wrap">
+  <div class="login-card">
+    <h1>Support Desk</h1>
+    <p>Laurie's Love — sign in with your staff account.</p>
+    <div class="field">
+      <label>Email</label>
+      <input id="email" type="email" autocomplete="username" placeholder="you@laurieslove.org" />
+    </div>
+    <div class="field">
+      <label>Password</label>
+      <input id="password" type="password" autocomplete="current-password" placeholder="••••••••" />
+    </div>
+    <button class="btn" id="loginBtn">Sign in</button>
+    <div class="err" id="loginErr"></div>
+  </div>
+</div>
+
+<!-- APP -->
+<div id="app" class="hidden">
+  <header class="top">
+    <span class="brand">🎫 Support Desk</span>
+    <button class="btn small secondary" id="refreshBtn">Refresh</button>
+    <span class="who" id="whoami"></span>
+    <button class="btn small secondary" id="logoutBtn">Sign out</button>
+  </header>
+  <div class="wrap">
+    <div class="stats" id="stats"></div>
+    <div class="toolbar">
+      <select id="fStatus">
+        <option value="">All statuses</option>
+        <option value="open">Open</option>
+        <option value="in_progress">In progress</option>
+        <option value="closed">Closed</option>
+      </select>
+      <select id="fCategory"><option value="">All categories</option></select>
+      <select id="fAssignee"><option value="">Any assignee</option></select>
+      <input class="search" id="fSearch" type="search" placeholder="Search subject / description…" />
+    </div>
+    <table>
+      <thead>
+        <tr><th>Subject</th><th>Reporter</th><th>Status</th><th>Assignee</th><th>Created</th></tr>
+      </thead>
+      <tbody id="rows"></tbody>
+    </table>
+    <div class="empty hidden" id="empty">No tickets match.</div>
+  </div>
+</div>
+
+<!-- DRAWER -->
+<div id="drawer" class="drawer-bg hidden">
+  <div class="drawer" id="drawerInner"></div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script>
+const SUPABASE_URL = "https://iwbfsbriippzmdyrsmsu.supabase.co";
+const SUPABASE_KEY = "sb_publishable_oIW97mDLscM33OZXN2JXnw_GcHzMwJ8";
+const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+const $ = (id) => document.getElementById(id);
+let TICKETS = [], STAFF = [], ME = null;
+
+const STATUS_LABEL = { open:"Open", in_progress:"In progress", closed:"Closed" };
+const fmtDate = (s) => new Date(s).toLocaleString(undefined,{month:"short",day:"numeric",hour:"2-digit",minute:"2-digit"});
+const nameOf = (p) => p ? (p.display_name || p.first_name || "Member") : "—";
+const esc = (s) => (s??"").replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+
+async function boot(){
+  const { data:{ session } } = await sb.auth.getSession();
+  if(session){ await afterLogin(); } else { show("login"); }
+}
+function show(which){
+  $("login").classList.toggle("hidden", which!=="login");
+  $("app").classList.toggle("hidden", which!=="app");
+}
+
+$("loginBtn").onclick = async () => {
+  $("loginErr").textContent = "";
+  const email = $("email").value.trim(), password = $("password").value;
+  if(!email || !password){ $("loginErr").textContent = "Enter email and password."; return; }
+  $("loginBtn").disabled = true; $("loginBtn").textContent = "Signing in…";
+  const { error } = await sb.auth.signInWithPassword({ email, password });
+  $("loginBtn").disabled = false; $("loginBtn").textContent = "Sign in";
+  if(error){ $("loginErr").textContent = error.message; return; }
+  await afterLogin();
+};
+$("logoutBtn").onclick = async () => { await sb.auth.signOut(); location.reload(); };
+$("refreshBtn").onclick = load;
+
+async function afterLogin(){
+  // Verify staff by trying to read the staff list (RLS returns rows only to staff).
+  const { data:staff, error } = await sb.from("support_staff")
+    .select("profile_id, profiles(first_name,display_name)");
+  if(error || !staff || staff.length===0){
+    await sb.auth.signOut();
+    show("login");
+    $("loginErr").textContent = "This account isn't authorised for the support desk.";
+    return;
+  }
+  STAFF = staff.map(s=>({ id:s.profile_id, name:nameOf(s.profiles) }));
+  const { data:{ user } } = await sb.auth.getUser();
+  ME = user;
+  $("whoami").textContent = user.email;
+  // assignee filter + drawer options
+  $("fAssignee").innerHTML = '<option value="">Any assignee</option><option value="__none">Unassigned</option>' +
+    STAFF.map(s=>`<option value="${s.id}">${esc(s.name)}</option>`).join("");
+  show("app");
+  await load();
+}
+
+async function load(){
+  const { data, error } = await sb.from("support_tickets")
+    .select(`id,category,subject,description,status,assigned_to,conversation_id,created_at,
+             reporter:profiles!support_tickets_user_id_fkey(id,first_name,display_name,profiles_private(email,phone_number)),
+             assignee:profiles!support_tickets_assigned_to_fkey(first_name,display_name)`)
+    .order("created_at",{ ascending:false });
+  if(error){ alert("Load failed: "+error.message); return; }
+  TICKETS = data || [];
+  // category filter options
+  const cats = [...new Set(TICKETS.map(t=>t.category))].sort();
+  const cur = $("fCategory").value;
+  $("fCategory").innerHTML = '<option value="">All categories</option>' +
+    cats.map(c=>`<option value="${esc(c)}">${esc(c)}</option>`).join("");
+  $("fCategory").value = cur;
+  render();
+}
+
+function render(){
+  const fs=$("fStatus").value, fc=$("fCategory").value, fa=$("fAssignee").value,
+        q=$("fSearch").value.trim().toLowerCase();
+  let list = TICKETS.filter(t=>{
+    if(fs && t.status!==fs) return false;
+    if(fc && t.category!==fc) return false;
+    if(fa==="__none" && t.assigned_to) return false;
+    if(fa && fa!=="__none" && t.assigned_to!==fa) return false;
+    if(q && !(t.subject.toLowerCase().includes(q) || (t.description||"").toLowerCase().includes(q))) return false;
+    return true;
+  });
+  // stats over ALL tickets
+  const c = {open:0,in_progress:0,closed:0};
+  TICKETS.forEach(t=>c[t.status]!==undefined&&c[t.status]++);
+  $("stats").innerHTML = [
+    ["Open",c.open],["In progress",c.in_progress],["Closed",c.closed],["Total",TICKETS.length]
+  ].map(([l,n])=>`<div class="stat"><div class="n">${n}</div><div class="l">${l}</div></div>`).join("");
+
+  $("empty").classList.toggle("hidden", list.length>0);
+  $("rows").innerHTML = list.map(t=>`
+    <tr class="row" data-id="${t.id}">
+      <td class="subject">${esc(t.subject)}<span class="sub-cat">${esc(t.category)}</span></td>
+      <td>${esc(nameOf(t.reporter))}</td>
+      <td><span class="badge b-${t.status}">${STATUS_LABEL[t.status]}</span></td>
+      <td>${t.assignee?esc(nameOf(t.assignee)):'<span class="mono">unassigned</span>'}</td>
+      <td class="mono">${fmtDate(t.created_at)}</td>
+    </tr>`).join("");
+  document.querySelectorAll("tr.row").forEach(r=>r.onclick=()=>openDrawer(r.dataset.id));
+}
+
+["fStatus","fCategory","fAssignee"].forEach(id=>$(id).onchange=render);
+$("fSearch").oninput = render;
+
+function openDrawer(id){
+  const t = TICKETS.find(x=>x.id===id); if(!t) return;
+  const priv = t.reporter && t.reporter.profiles_private ? t.reporter.profiles_private : null;
+  const email = priv?.email || "", phone = priv?.phone_number || "";
+  $("drawerInner").innerHTML = `
+    <button class="close-x" id="closeX">×</button>
+    <h2>${esc(t.subject)}</h2>
+    <div class="cat">${esc(t.category)} · #${t.id.replace(/-/g,"").slice(0,8).toUpperCase()}</div>
+
+    <div class="block"><div class="k">Description</div><div class="desc">${esc(t.description)}</div></div>
+
+    <div class="block contact">
+      <div class="k">Reporter</div>
+      <div>${esc(nameOf(t.reporter))}</div>
+      ${email?`<div><a href="mailto:${esc(email)}">${esc(email)}</a></div>`:""}
+      ${phone?`<div>${esc(phone)}</div>`:""}
+      <div class="mono">${esc(t.reporter?.id||t.user_id||"")}</div>
+    </div>
+
+    <div class="row2">
+      <div class="block">
+        <div class="k">Status</div>
+        <select id="dStatus">
+          ${["open","in_progress","closed"].map(s=>`<option value="${s}" ${t.status===s?"selected":""}>${STATUS_LABEL[s]}</option>`).join("")}
+        </select>
+      </div>
+      <div class="block">
+        <div class="k">Assignee</div>
+        <select id="dAssignee">
+          <option value="">Unassigned</option>
+          ${STAFF.map(s=>`<option value="${s.id}" ${t.assigned_to===s.id?"selected":""}>${esc(s.name)}</option>`).join("")}
+        </select>
+      </div>
+    </div>
+
+    <div class="block">
+      <div class="k">In-app chat</div>
+      ${t.conversation_id
+        ? `<div>Reporter opened the support chat — reply from the Laurie's Love app.<div class="mono">${t.conversation_id}</div></div>`
+        : `<div class="mono">no linked conversation</div>`}
+    </div>
+
+    <div class="drawer-actions">
+      <button class="btn small" id="dSave">Save changes</button>
+      <button class="btn small secondary" id="dAssignMe">Assign to me</button>
+      <span class="saved hidden" id="dSaved">Saved ✓</span>
+    </div>
+  `;
+  $("drawer").classList.remove("hidden");
+  $("closeX").onclick = closeDrawer;
+  $("drawer").onclick = (e)=>{ if(e.target.id==="drawer") closeDrawer(); };
+  $("dAssignMe").onclick = ()=>{ const me = STAFF.find(s=>s.id===ME.id) ? ME.id : (STAFF[0]&&STAFF[0].id); if(me) $("dAssignee").value = me; };
+  $("dSave").onclick = ()=>saveTicket(id);
+}
+function closeDrawer(){ $("drawer").classList.add("hidden"); }
+
+async function saveTicket(id){
+  const status = $("dStatus").value;
+  const assigned_to = $("dAssignee").value || null;
+  $("dSave").disabled = true; $("dSave").textContent = "Saving…";
+  const { error } = await sb.from("support_tickets").update({ status, assigned_to }).eq("id", id);
+  $("dSave").disabled = false; $("dSave").textContent = "Save changes";
+  if(error){ alert("Save failed: "+error.message); return; }
+  $("dSaved").classList.remove("hidden");
+  await load();
+  setTimeout(closeDrawer, 500);
+}
+
+boot();
+</script>
+</body>
+</html>

@@ -23,6 +23,8 @@ the SQL editor.
 | attachments_ratelimits_bbox_v1 | private chat-attachments bucket (member-gated), rate-limit triggers on 7 tables, users_in_bbox map RPC |
 | rls_privacy_v1 | can_see_post/can_notify gates (comments, reactions, notifications), self-only conversation membership, addressee-only friend accept, narrowed bbox projection, create_group RPC, rate-limit composite indexes |
 | rls_privacy_v2_write_gates | comment/react writes also require visibility of the target content |
+| storage_listing_hardening_v1 | avatars/post-images bucket read restricted to authenticated (no anon listing) |
+| profiles_private_pii_v1 | sensitive PII (email/phone/push_token/zip/device) split into owner-only profiles_private table — closes the direct-PostgREST scrape path |
 
 Security invariants the client depends on (all enforced here, not in JS):
 writes are owner-scoped (`auth.uid()`), notification sender can never be

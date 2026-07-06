@@ -63,7 +63,7 @@ feed natively, and removed every rented vendor.
   profiles, avatars (Storage), support chat button (env-overridable
   SUPPORT_PROFILE_ID with graceful failure).
 
-## 4. Database — all committed to `supabase/migrations/` (15 files)
+## 4. Database — all committed to `supabase/migrations/` (18 files)
 
 Full schema + RLS is version-controlled. Key security model:
 - RLS on every table using `(select auth.uid())` init-plan pattern.
@@ -130,11 +130,13 @@ Sendbird per-user chat licensing; four rented vendors.
 Blocked on the owners' accounts: Stripe (payments edge fn), Firebase (push
 fan-out; FCM tokens already saved), Resend (SMTP in Supabase dashboard), Maps
 production key, enable leaked-password protection (one dashboard toggle).
-Engineering, needs staging: **#1 — `profiles_select using(active)` still exposes
-email/phone/push_token via direct PostgREST** (split sensitive columns into an
-owner-only `profiles_private` table or a `public_profiles` view; must be tested
-on a staging copy before touching live data — the *visible* leak via the map is
-already closed). Perf polish before growth push: feed image transforms/thumbnails,
+Engineering: **#1 security item (profiles PII exposure) — FIXED July 5** via
+migration `profiles_private_pii_v1`: email/phone/push_token/zip/device moved into
+an owner-only `profiles_private` table, dropped from `profiles`. Verified with
+simulated-JWT SQL (a user sees only their own private row). Client
+(supabase.api.ts) splits reads/writes across both tables. **Needs one on-device
+spot-check of: signup → onboarding, edit profile (phone), and that Settings shows
+your own email/phone.** Perf polish before growth push: feed image transforms/thumbnails,
 like counts instead of full liker arrays, chat history "load older" cursor,
 `getMyConversations` last-message denormalization, `getMyGroupChannels` member
 cap. Housekeeping: delete ~800 LOC dead legacy branches + the shim, remove ~13

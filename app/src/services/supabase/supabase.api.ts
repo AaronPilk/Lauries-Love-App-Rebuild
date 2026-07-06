@@ -114,46 +114,81 @@ async function mapProfile(row: any) {
   return mapProfileWith(row, await getDefinitionsById());
 }
 
-// Legacy camelCase user fields -> profiles columns
+// Legacy camelCase user fields -> DB columns, SPLIT into:
+//   safe -> public.profiles       (community-visible: name, avatar, city, ...)
+//   priv -> public.profiles_private (owner-only PII: email, phone, push, zip)
+// PII was moved to a separate owner-only table so it can never be scraped via
+// a direct /rest/v1/profiles query.
 function toProfilePatch(data: Record<string, any>) {
   const defIdOf = (v: any) => (typeof v === 'string' ? v : v?.id ?? null);
-  const patch: Record<string, any> = {};
-  if ('firstName' in data) patch.first_name = data.firstName;
-  if ('lastName' in data) patch.last_name = data.lastName;
-  if ('displayName' in data) patch.display_name = data.displayName;
-  if ('email' in data && data.email) patch.email = data.email;
-  if ('role' in data) patch.role_id = defIdOf(data.role);
+  const safe: Record<string, any> = {};
+  const priv: Record<string, any> = {};
+  if ('firstName' in data) safe.first_name = data.firstName;
+  if ('lastName' in data) safe.last_name = data.lastName;
+  if ('displayName' in data) safe.display_name = data.displayName;
+  if ('email' in data && data.email) priv.email = data.email;
+  if ('role' in data) safe.role_id = defIdOf(data.role);
   if ('diagnosisTypes' in data)
-    patch.diagnosis_type_ids = (data.diagnosisTypes ?? [])
+    safe.diagnosis_type_ids = (data.diagnosisTypes ?? [])
       .map(defIdOf)
       .filter(Boolean);
   if ('diagnosisSubTypes' in data)
-    patch.diagnosis_subtype_ids = (data.diagnosisSubTypes ?? [])
+    safe.diagnosis_subtype_ids = (data.diagnosisSubTypes ?? [])
       .map(defIdOf)
       .filter(Boolean);
-  if ('diagnosisYear' in data) patch.diagnosis_year = data.diagnosisYear;
-  if ('age' in data) patch.age_range = data.age;
-  if ('gender' in data) patch.gender = data.gender;
-  if ('description' in data) patch.description = data.description;
-  if ('phoneNumber' in data) patch.phone_number = data.phoneNumber;
+  if ('diagnosisYear' in data) safe.diagnosis_year = data.diagnosisYear;
+  if ('age' in data) safe.age_range = data.age;
+  if ('gender' in data) safe.gender = data.gender;
+  if ('description' in data) safe.description = data.description;
+  if ('phoneNumber' in data) priv.phone_number = data.phoneNumber;
   if ('phoneNumberLocation' in data)
-    patch.phone_number_location = data.phoneNumberLocation;
-  if ('city' in data) patch.city = data.city;
-  if ('state' in data) patch.state = data.state;
-  if ('country' in data) patch.country = data.country;
-  if ('zipCode' in data) patch.zip_code = data.zipCode;
+    priv.phone_number_location = data.phoneNumberLocation;
+  if ('city' in data) safe.city = data.city;
+  if ('state' in data) safe.state = data.state;
+  if ('country' in data) safe.country = data.country;
+  if ('zipCode' in data) priv.zip_code = data.zipCode;
   if ('geoLocation' in data) {
-    patch.latitude = data.geoLocation?.latitude ?? null;
-    patch.longitude = data.geoLocation?.longitude ?? null;
+    safe.latitude = data.geoLocation?.latitude ?? null;
+    safe.longitude = data.geoLocation?.longitude ?? null;
   }
-  if ('profilePicture' in data) patch.avatar_path = data.profilePicture;
+  if ('profilePicture' in data) safe.avatar_path = data.profilePicture;
   if ('config' in data && data.config?.notifications) {
-    patch.push_active = data.config.notifications.active ?? false;
-    patch.push_token = data.config.notifications.notificationToken ?? '';
-    patch.device_type = data.config.notifications.deviceType ?? '';
+    priv.push_active = data.config.notifications.active ?? false;
+    priv.push_token = data.config.notifications.notificationToken ?? '';
+    priv.device_type = data.config.notifications.deviceType ?? '';
   }
-  if ('active' in data) patch.active = data.active;
-  return patch;
+  if ('active' in data) safe.active = data.active;
+  return { safe, priv };
+}
+
+/**
+ * Read a single profile and, IF it's the caller's own, merge in their private
+ * PII (email/phone/push/zip). RLS on profiles_private returns a row only for
+ * the owner, so for anyone else's profile the PII fields stay undefined — which
+ * is exactly the privacy behavior we want.
+ */
+async function readProfileMerged(id: string) {
+  const { data, error } = await supabase
+    .from('profiles')
+    .select('*')
+    .eq('id', id)
+    .single();
+  if (error) throw error;
+  const { data: priv } = await supabase
+    .from('profiles_private')
+    .select('*')
+    .eq('profile_id', id)
+    .maybeSingle();
+  if (priv) {
+    data.email = priv.email;
+    data.phone_number = priv.phone_number;
+    data.phone_number_location = priv.phone_number_location;
+    data.zip_code = priv.zip_code;
+    data.push_token = priv.push_token;
+    data.push_active = priv.push_active;
+    data.device_type = priv.device_type;
+  }
+  return data;
 }
 
 // Shared UUID guard lives in ./client (also used by chat realtime filters).
@@ -184,13 +219,7 @@ export async function supabaseApi(
   // --- users ----------------------------------------------------------------
   if (path.startsWith('/users/getUserInfoByCognitoId/')) {
     const id = path.split('/').pop()!;
-    const { data, error } = await supabase
-      .from('profiles')
-      .select('*')
-      .eq('id', id)
-      .single();
-    if (error) throw error;
-    return mapProfile(data);
+    return mapProfile(await readProfileMerged(id));
   }
 
   if (path === '/users/intercom/user-hash') return null;
@@ -306,19 +335,22 @@ export async function supabaseApi(
       };
     }
     if (method === 'POST') {
-      // Legacy "create profile" -> IDEMPOTENT upsert. The auth trigger
-      // normally creates the row, but if it hasn't landed yet (or the call
-      // retries) this must not depend on row order — upsert wins either way.
+      // Legacy "create profile" -> IDEMPOTENT upsert across BOTH tables. The
+      // auth trigger normally creates the rows, but if it hasn't landed yet
+      // (or the call retries) this must not depend on order.
       if (!me) throw new Error('Not authenticated');
       const session = await supabase.auth.getSession();
       const email = session.data.session?.user?.email ?? '';
-      const { data, error } = await supabase
+      const { safe, priv } = toProfilePatch(config.data ?? {});
+      const { error } = await supabase
         .from('profiles')
-        .upsert({ id: me, email, ...toProfilePatch(config.data ?? {}) })
-        .select()
-        .single();
+        .upsert({ id: me, ...safe });
       if (error) throw error;
-      return mapProfile(data);
+      const { error: privErr } = await supabase
+        .from('profiles_private')
+        .upsert({ profile_id: me, email, ...priv });
+      if (privErr) throw privErr;
+      return mapProfile(await readProfileMerged(me));
     }
     if (method === 'DELETE') {
       if (!me) throw new Error('Not authenticated');
@@ -335,23 +367,26 @@ export async function supabaseApi(
   if (userByIdMatch) {
     const id = userByIdMatch[1];
     if (method === 'GET') {
-      const { data, error } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('id', id)
-        .single();
-      if (error) throw error;
-      return mapProfile(data);
+      return mapProfile(await readProfileMerged(id));
     }
     if (method === 'PUT' || method === 'PATCH') {
-      const { data, error } = await supabase
-        .from('profiles')
-        .update(toProfilePatch(config.data ?? {}))
-        .eq('id', id) // RLS guarantees only own row is writable
-        .select()
-        .single();
-      if (error) throw error;
-      return mapProfile(data);
+      const { safe, priv } = toProfilePatch(config.data ?? {});
+      if (Object.keys(safe).length > 0) {
+        const { error } = await supabase
+          .from('profiles')
+          .update(safe)
+          .eq('id', id); // RLS guarantees only own row is writable
+        if (error) throw error;
+      }
+      if (Object.keys(priv).length > 0) {
+        // upsert (not update): the private row always exists for the owner,
+        // but upsert is race-safe and self-healing if it somehow doesn't.
+        const { error } = await supabase
+          .from('profiles_private')
+          .upsert({ profile_id: id, ...priv });
+        if (error) throw error;
+      }
+      return mapProfile(await readProfileMerged(id));
     }
   }
 

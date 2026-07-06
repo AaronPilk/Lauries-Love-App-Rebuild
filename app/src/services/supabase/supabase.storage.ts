@@ -112,17 +112,25 @@ export async function uploadChatAttachment(
 }
 
 /**
- * Batch-sign private attachment paths (1h expiry). Returns path -> url.
- * One round-trip for a whole message page instead of one per attachment.
+ * Batch-sign private paths (default 1h). Returns path -> url. One round-trip
+ * for a whole page instead of one per file. Optional `transform` resizes the
+ * image at the edge (thumbnails) — used for post-images so the feed doesn't
+ * download full-size originals.
  */
 export async function signedUrlsFor(
-  bucket: 'chat-attachments',
+  bucket: 'chat-attachments' | 'post-images',
   paths: string[],
+  opts?: { expiresIn?: number; width?: number; quality?: number },
 ): Promise<Record<string, string>> {
-  if (!paths.length) return {};
+  const unique = [...new Set(paths.filter(Boolean))];
+  if (!unique.length) return {};
+  const transform =
+    opts?.width != null
+      ? { transform: { width: opts.width, quality: opts.quality ?? 70 } }
+      : undefined;
   const { data, error } = await supabase.storage
     .from(bucket)
-    .createSignedUrls(paths, 3600);
+    .createSignedUrls(unique, opts?.expiresIn ?? 3600, transform as any);
   if (error) throw error;
   const out: Record<string, string> = {};
   (data ?? []).forEach(r => {

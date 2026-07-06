@@ -10,6 +10,7 @@ import React, {
   useContext,
   useEffect,
   useMemo,
+  useRef,
   useState,
 } from 'react';
 
@@ -51,6 +52,7 @@ type SendbirdChatContext = {
   setLimit: React.Dispatch<React.SetStateAction<number>>;
   getChannels: () => Promise<void>;
   loadMessages: (channelUrl: string, limit?: number) => Promise<BaseMessage[]>;
+  loadOlderMessages: (channelUrl: string, limit?: number) => Promise<number>;
   appendMessage: (channelUrl: string, msg: any) => void;
   getMember: (userId: string) => Promise<void>;
   addBlockedUser: (userId: string) => Promise<boolean>;
@@ -69,6 +71,11 @@ export type LocalSearchResult = {
 };
 
 export const sendbirdChatContext = createContext({} as SendbirdChatContext);
+// Message-data-only context (perf: isolates chat re-renders from the rest of
+// the app). Consume via useChatMessages().
+export const chatMessagesContext = createContext<{
+  messages: Record<string, BaseMessageSendBirdType[]>;
+}>({ messages: {} });
 
 const SendbirdChatProvider: FunctionComponent<SendbirdChatProviderProps> = ({
   children,
@@ -87,6 +94,10 @@ const SendbirdChatProvider: FunctionComponent<SendbirdChatProviderProps> = ({
   const [messages, setMessages] = useState<
     Record<string, BaseMessageSendBirdType[]>
   >({});
+  // Ref mirror of messages so loadOlderMessages reads current state without a
+  // stale closure (it needs the oldest-loaded cursor before an async fetch).
+  const messagesRef = useRef(messages);
+  messagesRef.current = messages;
   const userID = useMemo(() => userDB?.cognitoId || null, [userDB?.cognitoId]);
 
   // Pure fetch (no setState) so getChannels can run it in parallel with the
@@ -396,6 +407,47 @@ const SendbirdChatProvider: FunctionComponent<SendbirdChatProviderProps> = ({
         return [];
       }
     }
+    return loadMessagesLegacy(channelUrl, limit);
+  };
+
+  /**
+   * Load OLDER history (keyset). Messages are stored newest-first (inverted
+   * list), so the oldest loaded is the LAST element; we fetch messages before
+   * its created_at and append them to the end. Dedupes by messageId. Returns
+   * how many older messages were added (0 = reached the beginning).
+   */
+  const loadOlderMessages = async (channelUrl: string, limit = 50) => {
+    if (!SUPABASE_ENABLED) return 0;
+    const current = (messagesRef.current[channelUrl] ?? []) as any[];
+    if (current.length === 0) return 0;
+    const oldest = current[current.length - 1];
+    const before = oldest?.createdAt
+      ? new Date(oldest.createdAt).toISOString()
+      : undefined;
+    try {
+      const threadId = await resolveThreadId(channelUrl);
+      const older = (await getConversationMessages(
+        threadId,
+        limit,
+        before,
+      )) as any[];
+      if (!older.length) return 0;
+      setMessages(prev => {
+        const existing = (prev[channelUrl] ?? []) as any[];
+        const seen = new Set(existing.map(m => m.messageId));
+        const add = older.filter(m => !seen.has(m.messageId));
+        if (!add.length) return prev;
+        return { ...prev, [channelUrl]: [...existing, ...add] as any };
+      });
+      return older.length;
+    } catch (error) {
+      if (__DEV__) console.warn('loadOlderMessages error', error);
+      return 0;
+    }
+  };
+
+  const loadMessagesLegacy = async (channelUrl: string, limit = 50) => {
+    if (SUPABASE_ENABLED) return [];
     if (SOCIAL_STUBBED) {
       const mockMsgs = (MOCK_CHAT_MESSAGES[channelUrl] ?? []) as BaseMessage[];
       setMessages(prev => ({ ...prev, [channelUrl]: mockMsgs as any }));
@@ -567,11 +619,15 @@ const SendbirdChatProvider: FunctionComponent<SendbirdChatProviderProps> = ({
     };
   }, [userChat]);
 
+  // PERF: `messages` is the churny state (changes on every incoming/sent chat
+  // message). It is DELIBERATELY excluded from this main context value so that
+  // a message in one conversation does NOT re-render every consumer of this
+  // provider app-wide (the Home feed, etc.). Message data lives in its own
+  // lightweight context below; only the chat screens subscribe to it.
   const value = useMemo(
     () => ({
       userChat,
       groupChannels,
-      messages,
       members,
       friends,
       blockedUsers,
@@ -579,6 +635,7 @@ const SendbirdChatProvider: FunctionComponent<SendbirdChatProviderProps> = ({
       getChannels,
       setLimit,
       loadMessages,
+      loadOlderMessages,
       appendMessage,
       getMember,
       addBlockedUser,
@@ -589,7 +646,6 @@ const SendbirdChatProvider: FunctionComponent<SendbirdChatProviderProps> = ({
     [
       userChat,
       groupChannels,
-      messages,
       members,
       friends,
       blockedUsers,
@@ -600,14 +656,23 @@ const SendbirdChatProvider: FunctionComponent<SendbirdChatProviderProps> = ({
     ],
   );
 
+  // Separate, message-only context — recomputes on every message, but only
+  // the chat screens consume it, so the fan-out is contained.
+  const messagesValue = useMemo(() => ({ messages }), [messages]);
+
   return (
     <sendbirdChatContext.Provider value={value}>
-      {children}
+      <chatMessagesContext.Provider value={messagesValue}>
+        {children}
+      </chatMessagesContext.Provider>
     </sendbirdChatContext.Provider>
   );
 };
 
 export const useSendbirdChatProvider = () => useContext(sendbirdChatContext);
+/** Message data only — subscribe here (not the main provider) to avoid
+ *  re-rendering on every chat message. */
+export const useChatMessages = () => useContext(chatMessagesContext);
 
 // Sendbird UIKit container removed — the provider now renders directly.
 export default ({ children }: { children: React.ReactNode }) => (

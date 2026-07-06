@@ -90,9 +90,16 @@ const PostHomeTab: FunctionComponent<PostHomeTabProps> = ({
   }, [postData]);
 
   useEffect(() => {
-    const likesArray = postData.likes;
-    setLikes(likesArray?.length || 0);
-    setIsLiked(likesArray?.includes(userID || ''));
+    // Counts + own-like flag (the feed no longer ships the full liker array).
+    // Fall back to the legacy array shape if present (mock mode).
+    const legacy = postData.likes;
+    setLikes(
+      postData.likeCount ?? (Array.isArray(legacy) ? legacy.length : 0),
+    );
+    setIsLiked(
+      postData.likedByMe ??
+        (Array.isArray(legacy) ? legacy.includes(userID || '') : false),
+    );
   }, [postData, userID]);
 
   const goToUserProfile = async () => {
@@ -153,10 +160,10 @@ const PostHomeTab: FunctionComponent<PostHomeTabProps> = ({
       setLikes(wasLiked ? Math.max(prevLikes - 1, 0) : prevLikes + 1);
 
       try {
-        const likers = await toggleReactionOn('post', post.url);
+        const { count, likedByMe } = await toggleReactionOn('post', post.url);
         // Reconcile with server truth.
-        const nowLiked = likers.includes(myId);
-        setLikes(likers.length);
+        const nowLiked = likedByMe;
+        setLikes(count);
         setIsLiked(nowLiked);
 
         const notifierId = post.creator?.userId;

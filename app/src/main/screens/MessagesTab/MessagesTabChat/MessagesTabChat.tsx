@@ -34,7 +34,7 @@ import {
 
 // providers
 import { useKeyboardProvider } from 'providers/KeyboardProvider/KeyboardProvider';
-import { useSendbirdChatProvider } from 'providers/SendbirdChatProvider/SendbirdChatProvider';
+import { useSendbirdChatProvider, useChatMessages } from 'providers/SendbirdChatProvider/SendbirdChatProvider';
 import { usePushNotificationProvider } from 'providers/PushNotificationProvider/PushNotificationProvider';
 
 // components
@@ -89,13 +89,29 @@ const MessagesTabChat: FunctionComponent<MessagesTabChatProps> = ({
   const {
     userChat,
     groupChannels,
-    messages,
     loadMessages,
+    loadOlderMessages,
     appendMessage,
     setLimit,
     getFriends,
     getChannels,
   } = useSendbirdChatProvider();
+  const { messages } = useChatMessages();
+  const loadingOlderRef = useRef(false);
+  const reachedStartRef = useRef(false);
+
+  const onLoadOlder = async () => {
+    if (!SUPABASE_ENABLED || loadingOlderRef.current || reachedStartRef.current)
+      return;
+    if ((messagesChannel?.length ?? 0) < 50) return; // less than a full page
+    loadingOlderRef.current = true;
+    try {
+      const added = await loadOlderMessages(route.params?.channelUrl || '');
+      if (added === 0) reachedStartRef.current = true;
+    } finally {
+      loadingOlderRef.current = false;
+    }
+  };
   const { sendPushNotificationToServer } = usePushNotificationProvider();
   const { userDB } = useUserDBProvider();
   const route =
@@ -649,6 +665,8 @@ const MessagesTabChat: FunctionComponent<MessagesTabChatProps> = ({
               style={styles.messages}
               contentContainerStyle={styles.messagesContainer}
               showsVerticalScrollIndicator={false}
+              onEndReached={onLoadOlder}
+              onEndReachedThreshold={0.4}
             />
             <Animated.View
               style={[

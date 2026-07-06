@@ -26,6 +26,8 @@ the SQL editor.
 | storage_listing_hardening_v1 | avatars/post-images bucket read restricted to authenticated (no anon listing) |
 | profiles_private_pii_v1 | sensitive PII (email/phone/push_token/zip/device) split into owner-only profiles_private table — closes the direct-PostgREST scrape path |
 | group_roster_privacy_v1 | group_members roster gated to co-members (was world-readable → diagnosis inference); member counts stay public via group_member_counts() RPC |
+| perf_privacy_v2 | denormalized posts.like_count (kills feed liker-array payloads); coarsened map coords (~1km) + last_name hidden; post-images bucket made private |
+| conversation_last_message_denorm | last-message preview denormalized onto conversations (fixes global-newest-200 heuristic) |
 
 Security invariants the client depends on (all enforced here, not in JS):
 writes are owner-scoped (`auth.uid()`), notification sender can never be

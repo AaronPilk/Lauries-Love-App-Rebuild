@@ -34,7 +34,7 @@ import {
 
 // providers
 import { useKeyboardProvider } from 'providers/KeyboardProvider/KeyboardProvider';
-import { useSendbirdChatProvider } from 'providers/SendbirdChatProvider/SendbirdChatProvider';
+import { useSendbirdChatProvider, useChatMessages } from 'providers/SendbirdChatProvider/SendbirdChatProvider';
 import { usePushNotificationProvider } from 'providers/PushNotificationProvider/PushNotificationProvider';
 
 // components
@@ -88,8 +88,29 @@ const MessagesTabChatGroup: FunctionComponent<MessagesTabChatGroupProps> = ({
   const route =
     useRoute<RouteProp<RootMessagesTabParamList, 'messages-tab-chat-group'>>();
   const { sdk } = useSendbirdChat();
-  const { userChat, groupChannels, messages, loadMessages, appendMessage } =
-    useSendbirdChatProvider();
+  const {
+    userChat,
+    groupChannels,
+    loadMessages,
+    loadOlderMessages,
+    appendMessage,
+  } = useSendbirdChatProvider();
+  const { messages } = useChatMessages();
+  const loadingOlderRef = useRef(false);
+  const reachedStartRef = useRef(false);
+
+  const onLoadOlder = async () => {
+    if (!SUPABASE_ENABLED || loadingOlderRef.current || reachedStartRef.current)
+      return;
+    if ((messagesChannel?.length ?? 0) < 50) return;
+    loadingOlderRef.current = true;
+    try {
+      const added = await loadOlderMessages(route.params?.channelUrl || '');
+      if (added === 0) reachedStartRef.current = true;
+    } finally {
+      loadingOlderRef.current = false;
+    }
+  };
   const { userDB } = useUserDBProvider();
 
   const [thumbnails, setThumbnails] = useState<Record<string, string>>({});
@@ -588,6 +609,8 @@ const MessagesTabChatGroup: FunctionComponent<MessagesTabChatGroupProps> = ({
               style={styles.messages}
               contentContainerStyle={styles.messagesContainer}
               showsVerticalScrollIndicator={false}
+              onEndReached={onLoadOlder}
+              onEndReachedThreshold={0.4}
             />
             <Animated.View
               style={[

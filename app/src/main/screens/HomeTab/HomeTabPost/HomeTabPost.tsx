@@ -154,7 +154,7 @@ const HomeTabPost: FunctionComponent<HomeTabPostProps> = ({ navigation }) => {
     const userDetailPost = posts.find(post => post.url === userPost.channelUrl);
     const postData = JSON.parse(userDetailPost?.data || '{}');
 
-    const likesArray = postData.likes;
+    const legacyLikes = postData.likes;
     const postImageUrl = postData.image_md ?? '';
     // Only measure when the URL actually changes — Image.getSize on every
     // focus/posts update triggers redundant network work
@@ -172,8 +172,16 @@ const HomeTabPost: FunctionComponent<HomeTabPostProps> = ({ navigation }) => {
       );
     }
 
-    setLikes(likesArray?.length || 0);
-    setIsLiked(likesArray?.includes(userID || ''));
+    setLikes(
+      postData.likeCount ??
+        (Array.isArray(legacyLikes) ? legacyLikes.length : 0),
+    );
+    setIsLiked(
+      postData.likedByMe ??
+        (Array.isArray(legacyLikes)
+          ? legacyLikes.includes(userID || '')
+          : false),
+    );
     setPostImage(postImageUrl);
   }
 
@@ -325,18 +333,17 @@ const HomeTabPost: FunctionComponent<HomeTabPostProps> = ({ navigation }) => {
 
       if (isPost) {
         try {
-          const likers = await toggleReactionOn('post', channelUrl);
-          setLikes(likers.length);
-          setIsLiked(likers.includes(myId));
+          const { count, likedByMe } = await toggleReactionOn(
+            'post',
+            channelUrl,
+          );
+          setLikes(count);
+          setIsLiked(likedByMe);
 
           const notifierId = (
             userPost?.sender?.metaData as MetaDataUserSendBirdType
           )?.id;
-          if (
-            likers.includes(myId) &&
-            notifierId &&
-            notifierId !== myId
-          )
+          if (likedByMe && notifierId && notifierId !== myId)
             sendNotification({
               notifierId,
               senderId: myId,

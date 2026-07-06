@@ -3,7 +3,7 @@
 // render unchanged — same trick as the mock layer, but backed by Postgres.
 
 import { supabase, currentUserId } from './client';
-import { publicUrlFor } from './supabase.storage';
+import { publicUrlFor, signedUrlsFor } from './supabase.storage';
 
 // Local cached session read — no network round-trip per request.
 const uid = currentUserId;
@@ -44,16 +44,32 @@ export async function getFeedPosts(limit = 50, before?: string) {
   if (!posts || posts.length === 0) return [];
 
   const postIds = posts.map(p => p.id);
-  const { data: likeRows } = await supabase
-    .from('reactions')
-    .select('entity_id, user_id')
-    .eq('entity_type', 'post')
-    .in('entity_id', postIds);
+  const me = await uid();
 
-  const likesByPost: Record<string, string[]> = {};
-  (likeRows ?? []).forEach(r => {
-    (likesByPost[r.entity_id] ??= []).push(r.user_id);
-  });
+  // "Did I like it" — ONLY the caller's own reactions (tiny), never the full
+  // liker list. Counts come from the denormalized posts.like_count column.
+  const likedByMe = new Set<string>();
+  if (me) {
+    const { data: mine } = await supabase
+      .from('reactions')
+      .select('entity_id')
+      .eq('entity_type', 'post')
+      .eq('user_id', me)
+      .in('entity_id', postIds);
+    (mine ?? []).forEach(r => likedByMe.add(r.entity_id));
+  }
+
+  // Post images live in a PRIVATE bucket now — batch-sign with a feed-sized
+  // (600px) thumbnail transform so scrolling doesn't pull full-res originals.
+  const imgPaths = posts.map(p => p.image_path).filter(Boolean) as string[];
+  const [smUrls, mdUrls] = await Promise.all([
+    imgPaths.length
+      ? signedUrlsFor('post-images', imgPaths, { width: 600, quality: 65 })
+      : Promise.resolve({} as Record<string, string>),
+    imgPaths.length
+      ? signedUrlsFor('post-images', imgPaths, { width: 1200, quality: 75 })
+      : Promise.resolve({} as Record<string, string>),
+  ]);
 
   return posts.map(p => ({
     url: p.id,
@@ -71,14 +87,14 @@ export async function getFeedPosts(limit = 50, before?: string) {
     data: JSON.stringify({
       firstMessage: p.body,
       commentQty: p.comments?.[0]?.count ?? 0,
-      likes: likesByPost[p.id] ?? [],
-      // Legacy Sendbird emitted three sizes; Storage serves one original.
-      // Emit ALL legacy keys so every consumer (feed uses _sm, post detail
-      // uses _md, viewers use _lg) renders the image. Real thumbnail
-      // variants can come later via Supabase image transforms.
-      image_sm: publicUrlFor('post-images', p.image_path) ?? '',
-      image_md: publicUrlFor('post-images', p.image_path) ?? '',
-      image_lg: publicUrlFor('post-images', p.image_path) ?? '',
+      // Counts + own-like flag instead of the full liker array.
+      likeCount: p.like_count ?? 0,
+      likedByMe: likedByMe.has(p.id),
+      likes: [], // legacy key kept present (empty) for any stray consumer
+      // Signed, resized thumbnails from the private post-images bucket.
+      image_sm: p.image_path ? smUrls[p.image_path] ?? '' : '',
+      image_md: p.image_path ? mdUrls[p.image_path] ?? '' : '',
+      image_lg: p.image_path ? mdUrls[p.image_path] ?? '' : '',
       visibility: p.visibility,
       groupId: p.group_id,
       groupName: p.group?.name ?? null,
@@ -222,11 +238,17 @@ export async function sendComment(postId: string, body: string) {
   };
 }
 
-/** Toggle like; returns the post's updated liker id list. */
+/**
+ * Toggle a like. Returns `{ count, likedByMe }` — NOT the full liker list.
+ * At scale a viral post has thousands of likers; shipping that array on every
+ * tap was the #1 payload problem. Post counts come from the denormalized
+ * posts.like_count column (trigger-maintained); comment counts from a bounded
+ * count() query.
+ */
 export async function toggleReactionOn(
   entityType: 'post' | 'comment',
   entityId: string,
-) {
+): Promise<{ count: number; likedByMe: boolean }> {
   const me = await uid();
   if (!me) throw new Error('Not authenticated');
 
@@ -239,26 +261,40 @@ export async function toggleReactionOn(
     .maybeSingle();
   if (findError) throw findError;
 
+  let likedByMe: boolean;
   if (existing) {
     const { error } = await supabase
       .from('reactions')
       .delete()
       .eq('id', existing.id);
     if (error) throw error;
+    likedByMe = false;
   } else {
     const { error } = await supabase
       .from('reactions')
       .insert({ entity_type: entityType, entity_id: entityId, user_id: me });
     // 23505 = already liked (double-tap race) — treat as success.
     if (error && error.code !== '23505') throw error;
+    likedByMe = true;
   }
 
-  const { data: rows } = await supabase
-    .from('reactions')
-    .select('user_id')
-    .eq('entity_type', entityType)
-    .eq('entity_id', entityId);
-  return (rows ?? []).map(r => r.user_id);
+  let count = 0;
+  if (entityType === 'post') {
+    const { data: post } = await supabase
+      .from('posts')
+      .select('like_count')
+      .eq('id', entityId)
+      .maybeSingle();
+    count = post?.like_count ?? 0;
+  } else {
+    const { count: c } = await supabase
+      .from('reactions')
+      .select('id', { count: 'exact', head: true })
+      .eq('entity_type', 'comment')
+      .eq('entity_id', entityId);
+    count = c ?? 0;
+  }
+  return { count, likedByMe };
 }
 
 // ---------------------------------------------------------------------------
@@ -331,22 +367,17 @@ export async function getMyGroupChannels() {
     .select('*')
     .in('id', ids);
 
-  const { data: memberRows } = await supabase
-    .from('group_members')
-    .select('group_id, profile:profiles(id, first_name, display_name, avatar_path)')
-    .in('group_id', ids);
-
-  const membersByGroup: Record<string, any[]> = {};
-  (memberRows ?? []).forEach(r => {
-    (membersByGroup[r.group_id] ??= []).push(r.profile);
+  // Counts via the RPC (bounded); member avatars are loaded lazily on the
+  // group-detail screen (getGroupMembers, capped) — do NOT pull every member
+  // of every group just to render the Messages-tab list.
+  const { data: counts } = await supabase.rpc('group_member_counts');
+  const countByGroup: Record<string, number> = {};
+  (counts ?? []).forEach((r: any) => {
+    countByGroup[r.group_id] = Number(r.member_count) || 0;
   });
 
   return (groups ?? []).map(g =>
-    groupToChannel(
-      { ...g, member_count: (membersByGroup[g.id] ?? []).length },
-      membersByGroup[g.id] ?? [],
-      true,
-    ),
+    groupToChannel({ ...g, member_count: countByGroup[g.id] ?? 0 }, [], true),
   );
 }
 

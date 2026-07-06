@@ -118,27 +118,25 @@ export async function getMyConversations(meIdHint?: string) {
   ]);
 
   const membersByConv: Record<string, any[]> = {};
+  const profileById: Record<string, any> = {};
   (memberRows ?? []).forEach((r: any) => {
     (membersByConv[r.conversation_id] ??= []).push(r.profile);
+    if (r.profile?.id) profileById[r.profile.id] = r.profile;
   });
 
-  // last message per conversation (one bounded query)
-  const { data: lastMsgs } = await supabase
-    .from('messages')
-    .select(
-      'id, conversation_id, body, created_at, sender:profiles(id, first_name, display_name)',
-    )
-    .in('conversation_id', convIds)
-    .order('created_at', { ascending: false })
-    .limit(200);
+  // Last message is DENORMALIZED onto conversations (maintained by the bump
+  // trigger) — correct per-conversation, no global newest-N heuristic.
   const lastByConv: Record<string, any> = {};
-  (lastMsgs ?? []).forEach((m: any) => {
-    if (!lastByConv[m.conversation_id])
-      lastByConv[m.conversation_id] = {
-        message: m.body ?? '',
-        createdAt: new Date(m.created_at).getTime(),
-        sender: senderFromProfile(m.sender),
+  (convs ?? []).forEach((c: any) => {
+    if (c.last_message_at) {
+      lastByConv[c.id] = {
+        message: c.last_message_body ?? '',
+        createdAt: new Date(c.last_message_at).getTime(),
+        sender: senderFromProfile(
+          c.last_message_sender ? profileById[c.last_message_sender] : null,
+        ),
       };
+    }
   });
 
   return (convs ?? []).map(c =>
@@ -220,15 +218,22 @@ export async function resolveThreadId(channelUrl: string) {
 
 /**
  * Messages for a conversation — NEWEST FIRST (the chat screen renders an
- * inverted FlatList, matching the old Sendbird reverse:true query).
+ * inverted FlatList). `before` is a created_at ISO cursor for loading OLDER
+ * history (keyset pagination) — pass the oldest loaded message's created_at.
  */
-export async function getConversationMessages(conversationId: string, limit = 100) {
-  const { data, error } = await supabase
+export async function getConversationMessages(
+  conversationId: string,
+  limit = 50,
+  before?: string,
+) {
+  let q = supabase
     .from('messages')
     .select(
       '*, sender:profiles!messages_sender_id_fkey(id, first_name, display_name, avatar_path)',
     )
-    .eq('conversation_id', conversationId)
+    .eq('conversation_id', conversationId);
+  if (before) q = q.lt('created_at', before);
+  const { data, error } = await q
     .order('created_at', { ascending: false })
     .limit(limit);
   if (error) throw error;

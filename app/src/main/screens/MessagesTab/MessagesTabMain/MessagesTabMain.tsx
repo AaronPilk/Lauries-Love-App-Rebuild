@@ -27,7 +27,7 @@ import {
 import { BaseMessage } from 'services/legacy-chat.shim';
 
 // providers
-import { useSendbirdChatProvider } from 'providers/SendbirdChatProvider/SendbirdChatProvider';
+import { useSendbirdChatProvider, useChatMessages } from 'providers/SendbirdChatProvider/SendbirdChatProvider';
 
 // components
 import BackgroundScreen from 'components/BackgroundScreen/BackgroundScreen';
@@ -194,8 +194,9 @@ const MessagesTabMain: FunctionComponent<MessagesTabMainProps> = ({
 }) => {
   const isFocused = useIsFocused();
   const { sdk } = useSendbirdChat();
-  const { userChat, groupChannels, messages, limit, setLimit, getChannels } =
+  const { userChat, groupChannels, limit, setLimit, getChannels } =
     useSendbirdChatProvider();
+  const { messages } = useChatMessages();
   const { userDB } = useUserDBProvider();
   const [search, setSearch] = useState('');
   const [filterChannels, setFilterChannel] = useState<LocalSearchResult[]>([]);

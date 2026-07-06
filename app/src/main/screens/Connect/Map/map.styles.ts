@@ -102,6 +102,31 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: colors.primary[600],
   },
+  // Map markers
+  pin: {
+    width: 32,
+    height: 32,
+  },
+  // Highlight for the marker the user tapped: a coloured halo behind a
+  // scaled-up pin so it clearly stands out from the rest.
+  selectedPinWrap: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: colors.primary[100],
+    borderColor: colors.primary[500],
+    borderWidth: 2,
+    borderRadius: 26,
+    padding: 4,
+    shadowColor: colors.black,
+    shadowOpacity: 0.25,
+    shadowRadius: 4,
+    shadowOffset: { width: 0, height: 2 },
+    elevation: 5,
+  },
+  selectedPin: {
+    width: 40,
+    height: 40,
+  },
 });
 
 export default styles;

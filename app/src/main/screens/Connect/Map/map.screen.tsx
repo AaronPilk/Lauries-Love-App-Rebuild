@@ -479,10 +479,16 @@ export default function MapScreen() {
   const markers = useMemo(() => {
     if (!isShowMarkers) return null;
 
-    return friends?.map(friend =>
-      friend.location || friend.geoLocation ? (
+    return friends?.map(friend => {
+      if (!friend.location && !friend.geoLocation) return [];
+      const isSelected = friend.id === user?.id;
+      return (
         <Marker
-          key={friend.id}
+          // Include selection in the key so ONLY the two markers whose state
+          // changed (previously-selected → normal, newly-selected → highlighted)
+          // remount. Needed because tracksViewChanges={false} otherwise caches
+          // the native marker view and wouldn't reflect the highlight.
+          key={`${friend.id}-${isSelected ? 'sel' : 'norm'}`}
           // Rebuild fix (P1 perf): static image markers never need view
           // tracking. The old onLayout toggled tracksView state per
           // marker, re-rendering ALL markers in a feedback loop that
@@ -494,27 +500,31 @@ export default function MapScreen() {
             longitude:
               friend.location?.longitude || friend.geoLocation?.longitude || 0,
           }}
-          style={{
-            opacity: 1,
-            // Rebuild fix: was primary[600] on iOS — painted a solid square
-            // behind the pin image (visible on Apple Maps).
-            backgroundColor: colors.transparent,
-          }}
+          // Selected pin sits on top of its neighbours.
+          zIndex={isSelected ? 999 : 1}
+          style={{ opacity: 1, backgroundColor: colors.transparent }}
           onPress={e => {
             e.stopPropagation();
             setUser(friend);
           }}
         >
-          <Image
-            source={require('../../../../assets/images/user-pin.png')}
-            style={{ width: 32, height: 32 }}
-          />
+          {isSelected ? (
+            <View style={styles.selectedPinWrap}>
+              <Image
+                source={require('../../../../assets/images/user-pin.png')}
+                style={styles.selectedPin}
+              />
+            </View>
+          ) : (
+            <Image
+              source={require('../../../../assets/images/user-pin.png')}
+              style={styles.pin}
+            />
+          )}
         </Marker>
-      ) : (
-        []
-      ),
-    );
-  }, [isShowMarkers, friends]);
+      );
+    });
+  }, [isShowMarkers, friends, user?.id]);
 
   if (isLoading || !isFocused) {
     // Branded loading screen (user-requested): logo + progress bar instead

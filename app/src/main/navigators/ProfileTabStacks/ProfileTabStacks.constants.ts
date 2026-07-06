@@ -11,6 +11,7 @@ import ProfileTabMainUpdateFullName from 'main/screens/ProfileTab/ProfileTabMain
 import ProfileTabQR from 'main/screens/ProfileTab/ProfileTabQR/ProfileTabQR';
 import ProfileTabSupportInbox from 'main/screens/ProfileTab/ProfileTabSupportInbox/ProfileTabSupportInbox';
 import ProfileTabSupportTicket from 'main/screens/ProfileTab/ProfileTabSupportTicket/ProfileTabSupportTicket';
+import ProfileTabSupportStaff from 'main/screens/ProfileTab/ProfileTabSupportStaff/ProfileTabSupportStaff';
 
 // constants
 import { PATHS_PROFILE_TAB } from '../paths';
@@ -92,6 +93,14 @@ export const LIST_PROFILE_TAB_SCREENS: Array<{
     name: PATHS_PROFILE_TAB.profileTabSupportTicket,
     title: PATHS_PROFILE_TAB.profileTabSupportTicket,
     component: ProfileTabSupportTicket,
+    headerShown: false,
+    gestureEnabled: false,
+  },
+  {
+    id: PATHS_PROFILE_TAB.profileTabSupportStaff,
+    name: PATHS_PROFILE_TAB.profileTabSupportStaff,
+    title: PATHS_PROFILE_TAB.profileTabSupportStaff,
+    component: ProfileTabSupportStaff,
     headerShown: false,
     gestureEnabled: false,
   },

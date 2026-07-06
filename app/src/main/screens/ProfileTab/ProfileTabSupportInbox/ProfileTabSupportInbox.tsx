@@ -21,6 +21,7 @@ import { PATHS_PROFILE_TAB } from 'main/navigators/paths';
 
 // backend
 import {
+  getIsSupportOwner,
   getSupportTickets,
   SupportTicket,
 } from 'services/supabase/supabase.support';
@@ -59,11 +60,17 @@ const ProfileTabSupportInbox: FunctionComponent<Props> = ({ navigation }) => {
   const [tickets, setTickets] = useState<SupportTicket[]>([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState<Filter>('all');
+  const [isOwner, setIsOwner] = useState(false);
 
   const load = useCallback(async () => {
     try {
       setLoading(true);
-      setTickets(await getSupportTickets());
+      const [t, owner] = await Promise.all([
+        getSupportTickets(),
+        getIsSupportOwner(),
+      ]);
+      setTickets(t);
+      setIsOwner(owner);
     } catch (e) {
       if (__DEV__) console.warn('load tickets failed', e);
     } finally {
@@ -118,6 +125,15 @@ const ProfileTabSupportInbox: FunctionComponent<Props> = ({ navigation }) => {
         onPressLeft={() => navigation.goBack()}
       />
       <View style={styles.container}>
+        {isOwner && (
+          <TouchableOpacity
+            onPress={() =>
+              navigation.navigate(PATHS_PROFILE_TAB.profileTabSupportStaff)
+            }
+          >
+            <Text style={styles.manageLink}>Manage agents ›</Text>
+          </TouchableOpacity>
+        )}
         <View style={styles.stats}>
           <View style={styles.stat}>
             <Text style={styles.statN}>{counts.open}</Text>

@@ -1,0 +1,53 @@
+import { StyleSheet } from 'react-native';
+import colors from 'styles/colors';
+
+export default StyleSheet.create({
+  container: { flex: 1, paddingHorizontal: 16 },
+  sectionTitle: {
+    fontSize: 12,
+    textTransform: 'uppercase',
+    letterSpacing: 0.4,
+    color: colors.neutral[600],
+    marginTop: 18,
+    marginBottom: 8,
+  },
+  row: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: colors.neutral[100],
+    borderWidth: 1,
+    borderColor: colors.neutral[300],
+    borderRadius: 12,
+    padding: 12,
+    marginBottom: 8,
+  },
+  rowMain: { flex: 1 },
+  name: { fontSize: 15, fontWeight: '600', color: colors.neutral[900] },
+  sub: { fontSize: 12, color: colors.neutral[600], marginTop: 2 },
+  roleTag: {
+    fontSize: 11,
+    fontWeight: '700',
+    textTransform: 'uppercase',
+    letterSpacing: 0.4,
+    paddingVertical: 3,
+    paddingHorizontal: 8,
+    borderRadius: 999,
+    overflow: 'hidden',
+    marginRight: 10,
+  },
+  owner: { backgroundColor: colors.primary[100], color: colors.primary[500] },
+  agent: { backgroundColor: colors.neutral[300], color: colors.neutral[800] },
+  remove: { color: colors.error[400], fontWeight: '600', fontSize: 14, paddingHorizontal: 4 },
+  searchInput: {
+    borderWidth: 1,
+    borderColor: colors.neutral[300],
+    borderRadius: 12,
+    backgroundColor: colors.neutral[100],
+    padding: 12,
+    fontSize: 15,
+    color: colors.neutral[900],
+  },
+  addBtn: { color: colors.secondary[600], fontWeight: '700', fontSize: 14, paddingHorizontal: 4 },
+  hint: { fontSize: 13, color: colors.neutral[600], marginTop: 6 },
+  loader: { marginTop: 24 },
+});

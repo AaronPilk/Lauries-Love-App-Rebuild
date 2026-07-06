@@ -104,6 +104,15 @@ export const SUPPORT_CATEGORIES = [
 // ---------------------------------------------------------------------------
 
 export type StaffMember = { id: string; name: string };
+export type StaffRole = 'owner' | 'agent';
+export type StaffMemberDetailed = {
+  id: string;
+  name: string;
+  email: string | null;
+  role: StaffRole;
+  addedAt: string;
+};
+export type AddableUser = { id: string; name: string; email: string | null };
 
 export type SupportTicket = {
   id: string;
@@ -146,6 +155,72 @@ export async function listSupportStaff(): Promise<StaffMember[]> {
     id: s.profile_id,
     name: staffName(s.profiles),
   }));
+}
+
+// ---------------------------------------------------------------------------
+// ROSTER MANAGEMENT (owner-only — writes gated by is_support_owner RLS)
+// ---------------------------------------------------------------------------
+
+/** Is the current user an OWNER (can manage the roster)? */
+export async function getIsSupportOwner(): Promise<boolean> {
+  const me = await currentUserId();
+  if (!me) return false;
+  const { data, error } = await supabase.rpc('is_support_owner');
+  if (error) {
+    if (__DEV__) console.warn('is_support_owner check failed', error);
+    return false;
+  }
+  return data === true;
+}
+
+/** Full staff roster with role + email (staff-readable; email via staff RLS). */
+export async function listSupportStaffDetailed(): Promise<StaffMemberDetailed[]> {
+  const { data, error } = await supabase
+    .from('support_staff')
+    .select('profile_id, role, added_at, profiles(first_name, display_name, profiles_private(email))')
+    .order('added_at', { ascending: true });
+  if (error) throw error;
+  return (data ?? []).map((s: any) => ({
+    id: s.profile_id,
+    name: staffName(s.profiles),
+    email: s.profiles?.profiles_private?.email ?? null,
+    role: (s.role as StaffRole) ?? 'agent',
+    addedAt: s.added_at,
+  }));
+}
+
+/** Search community members to add as agents (by name; email shown to staff). */
+export async function searchAddableUsers(query: string): Promise<AddableUser[]> {
+  const q = query.trim();
+  if (q.length < 2) return [];
+  const { data, error } = await supabase
+    .from('profiles')
+    .select('id, first_name, display_name, profiles_private(email)')
+    .or(`first_name.ilike.%${q}%,display_name.ilike.%${q}%`)
+    .limit(20);
+  if (error) throw error;
+  return (data ?? []).map((p: any) => ({
+    id: p.id,
+    name: staffName(p),
+    email: p.profiles_private?.email ?? null,
+  }));
+}
+
+/** Add a member as an agent (owner-only via RLS). */
+export async function addSupportAgent(profileId: string): Promise<void> {
+  const { error } = await supabase
+    .from('support_staff')
+    .insert({ profile_id: profileId, role: 'agent' });
+  if (error && error.code !== '23505') throw error; // ignore already-staff
+}
+
+/** Remove a staff member (owner-only; DB blocks removing the last owner). */
+export async function removeSupportStaff(profileId: string): Promise<void> {
+  const { error } = await supabase
+    .from('support_staff')
+    .delete()
+    .eq('profile_id', profileId);
+  if (error) throw error;
 }
 
 /** All tickets (staff-only via RLS), newest first, with reporter + assignee. */

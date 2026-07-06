@@ -3,6 +3,14 @@ import colors from 'styles/colors';
 
 export default StyleSheet.create({
   container: { flex: 1, paddingHorizontal: 16 },
+  manageLink: {
+    alignSelf: 'flex-end',
+    color: colors.secondary[600],
+    fontWeight: '600',
+    fontSize: 14,
+    marginTop: 6,
+    marginBottom: 2,
+  },
   stats: { flexDirection: 'row', gap: 8, marginTop: 8, marginBottom: 14 },
   stat: {
     flex: 1,

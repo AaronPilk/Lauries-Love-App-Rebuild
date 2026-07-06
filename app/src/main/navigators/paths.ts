@@ -23,6 +23,7 @@ export const PATHS_PROFILE_TAB = {
   profileTabQR: 'profile-tab-qr',
   profileTabSupportInbox: 'profile-tab-support-inbox',
   profileTabSupportTicket: 'profile-tab-support-ticket',
+  profileTabSupportStaff: 'profile-tab-support-staff',
 } as const;
 
 export const PATHS_DONATE_TAB = {

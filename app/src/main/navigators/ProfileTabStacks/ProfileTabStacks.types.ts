@@ -34,4 +34,8 @@ export type RootProfileTabParamList = {
     string,
     string | number | boolean
   > & { ticketId: string };
+  [PATHS_PROFILE_TAB.profileTabSupportStaff]?: Record<
+    string,
+    string | number | boolean
+  >;
 };

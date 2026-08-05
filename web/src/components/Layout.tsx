@@ -25,6 +25,9 @@ export function Layout() {
           <Link to="/donate" className="hover:underline">
             Donate
           </Link>
+          <Link to="/notifications" className="hover:underline">
+            Notifications
+          </Link>
           <Link to="/profile" className="hover:underline">
             Profile
           </Link>

@@ -9,6 +9,8 @@ import { Messages } from './pages/Messages';
 import { Profile } from './pages/Profile';
 import { MapPage } from './pages/MapPage';
 import { Donate } from './pages/Donate';
+import { Notifications } from './pages/Notifications';
+import { Sponsorships } from './pages/Sponsorships';
 import { AdminLayout } from './pages/admin/AdminLayout';
 import { AdminDashboard } from './pages/admin/Dashboard';
 import { AdminFeatures } from './pages/admin/Features';
@@ -43,6 +45,8 @@ export default function App() {
         <Route path="profile" element={<Profile />} />
         <Route path="map" element={<MapPage />} />
         <Route path="donate" element={<Donate />} />
+        <Route path="notifications" element={<Notifications />} />
+        <Route path="sponsors" element={<Sponsorships />} />
       </Route>
 
       {/* Admin console (staff only) */}

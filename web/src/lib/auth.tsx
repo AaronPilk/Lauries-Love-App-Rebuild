@@ -8,7 +8,9 @@ import {
 import type { Session } from '@supabase/supabase-js';
 import { supabase } from './supabase';
 
-type StaffRole = 'admin' | 'moderator' | 'support';
+// Staff source of truth is Jeremy's support_staff table: role = owner | agent.
+// 'owner' is admin-level; any row = staff.
+type StaffRole = 'owner' | 'agent';
 
 type AuthState = {
   session: Session | null;
@@ -39,21 +41,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return () => sub.subscription.unsubscribe();
   }, []);
 
-  // Load staff roles once signed in. The staff_roles table ships in the
-  // pending admin-foundation migration; until it's applied this returns
-  // empty (no admin access) and the app still works as a member.
+  // Load staff roles once signed in, from support_staff (the shared staff
+  // table). No rows = regular member.
   useEffect(() => {
     if (!session?.user?.id) {
       setRoles([]);
       return;
     }
     supabase
-      .from('staff_roles')
+      .from('support_staff')
       .select('role')
       .eq('profile_id', session.user.id)
       .then(({ data, error }) => {
         if (error) {
-          // table not present yet, or no rows — treat as a regular member
           setRoles([]);
           return;
         }
@@ -66,7 +66,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     loading,
     roles,
     isStaff: roles.length > 0,
-    isAdmin: roles.includes('admin'),
+    isAdmin: roles.includes('owner'),
     async signIn(email, password) {
       const { error } = await supabase.auth.signInWithPassword({
         email,

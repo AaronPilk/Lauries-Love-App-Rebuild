@@ -1,5 +1,19 @@
 # Supabase migrations — Backend V2 (project `iwbfsbriippzmdyrsmsu`)
 
+> ⚠️ **REPO ↔ DB DIVERGENCE (2026-08-05).** This project is worked on by more
+> than one developer. After the 7/6 work here, **Jeremy applied 5 migrations
+> directly to the live DB that are NOT in this repo**: `coarsen_profile_coords_v1`,
+> `create_group_cover_v1`, `support_tickets_v1`, `support_staff_and_agent_access_v1`,
+> `support_staff_roles_v1` (support_staff roles = owner|agent; support_tickets
+> uses user_id/category/description/conversation_id). The admin foundation here
+> (`20260805173233_admin_foundation_core_v1.sql`) DEPENDS on `support_staff`, so
+> **a fresh `db push` from this repo will fail** until Jeremy's migrations are
+> committed here and the full sequence is validated on a staging project.
+> **Action before launch:** export the live DB's migration set, commit Jeremy's
+> 5 files, and validate a clean fresh deploy on staging. Coordinate all schema
+> changes with Jeremy so we don't clobber support_staff/support_tickets.
+
+
 Exact copies of every migration applied to the Lauries Love Supabase project,
 exported from `supabase_migrations.schema_migrations` on 2026-07-05. This is
 the complete database contract the client code relies on: schema, triggers,

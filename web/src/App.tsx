@@ -7,6 +7,8 @@ import { Feed } from './pages/Feed';
 import { Groups } from './pages/Groups';
 import { Messages } from './pages/Messages';
 import { Profile } from './pages/Profile';
+import { MapPage } from './pages/MapPage';
+import { Donate } from './pages/Donate';
 import { AdminLayout } from './pages/admin/AdminLayout';
 import { AdminDashboard } from './pages/admin/Dashboard';
 import { AdminFeatures } from './pages/admin/Features';
@@ -39,7 +41,8 @@ export default function App() {
         <Route path="groups" element={<Groups />} />
         <Route path="messages" element={<Messages />} />
         <Route path="profile" element={<Profile />} />
-        {/* Fast-follow: /map, /donate */}
+        <Route path="map" element={<MapPage />} />
+        <Route path="donate" element={<Donate />} />
       </Route>
 
       {/* Admin console (staff only) */}

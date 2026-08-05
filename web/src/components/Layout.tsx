@@ -19,6 +19,12 @@ export function Layout() {
           <Link to="/messages" className="hover:underline">
             Messages
           </Link>
+          <Link to="/map" className="hover:underline">
+            Map
+          </Link>
+          <Link to="/donate" className="hover:underline">
+            Donate
+          </Link>
           <Link to="/profile" className="hover:underline">
             Profile
           </Link>

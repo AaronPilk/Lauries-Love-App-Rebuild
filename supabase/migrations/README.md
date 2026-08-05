@@ -1,17 +1,32 @@
 # Supabase migrations — Backend V2 (project `iwbfsbriippzmdyrsmsu`)
 
-> ⚠️ **REPO ↔ DB DIVERGENCE (2026-08-05).** This project is worked on by more
-> than one developer. After the 7/6 work here, **Jeremy applied 5 migrations
-> directly to the live DB that are NOT in this repo**: `coarsen_profile_coords_v1`,
-> `create_group_cover_v1`, `support_tickets_v1`, `support_staff_and_agent_access_v1`,
-> `support_staff_roles_v1` (support_staff roles = owner|agent; support_tickets
-> uses user_id/category/description/conversation_id). The admin foundation here
-> (`20260805173233_admin_foundation_core_v1.sql`) DEPENDS on `support_staff`, so
-> **a fresh `db push` from this repo will fail** until Jeremy's migrations are
-> committed here and the full sequence is validated on a staging project.
-> **Action before launch:** export the live DB's migration set, commit Jeremy's
-> 5 files, and validate a clean fresh deploy on staging. Coordinate all schema
-> changes with Jeremy so we don't clobber support_staff/support_tickets.
+> **SHARED PROJECT — repo vs DB status (verified 2026-08-05).** This project is
+> worked on by more than one developer (Aaron + Jeremy). **All migrations,
+> including Jeremy's 5 (coarsen_profile_coords_v1, create_group_cover_v1,
+> support_tickets_v1, support_staff_and_agent_access_v1, support_staff_roles_v1),
+> ARE committed here** — the repo is complete. A fresh deploy in filename order
+> reproduces the schema.
+>
+> The only real drift is **filename timestamps**: several files use slightly
+> different timestamps than the live DB's `schema_migrations` recorded (because
+> migrations were applied via the Supabase MCP tool, which assigns its own
+> apply-time), and the `reconcile_staff_to_support_staff_v1` step (drop the
+> duplicate staff_roles, point is_admin/is_staff at support_staff) is folded
+> into `20260805173233_admin_foundation_core_v1.sql` rather than a separate
+> file. Consequence: `supabase db push` against the EXISTING prod project would
+> mis-detect which migrations are applied — this repo has been managed via the
+> MCP tool, not the CLI.
+>
+> **Before switching to CLI-managed migrations / any `db push`:** run
+> `supabase db pull` against `iwbfsbriippzmdyrsmsu` to regenerate a baseline
+> whose filenames match the live history exactly, then validate a clean fresh
+> deploy on a staging project. Until then, apply schema via the MCP tool and
+> keep committing the SQL here. Coordinate schema changes with Jeremy
+> (support_staff / support_tickets / is_support_* are his).
+>
+> Note: there is light helper-function duplication to consolidate later —
+> Aaron's is_admin()/is_staff() and Jeremy's is_support_owner()/is_support_staff()
+> both read support_staff and do the same thing.
 
 
 Exact copies of every migration applied to the Lauries Love Supabase project,

@@ -24,7 +24,8 @@ async function fetchTickets(): Promise<Ticket[]> {
   return data ?? [];
 }
 
-const STATUSES = ['open', 'pending', 'closed'];
+// Must match Jeremy's support_tickets CHECK constraint.
+const STATUSES = ['open', 'in_progress', 'closed'];
 
 export function AdminSupportInbox() {
   const qc = useQueryClient();

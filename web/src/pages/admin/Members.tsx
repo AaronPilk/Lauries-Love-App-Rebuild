@@ -5,9 +5,10 @@ import { useAuth } from '../../lib/auth';
 
 // Member management: search, alphabetical sort, and (owners only) grant/revoke
 // staff roles by writing Jeremy's support_staff table (owner | agent).
-// NOTE: member email/phone live in profiles_private (owner-only by our privacy
-// model), so they are intentionally NOT listed here. If staff need contact
-// details for support, add a staff-readable view later — a deliberate decision.
+// NOTE: member email/phone live in profiles_private. Jeremy's pp_select_staff
+// policy already lets SUPPORT STAFF read them (for contact during support), so
+// a staff-readable contact column can be added here by joining profiles_private
+// — left out of this first pass for a clean list; easy to add.
 type Member = {
   id: string;
   first_name: string | null;

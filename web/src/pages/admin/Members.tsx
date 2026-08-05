@@ -1,0 +1,147 @@
+import { useState } from 'react';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { supabase } from '../../lib/supabase';
+import { useAuth } from '../../lib/auth';
+
+// Member management: search, alphabetical sort, and (owners only) grant/revoke
+// staff roles by writing Jeremy's support_staff table (owner | agent).
+// NOTE: member email/phone live in profiles_private (owner-only by our privacy
+// model), so they are intentionally NOT listed here. If staff need contact
+// details for support, add a staff-readable view later — a deliberate decision.
+type Member = {
+  id: string;
+  first_name: string | null;
+  last_name: string | null;
+  display_name: string | null;
+  avatar_path: string | null;
+  active: boolean;
+  created_at: string;
+};
+type StaffRow = { profile_id: string; role: 'owner' | 'agent' };
+
+async function fetchMembers(search: string): Promise<Member[]> {
+  let q = supabase
+    .from('profiles')
+    .select('id, first_name, last_name, display_name, avatar_path, active, created_at')
+    .order('display_name', { ascending: true, nullsFirst: false })
+    .limit(200);
+  if (search.trim()) {
+    const s = `%${search.trim()}%`;
+    q = q.or(`display_name.ilike.${s},first_name.ilike.${s},last_name.ilike.${s}`);
+  }
+  const { data, error } = await q;
+  if (error) throw error;
+  return data ?? [];
+}
+
+async function fetchStaff(): Promise<Record<string, 'owner' | 'agent'>> {
+  const { data } = await supabase.from('support_staff').select('profile_id, role');
+  const map: Record<string, 'owner' | 'agent'> = {};
+  (data ?? []).forEach((r: StaffRow) => (map[r.profile_id] = r.role));
+  return map;
+}
+
+export function AdminMembers() {
+  const { isAdmin } = useAuth();
+  const qc = useQueryClient();
+  const [search, setSearch] = useState('');
+
+  const members = useQuery({
+    queryKey: ['members', search],
+    queryFn: () => fetchMembers(search),
+  });
+  const staff = useQuery({ queryKey: ['staff-map'], queryFn: fetchStaff });
+
+  const setRole = useMutation({
+    mutationFn: async (v: { id: string; role: 'owner' | 'agent' | null }) => {
+      if (v.role === null) {
+        const { error } = await supabase
+          .from('support_staff')
+          .delete()
+          .eq('profile_id', v.id);
+        if (error) throw error;
+      } else {
+        const { error } = await supabase
+          .from('support_staff')
+          .upsert({ profile_id: v.id, role: v.role });
+        if (error) throw error;
+      }
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['staff-map'] }),
+  });
+
+  const staffMap = staff.data ?? {};
+
+  return (
+    <div>
+      <h1 className="mb-1 text-xl font-bold text-brand-700">Members</h1>
+      <p className="mb-4 text-sm text-gray-500">
+        Search and manage members. {isAdmin ? 'You can grant staff roles.' : 'Owner access required to change roles.'}
+      </p>
+      <input
+        value={search}
+        onChange={(e) => setSearch(e.target.value)}
+        placeholder="Search by name…"
+        className="mb-4 w-full max-w-sm rounded-lg border border-gray-300 px-3 py-2 text-sm outline-none focus:border-brand-500"
+      />
+      {members.isLoading && <p className="text-brand-700">Loading…</p>}
+      <table className="w-full text-sm">
+        <thead>
+          <tr className="border-b text-left text-xs uppercase text-gray-400">
+            <th className="py-2">Member</th>
+            <th>Joined</th>
+            <th>Status</th>
+            <th>Role</th>
+            {isAdmin && <th></th>}
+          </tr>
+        </thead>
+        <tbody>
+          {(members.data ?? []).map((m) => {
+            const name = m.display_name || m.first_name || 'Member';
+            const role = staffMap[m.id];
+            return (
+              <tr key={m.id} className="border-b last:border-0">
+                <td className="py-2 font-medium">{name}</td>
+                <td className="text-gray-500">
+                  {new Date(m.created_at).toLocaleDateString()}
+                </td>
+                <td>
+                  <span className={m.active ? 'text-green-600' : 'text-gray-400'}>
+                    {m.active ? 'Active' : 'Inactive'}
+                  </span>
+                </td>
+                <td>
+                  {role ? (
+                    <span className="rounded-full bg-brand-100 px-2 py-0.5 text-xs font-semibold text-brand-700">
+                      {role}
+                    </span>
+                  ) : (
+                    <span className="text-gray-400">member</span>
+                  )}
+                </td>
+                {isAdmin && (
+                  <td className="py-2 text-right">
+                    <select
+                      value={role ?? ''}
+                      onChange={(e) =>
+                        setRole.mutate({
+                          id: m.id,
+                          role: (e.target.value || null) as 'owner' | 'agent' | null,
+                        })
+                      }
+                      className="rounded border border-gray-300 px-2 py-1 text-xs"
+                    >
+                      <option value="">member</option>
+                      <option value="agent">agent</option>
+                      <option value="owner">owner</option>
+                    </select>
+                  </td>
+                )}
+              </tr>
+            );
+          })}
+        </tbody>
+      </table>
+    </div>
+  );
+}

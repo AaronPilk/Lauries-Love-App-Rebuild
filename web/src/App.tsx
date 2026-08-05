@@ -7,6 +7,9 @@ import { Feed } from './pages/Feed';
 import { AdminLayout } from './pages/admin/AdminLayout';
 import { AdminDashboard } from './pages/admin/Dashboard';
 import { AdminFeatures } from './pages/admin/Features';
+import { AdminMembers } from './pages/admin/Members';
+import { AdminModeration } from './pages/admin/Moderation';
+import { AdminSupportInbox } from './pages/admin/SupportInbox';
 
 export default function App() {
   const { loading } = useAuth();
@@ -43,8 +46,11 @@ export default function App() {
         }
       >
         <Route index element={<AdminDashboard />} />
+        <Route path="members" element={<AdminMembers />} />
+        <Route path="support" element={<AdminSupportInbox />} />
+        <Route path="moderation" element={<AdminModeration />} />
         <Route path="features" element={<AdminFeatures />} />
-        {/* Fast-follow: members, support inbox, moderation queue, settings */}
+        {/* Fast-follow: groups mgmt, branding/settings, custom profile fields */}
       </Route>
 
       <Route path="*" element={<Navigate to="/" replace />} />

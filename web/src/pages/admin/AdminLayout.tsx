@@ -3,8 +3,11 @@ import { useAuth } from '../../lib/auth';
 
 const nav = [
   { to: '/admin', label: 'Dashboard', end: true },
+  { to: '/admin/members', label: 'Members', end: false },
+  { to: '/admin/support', label: 'Support Inbox', end: false },
+  { to: '/admin/moderation', label: 'Moderation', end: false },
   { to: '/admin/features', label: 'Feature Toggles', end: false },
-  // Fast-follow: Members, Support Inbox, Moderation Queue, Groups, Settings
+  // Fast-follow: Groups, Branding/Settings, Custom Profile Fields
 ];
 
 export function AdminLayout() {

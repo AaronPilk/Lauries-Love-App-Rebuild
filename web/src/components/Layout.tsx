@@ -13,6 +13,15 @@ export function Layout() {
           <Link to="/" className="hover:underline">
             Community
           </Link>
+          <Link to="/groups" className="hover:underline">
+            Groups
+          </Link>
+          <Link to="/messages" className="hover:underline">
+            Messages
+          </Link>
+          <Link to="/profile" className="hover:underline">
+            Profile
+          </Link>
           {isStaff && (
             <Link to="/admin" className="rounded bg-white/15 px-3 py-1">
               Admin

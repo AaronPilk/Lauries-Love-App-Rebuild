@@ -4,6 +4,9 @@ import { Layout } from './components/Layout';
 import { ProtectedRoute } from './components/ProtectedRoute';
 import { Login } from './pages/Login';
 import { Feed } from './pages/Feed';
+import { Groups } from './pages/Groups';
+import { Messages } from './pages/Messages';
+import { Profile } from './pages/Profile';
 import { AdminLayout } from './pages/admin/AdminLayout';
 import { AdminDashboard } from './pages/admin/Dashboard';
 import { AdminFeatures } from './pages/admin/Features';
@@ -33,7 +36,10 @@ export default function App() {
         }
       >
         <Route index element={<Feed />} />
-        {/* Fast-follow: /groups, /messages, /map, /profile, /donate */}
+        <Route path="groups" element={<Groups />} />
+        <Route path="messages" element={<Messages />} />
+        <Route path="profile" element={<Profile />} />
+        {/* Fast-follow: /map, /donate */}
       </Route>
 
       {/* Admin console (staff only) */}

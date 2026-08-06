@@ -1,6 +1,5 @@
 import { registerRootComponent } from 'expo';
 import { LogBox } from 'react-native';
-import * as Sentry from '@sentry/react-native';
 import 'react-native-get-random-values';
 import 'react-native-url-polyfill/auto';
 

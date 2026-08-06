@@ -1,4 +1,4 @@
-import * as Sentry from '@sentry/react-native';
+import * as Sentry from 'services/sentry.shim';
 
 const DEFAULT_SENTRY_SETTINGS = {
   dsn: process.env.EXPO_PUBLIC_SENTRY_DSN,

@@ -2,7 +2,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { LogBox, StyleSheet } from 'react-native';
 import { I18nextProvider } from 'react-i18next';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import * as Sentry from '@sentry/react-native';
+import * as Sentry from 'services/sentry.shim';
 import SplashScreen from 'react-native-splash-screen';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { useFonts } from 'expo-font';

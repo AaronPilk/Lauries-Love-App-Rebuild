@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { captureException } from '@sentry/react-native';
+import { captureException } from 'services/sentry.shim';
 import React, {
   createContext,
   FunctionComponent,

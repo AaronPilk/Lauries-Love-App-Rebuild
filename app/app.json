@@ -138,14 +138,6 @@
       ],
       "react-native-video",
       [
-        "@sentry/react-native/expo",
-        {
-          "url": "https://sentry.io/",
-          "project": "laurieslove-app",
-          "organization": "your-sentry-org"
-        }
-      ],
-      [
         "@stripe/stripe-react-native",
         {
           "merchantIdentifier": [

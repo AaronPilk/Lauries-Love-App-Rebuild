@@ -1,6 +1,6 @@
 import { Platform } from 'react-native';
 // import { useSelector } from 'react-redux';
-import { captureException } from '@sentry/react-native';
+import { captureException } from 'services/sentry.shim';
 import React, {
   createContext,
   Dispatch,

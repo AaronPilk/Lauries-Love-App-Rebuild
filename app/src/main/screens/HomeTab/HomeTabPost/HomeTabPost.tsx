@@ -17,6 +17,7 @@ import {
   ActivityIndicator,
   InteractionManager,
   Image,
+  Alert,
 } from 'react-native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import {
@@ -42,6 +43,10 @@ import { useSendBirdPostsProvider } from 'providers/SendBirdPostsProvider/SendBi
 import BackgroundScreen from 'components/BackgroundScreen/BackgroundScreen';
 import AvatarMessagesTab from 'main/screens/MessagesTab/components/AvatarMessagesTab/AvatarMessagesTab';
 import LoadingLine from 'components/LoadingLine/LoadingLine';
+import RichText from 'components/RichText/RichText';
+
+// constants
+import { PATHS_HOME_TAB } from 'main/navigators/paths';
 
 // utils
 import { customShowError } from 'utils/other';
@@ -67,7 +72,12 @@ import { getOriginalImageUrl } from 'utils/imageUrlUtils';
 
 // backend v2
 import { SUPABASE_ENABLED } from 'services/supabase/backend.config';
-import { sendComment, toggleReactionOn } from 'services/supabase/supabase.social';
+import {
+  sendComment,
+  toggleReactionOn,
+  deletePost,
+  reportContent,
+} from 'services/supabase/supabase.social';
 
 type HomeTabPostProps = {
   navigation: NativeStackNavigationProp<RootHomeTabParamList>;
@@ -126,6 +136,77 @@ const HomeTabPost: FunctionComponent<HomeTabPostProps> = ({ navigation }) => {
   );
 
   const [userPost, ...restComments] = useMemo(() => comments, [comments]);
+
+  // Post author id (Supabase mode: sender ids are profile ids). Drives the
+  // author options menu — own post => Delete, someone else's => Report.
+  const postAuthorId = useMemo(
+    () => (userPost?.sender?.metaData as MetaDataUserSendBirdType)?.id ?? '',
+    [userPost?.sender],
+  );
+  const isOwnPost = useMemo(
+    () => !!postAuthorId && postAuthorId === userID,
+    [postAuthorId, userID],
+  );
+
+  const handleDeletePost = useCallback(() => {
+    const channelUrl = route.params?.channelUrl;
+    if (!channelUrl) return;
+    Alert.alert(
+      'Delete post',
+      'This permanently removes your post and its replies. This cannot be undone.',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Delete',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              await deletePost(channelUrl);
+              showToast({ type: 'success', message: 'Post deleted' });
+              getPosts();
+              navigation.goBack();
+            } catch (error) {
+              customShowError({ error, showToast });
+            }
+          },
+        },
+      ],
+    );
+  }, [route.params?.channelUrl, showToast, getPosts, navigation]);
+
+  const handleReportPost = useCallback(() => {
+    const channelUrl = route.params?.channelUrl;
+    if (!channelUrl) return;
+    const submit = async (reason: string) => {
+      try {
+        await reportContent('post', channelUrl, reason);
+        showToast({
+          type: 'success',
+          message: 'Thanks — our team will review this post.',
+        });
+      } catch (error) {
+        customShowError({ error, showToast });
+      }
+    };
+    Alert.alert('Report post', 'Why are you reporting this post?', [
+      { text: 'Cancel', style: 'cancel' },
+      { text: 'Spam', onPress: () => submit('Spam') },
+      { text: 'Harassment or bullying', onPress: () => submit('Harassment') },
+      {
+        text: 'Inappropriate content',
+        onPress: () => submit('Inappropriate content'),
+      },
+    ]);
+  }, [route.params?.channelUrl, showToast]);
+
+  const handlePostOptions = useCallback(() => {
+    if (!SUPABASE_ENABLED || !userPost) return;
+    if (isOwnPost) {
+      handleDeletePost();
+    } else {
+      handleReportPost();
+    }
+  }, [userPost, isOwnPost, handleDeletePost, handleReportPost]);
 
   const isReactionUserPost = useMemo(
     () => reactions[userPost?.messageId]?.some(reaction => reaction === userID),
@@ -329,6 +410,33 @@ const HomeTabPost: FunctionComponent<HomeTabPostProps> = ({ navigation }) => {
     return;
   };
 
+  // #hashtag tap -> community wall search for that tag. @mention tap -> that
+  // member's profile (best-effort resolve by name against the loaded users).
+  const onHashtagPress = useCallback(
+    (tag: string) => {
+      navigation.navigate(PATHS_HOME_TAB.homeTabMain, { initialSearch: tag });
+    },
+    [navigation],
+  );
+
+  const onMentionPress = useCallback(
+    (handle: string) => {
+      const norm = handle.replace(/[._]/g, '').toLowerCase();
+      const match = (usersData?.data as User[] | undefined)?.find(u => {
+        const dn = (u as any).displayName?.replace(/\s|[._]/g, '').toLowerCase();
+        const fn = u.firstName?.replace(/\s|[._]/g, '').toLowerCase();
+        return dn === norm || fn === norm;
+      });
+      if (match) {
+        navigationRedirect.navigate('Connect', {
+          screen: 'DetailView',
+          params: { user: match, fromExternal: true },
+        });
+      }
+    },
+    [usersData?.data, navigationRedirect],
+  );
+
   const onFocusInput = () => {
     const timeout = setTimeout(() => {
       inputRef.current?.focus();
@@ -392,12 +500,30 @@ const HomeTabPost: FunctionComponent<HomeTabPostProps> = ({ navigation }) => {
                 <IconArrowLeft width={30} height={30} />
               </TouchableOpacity>
               {/* <Text style={styles.titleHeader}>Comment</Text> */}
-              <TouchableOpacity
-                disabled
-                style={[styles.backButton, styles.backButtonHide]}
-              >
-                <IconArrowLeft width={30} height={30} />
-              </TouchableOpacity>
+              {SUPABASE_ENABLED && userPost ? (
+                <TouchableOpacity
+                  onPress={handlePostOptions}
+                  style={styles.backButton}
+                  hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+                >
+                  <Text
+                    style={{
+                      fontSize: 26,
+                      lineHeight: 30,
+                      color: colors.neutral[900],
+                    }}
+                  >
+                    {'⋯'}
+                  </Text>
+                </TouchableOpacity>
+              ) : (
+                <TouchableOpacity
+                  disabled
+                  style={[styles.backButton, styles.backButtonHide]}
+                >
+                  <IconArrowLeft width={30} height={30} />
+                </TouchableOpacity>
+              )}
             </View>
 
             {loadingServer ? (
@@ -482,7 +608,13 @@ const HomeTabPost: FunctionComponent<HomeTabPostProps> = ({ navigation }) => {
                     />
                   )}
 
-                  <Text style={styles.postText}>{userPost.message}</Text>
+                  <RichText
+                    text={userPost.message ?? ''}
+                    style={styles.postText}
+                    onHashtagPress={onHashtagPress}
+                    onMentionPress={onMentionPress}
+                  />
+
 
                   <View style={styles.postFooter}>
                     <TouchableOpacity

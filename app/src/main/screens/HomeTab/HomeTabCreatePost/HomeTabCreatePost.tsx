@@ -25,6 +25,7 @@ import { RootHomeTabParamList } from 'main/navigators/HomeTabStacks/HomeTabStack
 import { useToastProvider } from 'providers/ToastProvider/ToastProvider';
 import { useUserDBProvider } from 'providers/UserDBProvider/UserDBProvider';
 import { useSendBirdPostsProvider } from 'providers/SendBirdPostsProvider/SendBirdPostsProvider';
+import { useGetUsersReq } from 'presentation/services/react-query/user.query';
 
 // backend v2
 import { SUPABASE_ENABLED } from 'services/supabase/backend.config';
@@ -73,8 +74,52 @@ const HomeTabCreatePost: FunctionComponent<HomeTabCreatePostProps> = ({
   const [isLoading, setIsLoading] = useState(false);
   const { userDB } = useUserDBProvider();
   const { getPosts } = useSendBirdPostsProvider();
+  const { data: usersData } = useGetUsersReq();
 
   const isActionButtonActive = useMemo(() => postText.length > 0, [postText]);
+
+  // --- @mentions -----------------------------------------------------------
+  // Selected mentions this session: single-token handle (name w/o spaces) ->
+  // profile id. On post we keep only the ones whose @handle still appears.
+  const [selectedMentions, setSelectedMentions] = useState<
+    { id: string; handle: string }[]
+  >([]);
+
+  const myId = userDB?.id ?? userDB?.cognitoId ?? '';
+  const mentionCandidates = useMemo(() => {
+    const list = (usersData?.data ?? []) as any[];
+    return list
+      .filter(u => u?.id && u.id !== myId)
+      .map(u => {
+        const name = (u.displayName || u.firstName || 'Member') as string;
+        return { id: u.id as string, name, handle: name.replace(/\s+/g, '') };
+      });
+  }, [usersData?.data, myId]);
+
+  // The active partial being typed: a trailing "@word" at the caret/end.
+  const mentionPartial = useMemo(() => {
+    const m = /@([A-Za-z0-9_.]*)$/.exec(postText);
+    return m ? m[1] : null;
+  }, [postText]);
+
+  const mentionSuggestions = useMemo(() => {
+    if (mentionPartial === null) return [];
+    const q = mentionPartial.toLowerCase();
+    return mentionCandidates
+      .filter(c =>
+        q ? c.handle.toLowerCase().includes(q) || c.name.toLowerCase().includes(q) : true,
+      )
+      .slice(0, 6);
+  }, [mentionPartial, mentionCandidates]);
+
+  const onSelectMention = (c: { id: string; handle: string }) => {
+    // Replace the trailing "@partial" with "@handle ".
+    setPostText(prev => prev.replace(/@([A-Za-z0-9_.]*)$/, `@${c.handle} `));
+    setSelectedMentions(prev =>
+      prev.some(m => m.id === c.id) ? prev : [...prev, c],
+    );
+    inputRef.current?.focus();
+  };
 
   const [showUploadModal, setShowUploadModal] = useState(false);
   const [selectedImage, setSelectedImage] = useState<ImageUploadItem | null>(
@@ -112,7 +157,11 @@ const HomeTabCreatePost: FunctionComponent<HomeTabCreatePostProps> = ({
                 ),
               ].filter(Boolean) as string[])
             : [];
-        await createPost(postText, { imagePath, audienceTags });
+        // Keep only mentions whose @handle still appears in the final body.
+        const mentionIds = selectedMentions
+          .filter(m => postText.includes(`@${m.handle}`))
+          .map(m => m.id);
+        await createPost(postText, { imagePath, audienceTags, mentionIds });
         getPosts();
         navigation.navigate(PATHS_HOME_TAB.homeTabMain);
         setIsLoading(false);
@@ -215,6 +264,38 @@ const HomeTabCreatePost: FunctionComponent<HomeTabCreatePostProps> = ({
                   onLayout={() => setReadyInput(true)}
                 />
               </View>
+              {mentionSuggestions.length > 0 && (
+                <View
+                  style={{
+                    marginTop: 4,
+                    marginLeft: 61,
+                    marginRight: 12,
+                    backgroundColor: colors.neutral[100],
+                    borderRadius: 12,
+                    borderWidth: 1,
+                    borderColor: colors.neutral[300],
+                    overflow: 'hidden',
+                  }}
+                >
+                  {mentionSuggestions.map((c, idx) => (
+                    <TouchableOpacity
+                      key={c.id}
+                      onPress={() => onSelectMention(c)}
+                      style={{
+                        paddingVertical: 10,
+                        paddingHorizontal: 14,
+                        borderTopWidth: idx === 0 ? 0 : 1,
+                        borderTopColor: colors.neutral[200],
+                      }}
+                    >
+                      <Text style={{ color: colors.neutral[900] }}>
+                        <Text style={{ color: colors.primary[600] }}>@</Text>
+                        {c.name}
+                      </Text>
+                    </TouchableOpacity>
+                  ))}
+                </View>
+              )}
               {selectedImage && (
                 <View style={styles.imageCont}>
                   <View style={styles.imageShadow}>

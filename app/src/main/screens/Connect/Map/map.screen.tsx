@@ -1,5 +1,5 @@
 import * as Location from 'expo-location';
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import MapView, { Marker, PROVIDER_GOOGLE, Region } from 'react-native-maps';
 import {
   RouteProp,
@@ -114,6 +114,48 @@ function offsetOverlappingMarkers(users: User[]) {
     .flat();
 }
 
+// Manual grid clustering (state -> city -> individual falls out of the cell
+// size shrinking as you zoom in). Chosen over supercluster so no new native/JS
+// dependency has to be installed for the bundle to build. Users in the same
+// grid cell collapse into one count bubble; tapping it zooms into that cell.
+type Cluster = {
+  id: string;
+  latitude: number;
+  longitude: number;
+  count: number;
+  users: User[];
+};
+
+function buildClusters(users: User[], lngDelta: number): Cluster[] {
+  // Cell size scales with zoom: wide view -> big cells (state-level bubbles),
+  // tight view -> tiny cells (individual pins). Clamped so it never degenerates.
+  const cell = Math.min(Math.max(lngDelta / 6, 0.02), 12);
+  const grid = new Map<
+    string,
+    { users: User[]; latSum: number; lngSum: number }
+  >();
+
+  users.forEach(u => {
+    const lat = u.geoLocation?.latitude;
+    const lng = u.geoLocation?.longitude;
+    if (lat == null || lng == null) return;
+    const key = `${Math.floor(lat / cell)}:${Math.floor(lng / cell)}`;
+    const g = grid.get(key) ?? { users: [], latSum: 0, lngSum: 0 };
+    g.users.push(u);
+    g.latSum += lat;
+    g.lngSum += lng;
+    grid.set(key, g);
+  });
+
+  return [...grid.values()].map(g => ({
+    id: g.users[0].id,
+    latitude: g.latSum / g.users.length,
+    longitude: g.lngSum / g.users.length,
+    count: g.users.length,
+    users: g.users,
+  }));
+}
+
 export default function MapScreen() {
   const isFocused = useIsFocused();
   const navigation = useNavigation();
@@ -170,6 +212,10 @@ export default function MapScreen() {
     longitudeDelta: 50.0,
   });
   const [region, setRegion] = useState<Region>();
+  // Tracks the visible region on EVERY change (even when zoomed past the fetch
+  // threshold) purely to drive cluster cell sizing — kept separate from
+  // `region` so the users_in_bbox fetch behavior is unchanged.
+  const [viewRegion, setViewRegion] = useState<Region>();
   const [isShowMarkers, setIsShowMarkers] = useState(false);
   // Viewport-aware: only profiles inside the visible region are fetched
   // (users_in_bbox RPC) — scales to any community size. The hook keeps the
@@ -418,6 +464,7 @@ export default function MapScreen() {
   }
 
   function handleRegionChangeComplete(newRegion: Region) {
+    setViewRegion(newRegion); // always — drives cluster granularity
     const isZoomedIn = newRegion.longitudeDelta < MIN_LONGITUDE_DELTA;
     if (isRegionOutOfThreshold(newRegion)) setIsCurrentLocation(false);
     if (!isZoomedIn) setRegion(newRegion);
@@ -476,23 +523,93 @@ export default function MapScreen() {
   // keystrokes, region changes, "my location" toggles) don't rebuild the whole
   // Marker tree on every render. Rebuilds only when the visible friends set
   // or the show flag changes. setUser is a stable useState setter.
+  // Hierarchical clusters (state -> city -> individual) derived from the
+  // filtered users at the current zoom. Cell size shrinks as you zoom in, so
+  // bubbles progressively split until single members become pins.
+  const clusters = useMemo(() => {
+    const lngDelta =
+      viewRegion?.longitudeDelta ?? initialRegion.longitudeDelta ?? 50;
+    return buildClusters(friends ?? [], lngDelta);
+  }, [friends, viewRegion?.longitudeDelta, initialRegion.longitudeDelta]);
+
+  // Tap a count bubble -> zoom into that cell (roughly 1/3 the current span),
+  // which re-clusters at the finer granularity. The existing users_in_bbox
+  // fetch (via region change) keeps supplying the members in view.
+  const handleClusterPress = useCallback(
+    (cluster: Cluster) => {
+      const currentDelta =
+        viewRegion?.longitudeDelta ?? initialRegion.longitudeDelta ?? 10;
+      const nextDelta = Math.max(currentDelta / 3, MIN_LONGITUDE_DELTA);
+      mapRef.current?.animateToRegion(
+        {
+          latitude: cluster.latitude,
+          longitude: cluster.longitude,
+          latitudeDelta: nextDelta,
+          longitudeDelta: nextDelta,
+        },
+        600,
+      );
+    },
+    [viewRegion?.longitudeDelta, initialRegion.longitudeDelta],
+  );
+
   const markers = useMemo(() => {
     if (!isShowMarkers) return null;
 
-    return friends?.map(friend => {
-      if (!friend.location && !friend.geoLocation) return [];
+    return clusters.map(cluster => {
+      // Multi-member cell -> a count bubble that zooms in on tap.
+      if (cluster.count > 1) {
+        const size =
+          cluster.count >= 100 ? 56 : cluster.count >= 10 ? 48 : 40;
+        return (
+          <Marker
+            key={`cluster-${cluster.id}-${cluster.count}`}
+            tracksViewChanges={false}
+            coordinate={{
+              latitude: cluster.latitude,
+              longitude: cluster.longitude,
+            }}
+            zIndex={2}
+            style={{ backgroundColor: colors.transparent }}
+            onPress={e => {
+              e.stopPropagation();
+              handleClusterPress(cluster);
+            }}
+          >
+            <View
+              style={{
+                width: size,
+                height: size,
+                borderRadius: size / 2,
+                backgroundColor: colors.primary[500],
+                borderWidth: 2,
+                borderColor: colors.neutral[100],
+                alignItems: 'center',
+                justifyContent: 'center',
+              }}
+            >
+              <Text
+                style={{
+                  color: colors.neutral[100],
+                  fontWeight: '700',
+                  fontSize: cluster.count >= 100 ? 14 : 15,
+                }}
+              >
+                {cluster.count >= 1000
+                  ? `${Math.floor(cluster.count / 1000)}k+`
+                  : cluster.count}
+              </Text>
+            </View>
+          </Marker>
+        );
+      }
+
+      // Single member -> the existing user pin (with selection highlight).
+      const friend = cluster.users[0];
       const isSelected = friend.id === user?.id;
       return (
         <Marker
-          // Include selection in the key so ONLY the two markers whose state
-          // changed (previously-selected → normal, newly-selected → highlighted)
-          // remount. Needed because tracksViewChanges={false} otherwise caches
-          // the native marker view and wouldn't reflect the highlight.
           key={`${friend.id}-${isSelected ? 'sel' : 'norm'}`}
-          // Rebuild fix (P1 perf): static image markers never need view
-          // tracking. The old onLayout toggled tracksView state per
-          // marker, re-rendering ALL markers in a feedback loop that
-          // dragged the JS thread down app-wide.
           tracksViewChanges={false}
           coordinate={{
             latitude:
@@ -500,7 +617,6 @@ export default function MapScreen() {
             longitude:
               friend.location?.longitude || friend.geoLocation?.longitude || 0,
           }}
-          // Selected pin sits on top of its neighbours.
           zIndex={isSelected ? 999 : 1}
           style={{ opacity: 1, backgroundColor: colors.transparent }}
           onPress={e => {
@@ -524,7 +640,7 @@ export default function MapScreen() {
         </Marker>
       );
     });
-  }, [isShowMarkers, friends, user?.id]);
+  }, [isShowMarkers, clusters, user?.id, handleClusterPress]);
 
   if (isLoading || !isFocused) {
     // Branded loading screen (user-requested): logo + progress bar instead

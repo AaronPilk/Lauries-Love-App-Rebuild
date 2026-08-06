@@ -24,23 +24,17 @@ const senderFromProfile = (p: any) => {
 // FEED
 // ---------------------------------------------------------------------------
 
+// Shared feed-post select: post + author + group name + comment count. Used by
+// getFeedPosts, getPostsByUser and searchPosts so all three render identically.
+const FEED_POST_SELECT =
+  '*, author:profiles!posts_author_id_fkey(id, first_name, display_name, avatar_path), group:groups(name), comments(count)';
+
 /**
- * Posts shaped like the legacy Sendbird "post channels".
- * `before` is a created_at cursor (ISO string) for keyset pagination — pass
- * the oldest loaded post's created_at to fetch the next page (infinite
- * scroll plumbing; no UI wired yet).
+ * Map raw post rows (already fetched with FEED_POST_SELECT) into the legacy
+ * Sendbird "post channel" shapes the feed screens expect. Extracted so search
+ * and profile-post lists reuse the exact same mapping as the main feed.
  */
-export async function getFeedPosts(limit = 50, before?: string) {
-  let query = supabase
-    .from('posts')
-    .select(
-      '*, author:profiles!posts_author_id_fkey(id, first_name, display_name, avatar_path), group:groups(name), comments(count)',
-    );
-  if (before) query = query.lt('created_at', before);
-  const { data: posts, error } = await query
-    .order('created_at', { ascending: false })
-    .limit(limit);
-  if (error) throw error;
+async function mapPostRowsToChannels(posts: any[]) {
   if (!posts || posts.length === 0) return [];
 
   const postIds = posts.map(p => p.id);
@@ -103,6 +97,60 @@ export async function getFeedPosts(limit = 50, before?: string) {
   }));
 }
 
+/**
+ * Posts shaped like the legacy Sendbird "post channels".
+ * `before` is a created_at cursor (ISO string) for keyset pagination — pass
+ * the oldest loaded post's created_at to fetch the next page.
+ */
+export async function getFeedPosts(limit = 50, before?: string) {
+  let query = supabase.from('posts').select(FEED_POST_SELECT);
+  if (before) query = query.lt('created_at', before);
+  const { data: posts, error } = await query
+    .order('created_at', { ascending: false })
+    .limit(limit);
+  if (error) throw error;
+  return mapPostRowsToChannels(posts ?? []);
+}
+
+// ---------------------------------------------------------------------------
+// TEXT HELPERS — hashtags + mentions
+// ---------------------------------------------------------------------------
+
+// Shared token patterns (keep in sync with the SQL trigger in
+// 20260806120000_community_features_v1.sql). Global+capture for extraction.
+const HASHTAG_RE = /#([A-Za-z0-9_]{1,50})/g;
+const MENTION_RE = /@([A-Za-z0-9_.]{1,50})/g;
+
+/** Unique, lowercased hashtags found in a body (without the leading '#'). */
+export function extractHashtags(text: string): string[] {
+  const out = new Set<string>();
+  for (const m of (text ?? '').matchAll(HASHTAG_RE)) out.add(m[1].toLowerCase());
+  return [...out];
+}
+
+/** Unique @-handles found in a body (without the leading '@'), original case. */
+export function extractMentionHandles(text: string): string[] {
+  const out = new Set<string>();
+  for (const m of (text ?? '').matchAll(MENTION_RE)) out.add(m[1]);
+  return [...out];
+}
+
+/**
+ * Record @mentions for a post (the composer resolves handles -> profile ids and
+ * passes the ids here). Inserts into post_mentions; the DB trigger fans out a
+ * NEW_MENTION notification. Best-effort — a failed mention insert must not fail
+ * the post itself, so callers can ignore rejections.
+ */
+export async function recordPostMentions(postId: string, profileIds: string[]) {
+  const ids = [...new Set((profileIds ?? []).filter(Boolean))];
+  if (ids.length === 0) return;
+  const rows = ids.map(id => ({ post_id: postId, mentioned_profile_id: id }));
+  const { error } = await supabase
+    .from('post_mentions')
+    .upsert(rows, { onConflict: 'post_id,mentioned_profile_id' });
+  if (error && error.code !== '23505') throw error;
+}
+
 export async function createPost(
   body: string,
   options?: {
@@ -110,6 +158,8 @@ export async function createPost(
     imagePath?: string | null;
     /** legacy "My Groups" audience: role/diagnosis tag names, lowercased */
     audienceTags?: string[];
+    /** resolved profile ids for @mentions in the body (composer supplies) */
+    mentionIds?: string[];
   },
 ) {
   const me = await uid();
@@ -129,7 +179,99 @@ export async function createPost(
     .select()
     .single();
   if (error) throw error;
+
+  // Record @mentions -> DB trigger sends each mentioned user a NEW_MENTION
+  // notification. Best-effort: never fail a successful post over a mention.
+  if (data?.id && (options?.mentionIds?.length ?? 0) > 0) {
+    try {
+      await recordPostMentions(data.id, options!.mentionIds!);
+    } catch (e) {
+      if (__DEV__) console.warn('[supabase] recordPostMentions failed', e);
+    }
+  }
   return data;
+}
+
+/**
+ * Delete one of the caller's OWN posts. RLS (posts_delete) enforces ownership;
+ * a DB trigger cleans up the post's likes + its comments' likes, and FKs
+ * cascade the comments/hashtags/mentions.
+ */
+export async function deletePost(postId: string) {
+  const { error } = await supabase.from('posts').delete().eq('id', postId);
+  if (error) throw error;
+  return true;
+}
+
+/** A member's "joined" date (profiles.created_at). Null if not visible. */
+export async function getMemberJoinedAt(
+  userId: string,
+): Promise<string | null> {
+  const { data, error } = await supabase
+    .from('profiles')
+    .select('created_at')
+    .eq('id', userId)
+    .maybeSingle();
+  if (error) throw error;
+  return data?.created_at ?? null;
+}
+
+/** Posts authored by one user, newest first — legacy feed-channel shapes. */
+export async function getPostsByUser(userId: string, limit = 100) {
+  const { data, error } = await supabase
+    .from('posts')
+    .select(FEED_POST_SELECT)
+    .eq('author_id', userId)
+    .order('created_at', { ascending: false })
+    .limit(limit);
+  if (error) throw error;
+  return mapPostRowsToChannels(data ?? []);
+}
+
+/**
+ * Full-text search over posts the caller can see (search_posts RPC is SECURITY
+ * INVOKER, so post RLS applies). Re-fetches with the feed select so results
+ * render exactly like the main feed, preserving the RPC's rank/recency order.
+ */
+export async function searchPosts(q: string) {
+  const term = (q ?? '').trim();
+  if (!term) return [];
+  const { data: hits, error } = await supabase.rpc('search_posts', { q: term });
+  if (error) throw error;
+  const ids = (hits ?? []).map((p: any) => p.id);
+  if (ids.length === 0) return [];
+
+  const { data, error: fetchErr } = await supabase
+    .from('posts')
+    .select(FEED_POST_SELECT)
+    .in('id', ids);
+  if (fetchErr) throw fetchErr;
+
+  const order = new Map<string, number>(
+    ids.map((id: string, i: number): [string, number] => [id, i]),
+  );
+  const sorted = (data ?? []).sort(
+    (a, b) => (order.get(a.id) ?? 0) - (order.get(b.id) ?? 0),
+  );
+  return mapPostRowsToChannels(sorted);
+}
+
+/**
+ * Report a post/comment into the moderation queue (report_content RPC stamps
+ * flagged_by='user', status='pending'). Returns the new queue row id.
+ */
+export async function reportContent(
+  entityType: 'post' | 'comment',
+  entityId: string,
+  reason: string,
+) {
+  const { data, error } = await supabase.rpc('report_content', {
+    p_entity_type: entityType,
+    p_entity_id: entityId,
+    p_reason: reason ?? '',
+  });
+  if (error) throw error;
+  return data as string;
 }
 
 /**
@@ -356,6 +498,28 @@ export async function getAllGroups() {
     countByGroup[r.group_id] = Number(r.member_count) || 0;
   });
   return (data ?? []).map(g =>
+    groupToChannel({ ...g, member_count: countByGroup[g.id] ?? 0 }),
+  );
+}
+
+/**
+ * Search groups by name (trigram-indexed, case-insensitive) via the
+ * search_groups RPC. Returns legacy channel shapes with member counts, same as
+ * getAllGroups. Empty query returns [] (caller shows the full list instead).
+ */
+export async function searchGroups(q: string) {
+  const term = (q ?? '').trim();
+  if (!term) return [];
+  const [{ data, error }, { data: counts }] = await Promise.all([
+    supabase.rpc('search_groups', { q: term }),
+    supabase.rpc('group_member_counts'),
+  ]);
+  if (error) throw error;
+  const countByGroup: Record<string, number> = {};
+  (counts ?? []).forEach((r: any) => {
+    countByGroup[r.group_id] = Number(r.member_count) || 0;
+  });
+  return (data ?? []).map((g: any) =>
     groupToChannel({ ...g, member_count: countByGroup[g.id] ?? 0 }),
   );
 }

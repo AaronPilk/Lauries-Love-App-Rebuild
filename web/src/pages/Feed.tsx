@@ -1,5 +1,6 @@
-import { useQuery } from '@tanstack/react-query';
-import { supabase } from '../lib/supabase';
+import { useState } from 'react';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { supabase, currentUserId } from '../lib/supabase';
 import { useFeatureFlags } from '../lib/featureFlags';
 
 type FeedPost = {
@@ -16,10 +17,16 @@ type FeedPost = {
   comments: { count: number }[];
 };
 
+type FeedData = {
+  posts: FeedPost[];
+  likedIds: Set<string>;
+};
+
 // Reads the same posts the mobile feed reads. RLS lets the caller see public
 // posts + their own + posts in groups they belong to. Uses the denormalized
-// like_count column (no unbounded liker arrays).
-async function fetchFeed(): Promise<FeedPost[]> {
+// like_count column (no unbounded liker arrays). Also loads which of these the
+// caller has liked so the heart can toggle.
+async function fetchFeed(): Promise<FeedData> {
   const { data, error } = await supabase
     .from('posts')
     .select(
@@ -28,7 +35,24 @@ async function fetchFeed(): Promise<FeedPost[]> {
     .order('created_at', { ascending: false })
     .limit(30);
   if (error) throw error;
-  return (data ?? []) as unknown as FeedPost[];
+  const posts = (data ?? []) as unknown as FeedPost[];
+
+  const me = await currentUserId();
+  let likedIds = new Set<string>();
+  if (me && posts.length) {
+    const { data: likes } = await supabase
+      .from('reactions')
+      .select('entity_id')
+      .eq('entity_type', 'post')
+      .eq('user_id', me)
+      .eq('kind', 'like')
+      .in(
+        'entity_id',
+        posts.map((p) => p.id),
+      );
+    likedIds = new Set((likes ?? []).map((r: { entity_id: string }) => r.entity_id));
+  }
+  return { posts, likedIds };
 }
 
 function avatarUrl(path: string | null | undefined): string | null {
@@ -40,26 +64,114 @@ function avatarUrl(path: string | null | undefined): string | null {
 
 export function Feed() {
   const { isEnabled } = useFeatureFlags();
+  const qc = useQueryClient();
+  const [body, setBody] = useState('');
+  const [commentFor, setCommentFor] = useState<string | null>(null);
+  const [commentBody, setCommentBody] = useState('');
+
   const { data, isLoading, error } = useQuery({
     queryKey: ['feed'],
     queryFn: fetchFeed,
   });
 
+  const createPost = useMutation({
+    mutationFn: async (text: string) => {
+      const me = await currentUserId();
+      if (!me) throw new Error('Not signed in');
+      // visibility 'all' is the DB check-constraint value for a public post.
+      const { error } = await supabase
+        .from('posts')
+        .insert({ author_id: me, body: text.trim(), visibility: 'all' });
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      setBody('');
+      qc.invalidateQueries({ queryKey: ['feed'] });
+    },
+  });
+
+  const toggleLike = useMutation({
+    mutationFn: async (v: { id: string; liked: boolean }) => {
+      const me = await currentUserId();
+      if (!me) throw new Error('Not signed in');
+      if (v.liked) {
+        const { error } = await supabase
+          .from('reactions')
+          .delete()
+          .eq('entity_type', 'post')
+          .eq('entity_id', v.id)
+          .eq('user_id', me)
+          .eq('kind', 'like');
+        if (error) throw error;
+      } else {
+        const { error } = await supabase.from('reactions').insert({
+          entity_type: 'post',
+          entity_id: v.id,
+          user_id: me,
+          kind: 'like',
+        });
+        if (error && error.code !== '23505') throw error;
+      }
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['feed'] }),
+  });
+
+  const addComment = useMutation({
+    mutationFn: async (v: { postId: string; text: string }) => {
+      const me = await currentUserId();
+      if (!me) throw new Error('Not signed in');
+      const { error } = await supabase
+        .from('comments')
+        .insert({ post_id: v.postId, author_id: me, body: v.text.trim() });
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      setCommentBody('');
+      setCommentFor(null);
+      qc.invalidateQueries({ queryKey: ['feed'] });
+    },
+  });
+
   if (!isEnabled('community_wall'))
     return <p className="text-gray-500">The community wall is turned off.</p>;
-  if (isLoading) return <p className="text-brand-700">Loading the feed…</p>;
-  if (error)
-    return <p className="text-red-600">Couldn’t load the feed.</p>;
-  if (!data || data.length === 0)
-    return <p className="text-gray-500">It’s quiet here — no posts yet.</p>;
+
+  const posts = data?.posts ?? [];
+  const likedIds = data?.likedIds ?? new Set<string>();
 
   return (
     <div className="space-y-4">
       <h1 className="text-xl font-bold text-brand-700">Community</h1>
-      {data.map((p) => {
-        const name =
-          p.author?.display_name || p.author?.first_name || 'Member';
+
+      {/* Composer */}
+      <div className="rounded-2xl border border-brand-100 bg-white p-4 shadow-sm">
+        <textarea
+          value={body}
+          onChange={(e) => setBody(e.target.value)}
+          placeholder="Share something with the community…"
+          rows={3}
+          className="w-full resize-none rounded-lg border border-gray-200 p-3 text-sm outline-none focus:border-brand-500"
+        />
+        <div className="mt-2 flex justify-end">
+          <button
+            onClick={() => createPost.mutate(body)}
+            disabled={!body.trim() || createPost.isPending}
+            className="rounded-lg bg-brand-700 px-4 py-2 text-sm font-semibold text-white hover:bg-brand-500 disabled:opacity-50"
+          >
+            {createPost.isPending ? 'Posting…' : 'Post'}
+          </button>
+        </div>
+      </div>
+
+      {isLoading && <p className="text-brand-700">Loading the feed…</p>}
+      {error && <p className="text-red-600">Couldn’t load the feed.</p>}
+      {!isLoading && !error && posts.length === 0 && (
+        <p className="text-gray-500">It’s quiet here — be the first to post.</p>
+      )}
+
+      {posts.map((p) => {
+        const name = p.author?.display_name || p.author?.first_name || 'Member';
         const img = avatarUrl(p.author?.avatar_path);
+        const liked = likedIds.has(p.id);
         return (
           <article
             key={p.id}
@@ -89,9 +201,44 @@ export function Feed() {
               {p.body}
             </p>
             <footer className="mt-3 flex gap-4 text-sm text-gray-500">
-              <span>♥ {p.like_count}</span>
-              <span>💬 {p.comments?.[0]?.count ?? 0}</span>
+              <button
+                onClick={() => toggleLike.mutate({ id: p.id, liked })}
+                disabled={toggleLike.isPending}
+                className={`flex items-center gap-1 ${
+                  liked ? 'font-semibold text-brand-700' : 'hover:text-brand-700'
+                }`}
+              >
+                {liked ? '♥' : '♡'} {p.like_count}
+              </button>
+              <button
+                onClick={() =>
+                  setCommentFor((cur) => (cur === p.id ? null : p.id))
+                }
+                className="hover:text-brand-700"
+              >
+                💬 {p.comments?.[0]?.count ?? 0}
+              </button>
             </footer>
+
+            {commentFor === p.id && (
+              <div className="mt-3 flex gap-2">
+                <input
+                  value={commentBody}
+                  onChange={(e) => setCommentBody(e.target.value)}
+                  placeholder="Write a comment…"
+                  className="flex-1 rounded-lg border border-gray-200 px-3 py-2 text-sm outline-none focus:border-brand-500"
+                />
+                <button
+                  onClick={() =>
+                    addComment.mutate({ postId: p.id, text: commentBody })
+                  }
+                  disabled={!commentBody.trim() || addComment.isPending}
+                  className="rounded-lg bg-brand-700 px-3 py-2 text-sm font-semibold text-white hover:bg-brand-500 disabled:opacity-50"
+                >
+                  Send
+                </button>
+              </div>
+            )}
           </article>
         );
       })}

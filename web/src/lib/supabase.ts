@@ -20,3 +20,11 @@ export async function currentUserId(): Promise<string | null> {
   const { data } = await supabase.auth.getSession();
   return data.session?.user?.id ?? null;
 }
+
+// Resolves the single active org id (Laurie's Love) via the default_org_id()
+// RPC. Needed as the conflict target when upserting org-scoped settings.
+export async function currentOrgId(): Promise<string | null> {
+  const { data, error } = await supabase.rpc('default_org_id');
+  if (error) return null;
+  return (data as string | null) ?? null;
+}

@@ -44,10 +44,15 @@ import {
 import { PATHS_MESSAGES_TAB } from 'main/navigators/paths';
 import { SUPABASE_ENABLED } from 'services/supabase/backend.config';
 import { findOrCreateDirectConversation } from 'services/supabase/supabase.chat';
+import {
+  getPostsByUser,
+  getMemberJoinedAt,
+} from 'services/supabase/supabase.social';
 import { publicUrlFor } from 'services/supabase/supabase.storage';
 
 // hooks
 import { useCountry } from 'presentation/hooks';
+import { toLocalizedDateString } from 'utils/formatDate';
 
 // styles
 import colors from 'styles/colors';
@@ -84,6 +89,8 @@ const DetailsScreen: FunctionComponent<DetailsScreenProps> = ({
 
   const [profilePicture, setProfilePicture] = useState<URL | undefined>();
   const [isLoadingSendMessage, setIsLoadingSendMessage] = useState(false);
+  const [memberPosts, setMemberPosts] = useState<any[]>([]);
+  const [joinedAt, setJoinedAt] = useState<string | null>(null);
 
   const { user } = useMemo(() => route.params, [route.params]);
 
@@ -196,6 +203,38 @@ const DetailsScreen: FunctionComponent<DetailsScreenProps> = ({
   useEffect(() => {
     getProfilePicture();
   }, [user?.profilePicture]);
+
+  // Backend V2: member "joined" date + their posts (getPostsByUser). RLS means
+  // only posts this viewer is allowed to see come back. Additive, best-effort.
+  useEffect(() => {
+    if (!SUPABASE_ENABLED || !user?.id) return;
+    let cancelled = false;
+    (async () => {
+      try {
+        const [joined, posts] = await Promise.all([
+          getMemberJoinedAt(user.id),
+          getPostsByUser(user.id, 20),
+        ]);
+        if (cancelled) return;
+        setJoinedAt(joined);
+        setMemberPosts(posts ?? []);
+      } catch (error) {
+        if (__DEV__) console.warn('Error loading member profile posts', error);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [user?.id]);
+
+  const joinedLabel = useMemo(() => {
+    if (!joinedAt) return null;
+    return toLocalizedDateString(
+      new Date(joinedAt).getTime(),
+      user?.country ?? '',
+      { month: 'long', year: 'numeric' },
+    );
+  }, [joinedAt, user?.country]);
 
   const handleBack = () => {
     if (route.params?.fromExternal) {
@@ -366,7 +405,56 @@ const DetailsScreen: FunctionComponent<DetailsScreenProps> = ({
                     {user.role?.description}
                   </Text>
                 </View>
+
+                {joinedLabel && (
+                  <View style={styles.detailsRow}>
+                    <Text style={styles.detailsLabel}>Member since</Text>
+                    <Text numberOfLines={1} style={styles.detailsDate}>
+                      {joinedLabel}
+                    </Text>
+                  </View>
+                )}
               </View>
+
+              {SUPABASE_ENABLED && memberPosts.length > 0 && (
+                <View style={styles.detailsCard}>
+                  <Text style={[styles.detailsLabel, { marginBottom: 8 }]}>
+                    Posts
+                  </Text>
+                  {memberPosts.map(post => {
+                    let body = '';
+                    try {
+                      body = JSON.parse(post.data || '{}').firstMessage ?? '';
+                    } catch {
+                      body = '';
+                    }
+                    return (
+                      <View
+                        key={post.url}
+                        style={{
+                          paddingVertical: 8,
+                          borderTopWidth: 1,
+                          borderTopColor: colors.neutral[300],
+                        }}
+                      >
+                        <Text
+                          numberOfLines={3}
+                          style={[styles.detailsValue, { textAlign: 'left' }]}
+                        >
+                          {body}
+                        </Text>
+                        <Text style={styles.profileInfoDate}>
+                          {toLocalizedDateString(
+                            post.createdAt,
+                            user?.country ?? '',
+                            { day: 'numeric', month: 'numeric', year: 'numeric' },
+                          )}
+                        </Text>
+                      </View>
+                    );
+                  })}
+                </View>
+              )}
             </View>
           </View>
         </ScrollView>

@@ -6,6 +6,7 @@ import {
   Popup,
   useMapEvents,
 } from 'react-leaflet';
+import MarkerClusterGroup from 'react-leaflet-cluster';
 import 'leaflet/dist/leaflet.css';
 import { supabase } from '../lib/supabase';
 import { useFeatureFlags } from '../lib/featureFlags';
@@ -13,7 +14,8 @@ import { useFeatureFlags } from '../lib/featureFlags';
 // Community map. Loads only the members inside the current viewport via the
 // users_in_bbox RPC (privacy: coordinates are already coarsened to ~1km, and
 // the RPC returns no email/phone). CircleMarkers avoid the Leaflet default-icon
-// bundler issue. Hierarchical state/city clustering is a fast-follow.
+// bundler issue. Nearby markers are grouped into clusters that show the member
+// count and split apart as you zoom in.
 type Marker = {
   id: string;
   display_name: string | null;
@@ -66,16 +68,18 @@ export function MapPage() {
             url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
           />
           <ViewportLoader onData={setMarkers} />
-          {markers.map((m) => (
-            <CircleMarker
-              key={m.id}
-              center={[m.latitude, m.longitude]}
-              radius={8}
-              pathOptions={{ color: '#a5257e', fillColor: '#d84a9a', fillOpacity: 0.8 }}
-            >
-              <Popup>{m.display_name || m.first_name || 'Member'}</Popup>
-            </CircleMarker>
-          ))}
+          <MarkerClusterGroup chunkedLoading showCoverageOnHover={false}>
+            {markers.map((m) => (
+              <CircleMarker
+                key={m.id}
+                center={[m.latitude, m.longitude]}
+                radius={8}
+                pathOptions={{ color: '#a5257e', fillColor: '#d84a9a', fillOpacity: 0.8 }}
+              >
+                <Popup>{m.display_name || m.first_name || 'Member'}</Popup>
+              </CircleMarker>
+            ))}
+          </MarkerClusterGroup>
         </MapContainer>
       </div>
       <p className="mt-2 text-xs text-gray-400">

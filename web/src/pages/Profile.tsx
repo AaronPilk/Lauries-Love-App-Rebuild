@@ -1,18 +1,42 @@
-import { useQuery } from '@tanstack/react-query';
+import { useEffect, useState } from 'react';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase, currentUserId } from '../lib/supabase';
+
+type MyProfile = {
+  id: string;
+  first_name: string | null;
+  last_name: string | null;
+  display_name: string | null;
+  description: string | null;
+  avatar_path: string | null;
+  city: string | null;
+  state: string | null;
+  country: string | null;
+  created_at: string | null;
+  email: string | null;
+  phone: string | null;
+  postCount: number;
+  friendCount: number;
+};
 
 // Own profile. Reads the public row + the caller's own profiles_private
 // (owner-only, so email/phone only ever show for yourself).
-async function fetchMyProfile() {
+async function fetchMyProfile(): Promise<MyProfile | null> {
   const me = await currentUserId();
   if (!me) return null;
   const [{ data: profile }, { data: priv }, posts, friends] = await Promise.all([
     supabase
       .from('profiles')
-      .select('id, first_name, last_name, display_name, avatar_path, city, state, country, created_at')
+      .select(
+        'id, first_name, last_name, display_name, description, avatar_path, city, state, country, created_at',
+      )
       .eq('id', me)
       .single(),
-    supabase.from('profiles_private').select('email, phone_number').eq('profile_id', me).maybeSingle(),
+    supabase
+      .from('profiles_private')
+      .select('email, phone_number')
+      .eq('profile_id', me)
+      .maybeSingle(),
     supabase.from('posts').select('id', { count: 'exact', head: true }).eq('author_id', me),
     supabase
       .from('friendships')
@@ -21,7 +45,7 @@ async function fetchMyProfile() {
       .eq('status', 'accepted'),
   ]);
   return {
-    ...profile,
+    ...(profile as Omit<MyProfile, 'email' | 'phone' | 'postCount' | 'friendCount'>),
     email: priv?.email ?? null,
     phone: priv?.phone_number ?? null,
     postCount: posts.count ?? 0,
@@ -35,14 +59,133 @@ function avatarUrl(path: string | null | undefined): string | null {
   return supabase.storage.from('avatars').getPublicUrl(path).data.publicUrl ?? null;
 }
 
+type EditForm = {
+  display_name: string;
+  description: string;
+  email: string;
+  phone: string;
+};
+
 export function Profile() {
+  const qc = useQueryClient();
   const { data, isLoading } = useQuery({ queryKey: ['my-profile'], queryFn: fetchMyProfile });
+  const [editing, setEditing] = useState(false);
+  const [form, setForm] = useState<EditForm>({
+    display_name: '',
+    description: '',
+    email: '',
+    phone: '',
+  });
+
+  useEffect(() => {
+    if (data) {
+      setForm({
+        display_name: data.display_name ?? '',
+        description: data.description ?? '',
+        email: data.email ?? '',
+        phone: data.phone ?? '',
+      });
+    }
+  }, [data]);
+
+  const save = useMutation({
+    mutationFn: async (f: EditForm) => {
+      const me = await currentUserId();
+      if (!me) throw new Error('Not signed in');
+      const { error: pErr } = await supabase
+        .from('profiles')
+        .update({
+          display_name: f.display_name.trim() || null,
+          description: f.description.trim() || null,
+        })
+        .eq('id', me);
+      if (pErr) throw pErr;
+      const { error: privErr } = await supabase
+        .from('profiles_private')
+        .upsert(
+          {
+            profile_id: me,
+            email: f.email.trim() || null,
+            phone_number: f.phone.trim() || null,
+          },
+          { onConflict: 'profile_id' },
+        );
+      if (privErr) throw privErr;
+    },
+    onSuccess: () => {
+      setEditing(false);
+      qc.invalidateQueries({ queryKey: ['my-profile'] });
+    },
+  });
+
   if (isLoading) return <p className="text-brand-700">Loading…</p>;
   if (!data) return <p className="text-gray-500">Not signed in.</p>;
 
   const name = data.display_name || data.first_name || 'Member';
   const img = avatarUrl(data.avatar_path);
   const place = [data.city, data.state, data.country].filter(Boolean).join(', ');
+
+  if (editing) {
+    return (
+      <div className="mx-auto max-w-md">
+        <div className="rounded-2xl border border-brand-100 bg-white p-6 shadow-sm">
+          <h1 className="mb-4 text-xl font-bold text-brand-700">Edit profile</h1>
+          <label className="mb-3 block text-sm">
+            <span className="mb-1 block text-gray-500">Display name</span>
+            <input
+              value={form.display_name}
+              onChange={(e) => setForm({ ...form, display_name: e.target.value })}
+              className="w-full rounded-lg border border-gray-300 px-3 py-2 outline-none focus:border-brand-500"
+            />
+          </label>
+          <label className="mb-3 block text-sm">
+            <span className="mb-1 block text-gray-500">Bio</span>
+            <textarea
+              value={form.description}
+              onChange={(e) => setForm({ ...form, description: e.target.value })}
+              rows={3}
+              className="w-full resize-none rounded-lg border border-gray-300 px-3 py-2 outline-none focus:border-brand-500"
+            />
+          </label>
+          <label className="mb-3 block text-sm">
+            <span className="mb-1 block text-gray-500">Email</span>
+            <input
+              type="email"
+              value={form.email}
+              onChange={(e) => setForm({ ...form, email: e.target.value })}
+              className="w-full rounded-lg border border-gray-300 px-3 py-2 outline-none focus:border-brand-500"
+            />
+          </label>
+          <label className="mb-4 block text-sm">
+            <span className="mb-1 block text-gray-500">Phone</span>
+            <input
+              value={form.phone}
+              onChange={(e) => setForm({ ...form, phone: e.target.value })}
+              className="w-full rounded-lg border border-gray-300 px-3 py-2 outline-none focus:border-brand-500"
+            />
+          </label>
+          {save.isError && (
+            <p className="mb-3 text-sm text-red-600">Couldn’t save — try again.</p>
+          )}
+          <div className="flex gap-2">
+            <button
+              onClick={() => save.mutate(form)}
+              disabled={save.isPending}
+              className="rounded-lg bg-brand-700 px-4 py-2 text-sm font-semibold text-white hover:bg-brand-500 disabled:opacity-50"
+            >
+              {save.isPending ? 'Saving…' : 'Save'}
+            </button>
+            <button
+              onClick={() => setEditing(false)}
+              className="rounded-lg px-4 py-2 text-sm text-gray-500 hover:underline"
+            >
+              Cancel
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="mx-auto max-w-md">
@@ -56,6 +199,9 @@ export function Profile() {
         )}
         <h1 className="text-xl font-bold text-brand-700">{name}</h1>
         {place && <p className="text-sm text-gray-500">{place}</p>}
+        {data.description && (
+          <p className="mt-2 text-sm text-gray-600">{data.description}</p>
+        )}
         <p className="mt-1 text-xs text-gray-400">
           Joined {data.created_at ? new Date(data.created_at).toLocaleDateString() : ''}
         </p>
@@ -85,6 +231,13 @@ export function Profile() {
             </div>
           )}
         </div>
+
+        <button
+          onClick={() => setEditing(true)}
+          className="mt-6 w-full rounded-lg bg-brand-700 py-2 text-sm font-semibold text-white hover:bg-brand-500"
+        >
+          Edit profile
+        </button>
       </div>
     </div>
   );

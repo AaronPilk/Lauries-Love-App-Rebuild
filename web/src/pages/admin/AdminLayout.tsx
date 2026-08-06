@@ -7,7 +7,10 @@ const nav = [
   { to: '/admin/support', label: 'Support Inbox', end: false },
   { to: '/admin/moderation', label: 'Moderation', end: false },
   { to: '/admin/features', label: 'Feature Toggles', end: false },
-  // Fast-follow: Groups, Branding/Settings, Custom Profile Fields
+  { to: '/admin/groups', label: 'Groups', end: false },
+  { to: '/admin/branding', label: 'Branding', end: false },
+  { to: '/admin/custom-fields', label: 'Custom Fields', end: false },
+  { to: '/admin/settings', label: 'Platform Config', end: false },
 ];
 
 export function AdminLayout() {

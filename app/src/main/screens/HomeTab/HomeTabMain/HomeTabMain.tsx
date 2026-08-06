@@ -1,4 +1,4 @@
-import { useIsFocused, CommonActions } from '@react-navigation/native';
+import { useIsFocused, CommonActions, useRoute } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import React, {
   FunctionComponent,
@@ -42,6 +42,7 @@ import {
 } from 'assets/icons-auto/components';
 import { useIntercom } from 'providers/IntercomProvider/IntercomProvider';
 import { SUPABASE_ENABLED } from 'services/supabase/backend.config';
+import { searchPosts as searchPostsRemote } from 'services/supabase/supabase.social';
 import InputSearch from 'components/InputSearch/InputSearch';
 import { useDebouncedValue } from 'utils/useDebouncedValue';
 
@@ -51,6 +52,7 @@ type HomeTabMainProps = {
 
 const HomeTabMain: FunctionComponent<HomeTabMainProps> = ({ navigation }) => {
   const isFocused = useIsFocused();
+  const route = useRoute();
   const { friends, groupChannels } = useSendbirdChatProvider();
   const { userChat } = useSendbirdChatProvider();
   const { checkGeoLocationCity } = useUserDBProvider();
@@ -67,6 +69,15 @@ const HomeTabMain: FunctionComponent<HomeTabMainProps> = ({ navigation }) => {
 
   const [search, setSearch] = useState('');
   const debouncedSearch = useDebouncedValue(search, 300);
+
+  // Deep-link from a tapped #hashtag (post detail) -> prefill the community
+  // search so the results page shows matching posts.
+  const initialSearch = (route.params as any)?.initialSearch as
+    | string
+    | undefined;
+  useEffect(() => {
+    if (initialSearch) setSearch(initialSearch);
+  }, [initialSearch]);
   const [showResultPage, setShowResultPage] = useState(false);
   const [searchPosts, setSearchPosts] = useState<GroupChannelSendBirdType[]>(
     [],
@@ -256,15 +267,60 @@ const HomeTabMain: FunctionComponent<HomeTabMainProps> = ({ navigation }) => {
   }, [posts.length, loadingServer]);
 
   useEffect(() => {
-    const keyword = debouncedSearch.trim().toLowerCase();
+    const rawKeyword = debouncedSearch.trim();
+    const keyword = rawKeyword.toLowerCase();
 
     if (!keyword) {
       setShowResultPage(false);
       setSearchPosts([]);
       return;
     }
-    // get result
-    const filteredPosts = posts
+
+    // Instant local match over the already-loaded feed (creator name OR body).
+    const enrich = (post: any) => {
+      const amountMessage = comments[post.url]?.length || 0;
+      const amountReaction =
+        comments[post.url]?.length > 0
+          ? comments[post.url][0].reactions?.find(
+              reaction => reaction.key === 'smile',
+            )?.sampledUserIds?.length || 0
+          : 0;
+      return {
+        ...post,
+        url: post.url,
+        amountMessage,
+        amountReaction,
+        createdAt: post.createdAt,
+      };
+    };
+
+    // Apply the active Trending/New sort to a result set.
+    const sortResults = (list: GroupChannelSendBirdType[]) => {
+      if (selectTime === 'trending') {
+        const cache = new Map<string, number>();
+        const score = (item: GroupChannelSendBirdType) => {
+          const cached = cache.get(item.url);
+          if (cached !== undefined) return cached;
+          let commentQty = 0;
+          try {
+            commentQty = JSON.parse(item.data).commentQty || 0;
+          } catch {
+            commentQty = 0;
+          }
+          const s = commentQty + commentQty;
+          cache.set(item.url, s);
+          return s;
+        };
+        return [...list].sort((a, b) => score(b) - score(a));
+      }
+      if (selectTime === 'new') {
+        return [...list].sort((a, b) => b.createdAt - a.createdAt);
+      }
+      return list;
+    };
+
+    let cancelled = false;
+    const localFiltered = posts
       .filter(post => {
         let parsedData: any = {};
         try {
@@ -276,52 +332,40 @@ const HomeTabMain: FunctionComponent<HomeTabMainProps> = ({ navigation }) => {
         const firstMessage = parsedData.firstMessage?.toLowerCase() || '';
         return creatorName.includes(keyword) || firstMessage.includes(keyword);
       })
-      .map(post => {
-        const amountMessage = comments[post.url]?.length || 0;
-        const amountReaction =
-          comments[post.url]?.length > 0
-            ? comments[post.url][0].reactions?.find(
-                reaction => reaction.key === 'smile',
-              )?.sampledUserIds?.length || 0
-            : 0;
-        return {
-          ...post,
-          url: post.url,
-          amountMessage,
-          amountReaction,
-          createdAt: post.createdAt,
-        };
-      }) as GroupChannelSendBirdType[];
+      .map(enrich) as GroupChannelSendBirdType[];
+
     setShowResultPage(true);
-    if (selectTime === 'trending') {
-      // Parse each post's data once (instead of twice per sort comparison)
-      const trendingScoreCache = new Map<string, number>();
-      const getTrendingScore = (item: GroupChannelSendBirdType) => {
-        const cached = trendingScoreCache.get(item.url);
-        if (cached !== undefined) return cached;
-        const commentQty = JSON.parse(item.data).commentQty || 0;
-        const score = commentQty + commentQty;
-        trendingScoreCache.set(item.url, score);
-        return score;
+
+    // Backend V2: full-text search across ALL posts the user can see (not just
+    // the paginated window). Server results replace the local ones when they
+    // arrive; the local pass keeps the UI instant and covers author-name hits.
+    if (SUPABASE_ENABLED) {
+      (async () => {
+        try {
+          const remote = (await searchPostsRemote(rawKeyword)).map(
+            enrich,
+          ) as GroupChannelSendBirdType[];
+          if (cancelled) return;
+          // Merge: server FTS body hits + local author-name hits, de-duped.
+          const byUrl = new Map<string, GroupChannelSendBirdType>();
+          [...remote, ...localFiltered].forEach(p => {
+            if (!byUrl.has(p.url)) byUrl.set(p.url, p);
+          });
+          const merged = [...byUrl.values()];
+          setSearchPosts(sortResults(merged));
+        } catch (error) {
+          if (__DEV__) console.warn('searchPostsRemote failed', error);
+          if (!cancelled) setSearchPosts(sortResults(localFiltered));
+        }
+      })();
+      return () => {
+        cancelled = true;
       };
-      setSearchPosts(
-        [...filteredPosts].sort(
-          (a, b) => getTrendingScore(b) - getTrendingScore(a),
-        ),
-      );
-      return;
     }
 
-    if (selectTime === 'new') {
-      setSearchPosts(
-        [...filteredPosts].sort((a, b) => {
-          return b.createdAt - a.createdAt;
-        }),
-      );
-      return;
-    }
-    setSearchPosts(filteredPosts);
-  }, [debouncedSearch, posts, selectTime]);
+    // Mock/legacy mode: local results only.
+    setSearchPosts(sortResults(localFiltered));
+  }, [debouncedSearch, posts, selectTime, comments]);
 
   useEffect(() => {
     const task = InteractionManager.runAfterInteractions(() => {

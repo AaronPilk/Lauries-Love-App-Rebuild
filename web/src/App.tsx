@@ -17,6 +17,10 @@ import { AdminFeatures } from './pages/admin/Features';
 import { AdminMembers } from './pages/admin/Members';
 import { AdminModeration } from './pages/admin/Moderation';
 import { AdminSupportInbox } from './pages/admin/SupportInbox';
+import { AdminGroups } from './pages/admin/Groups';
+import { AdminBranding } from './pages/admin/Branding';
+import { AdminCustomFields } from './pages/admin/CustomFields';
+import { AdminPlatformConfig } from './pages/admin/PlatformConfig';
 
 export default function App() {
   const { loading } = useAuth();
@@ -63,7 +67,10 @@ export default function App() {
         <Route path="support" element={<AdminSupportInbox />} />
         <Route path="moderation" element={<AdminModeration />} />
         <Route path="features" element={<AdminFeatures />} />
-        {/* Fast-follow: groups mgmt, branding/settings, custom profile fields */}
+        <Route path="groups" element={<AdminGroups />} />
+        <Route path="branding" element={<AdminBranding />} />
+        <Route path="custom-fields" element={<AdminCustomFields />} />
+        <Route path="settings" element={<AdminPlatformConfig />} />
       </Route>
 
       <Route path="*" element={<Navigate to="/" replace />} />

@@ -23,7 +23,11 @@ import { RootMessagesTabParamList } from 'main/navigators/MessagesTabStacks/Mess
 
 // backend v2
 import { SUPABASE_ENABLED } from 'services/supabase/backend.config';
-import { joinGroup, getAllGroups } from 'services/supabase/supabase.social';
+import {
+  joinGroup,
+  getAllGroups,
+  searchGroups,
+} from 'services/supabase/supabase.social';
 
 type MessagesTabJoinGroupProps = {
   navigation: NativeStackNavigationProp<RootMessagesTabParamList>;
@@ -48,14 +52,12 @@ const MessagesTabJoinGroup: FunctionComponent<MessagesTabJoinGroupProps> = ({
     if (SUPABASE_ENABLED) {
       setLoading(true);
       try {
-        const all = (await getAllGroups()) as unknown as
-          GroupChannelSendBirdType[];
-        const filtered = all.filter(
-          channel =>
-            !search ||
-            channel.name.toLowerCase().includes(search.toLowerCase()),
-        );
-        setChannels(filtered);
+        // Server-side trigram search when the box has text; otherwise the full
+        // list. searchGroups is case-insensitive and typo-tolerant (pg_trgm).
+        const result = search.trim()
+          ? await searchGroups(search.trim())
+          : await getAllGroups();
+        setChannels(result as unknown as GroupChannelSendBirdType[]);
       } catch (error) {
         if (__DEV__) console.warn('getChannelsHandler', error);
       } finally {

@@ -76,6 +76,7 @@ import {
   sendComment,
   toggleReactionOn,
   deletePost,
+  deleteComment,
   reportContent,
 } from 'services/supabase/supabase.social';
 
@@ -207,6 +208,65 @@ const HomeTabPost: FunctionComponent<HomeTabPostProps> = ({ navigation }) => {
       handleReportPost();
     }
   }, [userPost, isOwnPost, handleDeletePost, handleReportPost]);
+
+  // Comment moderation menu: own reply => Delete (deleteComment; RLS enforces
+  // author ownership); someone else's => Report (reportContent, 'comment').
+  const handleCommentOptions = useCallback(
+    (comment: BaseMessageSendBirdType) => {
+      if (!SUPABASE_ENABLED) return;
+      const commentAuthorId =
+        (comment.sender?.metaData as MetaDataUserSendBirdType)?.id ?? '';
+      const isOwn = !!commentAuthorId && commentAuthorId === userID;
+
+      if (isOwn) {
+        Alert.alert(
+          'Delete reply',
+          'This permanently removes your reply. This cannot be undone.',
+          [
+            { text: 'Cancel', style: 'cancel' },
+            {
+              text: 'Delete',
+              style: 'destructive',
+              onPress: async () => {
+                try {
+                  await deleteComment(comment.messageId);
+                  setComments(state =>
+                    state.filter(c => c.messageId !== comment.messageId),
+                  );
+                  showToast({ type: 'success', message: 'Reply deleted' });
+                } catch (error) {
+                  customShowError({ error, showToast });
+                }
+              },
+            },
+          ],
+        );
+        return;
+      }
+
+      const submit = async (reason: string) => {
+        try {
+          await reportContent('comment', comment.messageId, reason);
+          showToast({
+            type: 'success',
+            message: 'Thanks — our team will review this reply.',
+          });
+        } catch (error) {
+          customShowError({ error, showToast });
+        }
+      };
+      Alert.alert('Report reply', 'Why are you reporting this reply?', [
+        { text: 'Cancel', style: 'cancel' },
+        { text: 'Spam', onPress: () => submit('Spam') },
+        { text: 'Harassment or bullying', onPress: () => submit('Harassment') },
+        {
+          text: 'Inappropriate content',
+          onPress: () => submit('Inappropriate content'),
+        },
+      ]);
+    },
+    [userID, showToast],
+  );
 
   const isReactionUserPost = useMemo(
     () => reactions[userPost?.messageId]?.some(reaction => reaction === userID),
@@ -414,7 +474,11 @@ const HomeTabPost: FunctionComponent<HomeTabPostProps> = ({ navigation }) => {
   // member's profile (best-effort resolve by name against the loaded users).
   const onHashtagPress = useCallback(
     (tag: string) => {
-      navigation.navigate(PATHS_HOME_TAB.homeTabMain, { initialSearch: tag });
+      // Keep the leading '#': the community wall detects it and runs the
+      // posts_by_hashtag RPC (exact tag match) instead of full-text search.
+      navigation.navigate(PATHS_HOME_TAB.homeTabMain, {
+        initialSearch: `#${tag}`,
+      });
     },
     [navigation],
   );
@@ -703,10 +767,42 @@ const HomeTabPost: FunctionComponent<HomeTabPostProps> = ({ navigation }) => {
                                     },
                                   )}
                                 </Text>
+                                {SUPABASE_ENABLED && (
+                                  <>
+                                    <View style={{ flex: 1 }} />
+                                    <TouchableOpacity
+                                      onPress={() =>
+                                        handleCommentOptions(comment)
+                                      }
+                                      hitSlop={{
+                                        top: 10,
+                                        bottom: 10,
+                                        left: 10,
+                                        right: 10,
+                                      }}
+                                    >
+                                      <Text
+                                        style={{
+                                          fontSize: 20,
+                                          lineHeight: 20,
+                                          color: colors.neutral[700],
+                                        }}
+                                      >
+                                        {'⋯'}
+                                      </Text>
+                                    </TouchableOpacity>
+                                  </>
+                                )}
                               </View>
-                              <Text style={styles.commentText}>
-                                {comment.message}
-                              </Text>
+                              {/* Comment body: tappable #tags/@mentions. No
+                                  existing press handler on this text, so the
+                                  tag handlers don't fight anything. */}
+                              <RichText
+                                text={comment.message ?? ''}
+                                style={styles.commentText}
+                                onHashtagPress={onHashtagPress}
+                                onMentionPress={onMentionPress}
+                              />
                             </View>
                           </View>
                           <View style={styles.commentFooter}>

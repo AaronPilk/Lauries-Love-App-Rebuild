@@ -3,7 +3,7 @@ import { useFeatureFlags } from '../lib/featureFlags';
 import { supabase, currentUserId } from '../lib/supabase';
 
 // Donations. One-time or monthly recurring. Checkout runs through a Stripe
-// edge function (create-checkout-session) that activates once the Stripe
+// edge function (stripe-create-checkout-session) that activates once the Stripe
 // account + keys are connected. Until then the button explains that clearly
 // rather than failing silently.
 const PRESETS = [10, 25, 50, 100, 250];
@@ -23,22 +23,30 @@ export function Donate() {
   const [recurring, setRecurring] = useState(false);
   const [status, setStatus] = useState<string | null>(null);
 
+  const [loading, setLoading] = useState(false);
+
   async function donate() {
     setStatus(null);
+    setLoading(true);
     const me = await currentUserId();
     try {
-      // The edge function returns a Stripe Checkout URL once configured.
-      const { data, error } = await supabase.functions.invoke('create-checkout-session', {
+      // The edge function returns a Stripe Checkout URL once configured. If it
+      // isn't (503 / not-configured / any error), fall through to the pending
+      // message rather than surfacing a raw error.
+      const { data, error } = await supabase.functions.invoke('stripe-create-checkout-session', {
         body: { amount, recurring, profile_id: me },
       });
       if (error) throw error;
-      if (data?.url) {
-        window.location.href = data.url as string;
+      const url = (data as { url?: string } | null)?.url;
+      if (url) {
+        window.location.href = url;
         return;
       }
       setStatus('Donations aren’t connected yet — Stripe setup is pending.');
     } catch {
       setStatus('Donations aren’t connected yet — Stripe setup is pending.');
+    } finally {
+      setLoading(false);
     }
   }
 
@@ -94,9 +102,14 @@ export function Donate() {
 
       <button
         onClick={donate}
-        className="w-full rounded-lg bg-brand-700 py-3 font-semibold text-white hover:bg-brand-500"
+        disabled={loading}
+        className="w-full rounded-lg bg-brand-700 py-3 font-semibold text-white hover:bg-brand-500 disabled:opacity-50"
       >
-        {recurring ? `Give $${amount}/month` : `Give $${amount}`}
+        {loading
+          ? 'Redirecting…'
+          : recurring
+            ? `Give $${amount}/month`
+            : `Give $${amount}`}
       </button>
       {status && <p className="mt-3 text-center text-sm text-amber-700">{status}</p>}
     </div>

@@ -23,6 +23,7 @@ import { toLocalizedDateString } from 'utils/formatDate';
 import { IconArrowRight } from 'assets/icons-auto/components';
 import PostReadMoreButton from '../PostReadMoreButton/PostReadMoreButton';
 import PostFooter from '../PostFooter/PostFooter';
+import RichText from 'components/RichText/RichText';
 import { PostImageWithLoading } from '../PostImageWithLoading/PostImageWithLoading';
 import { getOriginalImageUrl } from 'utils/imageUrlUtils';
 
@@ -241,12 +242,13 @@ const PostHomeTab: FunctionComponent<PostHomeTabProps> = ({
             </Text>
             <PostReadMoreButton onPress={handlePressPost} text="Read More" />
           </View>
-          <Text
+          {/* Highlight #tags/@mentions but keep the whole card tappable:
+              no press handlers here, so taps fall through to the card. */}
+          <RichText
+            text={message ?? ''}
             style={[styles.contentText, { paddingRight: 12 }]}
             numberOfLines={2}
-          >
-            {message}
-          </Text>
+          />
         </View>
         <PostFooter
           footerStyles={styles.withImageFooter}
@@ -306,9 +308,12 @@ const PostHomeTab: FunctionComponent<PostHomeTabProps> = ({
             </Text>
           </View>
           <View style={styles.content}>
-            <Text style={styles.contentText} numberOfLines={4}>
-              {message}
-            </Text>
+            {/* Highlight-only (no handlers) so the card press wins the tap. */}
+            <RichText
+              text={message ?? ''}
+              style={styles.contentText}
+              numberOfLines={4}
+            />
           </View>
         </LinearGradient>
       </TouchableOpacity>

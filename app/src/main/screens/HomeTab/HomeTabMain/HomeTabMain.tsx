@@ -42,7 +42,10 @@ import {
 } from 'assets/icons-auto/components';
 import { useIntercom } from 'providers/IntercomProvider/IntercomProvider';
 import { SUPABASE_ENABLED } from 'services/supabase/backend.config';
-import { searchPosts as searchPostsRemote } from 'services/supabase/supabase.social';
+import {
+  searchPosts as searchPostsRemote,
+  getPostsByHashtag,
+} from 'services/supabase/supabase.social';
 import InputSearch from 'components/InputSearch/InputSearch';
 import { useDebouncedValue } from 'utils/useDebouncedValue';
 
@@ -339,12 +342,19 @@ const HomeTabMain: FunctionComponent<HomeTabMainProps> = ({ navigation }) => {
     // Backend V2: full-text search across ALL posts the user can see (not just
     // the paginated window). Server results replace the local ones when they
     // arrive; the local pass keeps the UI instant and covers author-name hits.
+    // A leading '#' means "show me this exact tag" -> hashtag RPC (indexed,
+    // exact match) instead of full-text search. Tapping a #tag anywhere in the
+    // app deep-links here with `#tag` prefilled.
+    const isHashtag = rawKeyword.startsWith('#') && rawKeyword.length > 1;
+
     if (SUPABASE_ENABLED) {
       (async () => {
         try {
-          const remote = (await searchPostsRemote(rawKeyword)).map(
-            enrich,
-          ) as GroupChannelSendBirdType[];
+          const remote = (
+            isHashtag
+              ? await getPostsByHashtag(rawKeyword.slice(1))
+              : await searchPostsRemote(rawKeyword)
+          ).map(enrich) as GroupChannelSendBirdType[];
           if (cancelled) return;
           // Merge: server FTS body hits + local author-name hits, de-duped.
           const byUrl = new Map<string, GroupChannelSendBirdType>();

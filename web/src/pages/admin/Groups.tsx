@@ -10,6 +10,7 @@ type Group = {
   name: string;
   description: string | null;
   tags: string[] | null;
+  cover_path: string | null;
 };
 
 type GroupForm = {
@@ -17,14 +18,15 @@ type GroupForm = {
   name: string;
   description: string;
   tags: string;
+  cover_path: string;
 };
 
-const EMPTY: GroupForm = { id: null, name: '', description: '', tags: '' };
+const EMPTY: GroupForm = { id: null, name: '', description: '', tags: '', cover_path: '' };
 
 async function fetchGroups(): Promise<Group[]> {
   const { data, error } = await supabase
     .from('groups')
-    .select('id, name, description, tags')
+    .select('id, name, description, tags, cover_path')
     .order('name');
   if (error) throw error;
   return data ?? [];
@@ -37,11 +39,43 @@ function parseTags(s: string): string[] {
     .filter(Boolean);
 }
 
+// Covers upload to the public 'avatars' bucket under the uploader's uid prefix
+// (owner-write policy requires foldername[1] === auth.uid()), same convention
+// as create_group's p_cover_path.
+function coverUrl(path: string | null | undefined): string | null {
+  if (!path) return null;
+  if (path.startsWith('http')) return path;
+  return supabase.storage.from('avatars').getPublicUrl(path).data.publicUrl ?? null;
+}
+
 export function AdminGroups() {
   const { isAdmin } = useAuth();
   const qc = useQueryClient();
   const [form, setForm] = useState<GroupForm>(EMPTY);
   const { data, isLoading } = useQuery({ queryKey: ['admin-groups'], queryFn: fetchGroups });
+
+  const [uploading, setUploading] = useState(false);
+  const [uploadError, setUploadError] = useState(false);
+
+  async function handleCoverFile(file: File) {
+    setUploadError(false);
+    setUploading(true);
+    try {
+      const me = await currentUserId();
+      if (!me) throw new Error('Not signed in');
+      const ext = (file.name.split('.').pop() || 'jpg').toLowerCase();
+      const path = `${me}/group-covers/${Date.now()}.${ext}`;
+      const { error } = await supabase.storage
+        .from('avatars')
+        .upload(path, file, { upsert: true, contentType: file.type || undefined });
+      if (error) throw error;
+      setForm((prev) => ({ ...prev, cover_path: path }));
+    } catch {
+      setUploadError(true);
+    } finally {
+      setUploading(false);
+    }
+  }
 
   const upsert = useMutation({
     mutationFn: async (f: GroupForm) => {
@@ -49,6 +83,7 @@ export function AdminGroups() {
         name: f.name.trim(),
         description: f.description.trim() || null,
         tags: parseTags(f.tags),
+        cover_path: f.cover_path.trim() || null,
       };
       if (f.id) {
         const { error } = await supabase.from('groups').update(payload).eq('id', f.id);
@@ -114,6 +149,46 @@ export function AdminGroups() {
           rows={2}
           className="mt-3 w-full resize-none rounded-lg border border-gray-300 px-3 py-2 text-sm outline-none focus:border-brand-500"
         />
+
+        <div className="mt-3">
+          <span className="mb-1 block text-sm text-gray-500">Cover image</span>
+          <div className="flex items-center gap-3">
+            {coverUrl(form.cover_path) && (
+              <img
+                src={coverUrl(form.cover_path) ?? undefined}
+                alt=""
+                className="h-14 w-24 rounded-lg object-cover"
+              />
+            )}
+            <label className="cursor-pointer rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-brand-700 hover:border-brand-500">
+              {uploading ? 'Uploading…' : form.cover_path ? 'Replace image' : 'Upload image'}
+              <input
+                type="file"
+                accept="image/*"
+                className="hidden"
+                disabled={uploading}
+                onChange={(e) => {
+                  const file = e.target.files?.[0];
+                  if (file) handleCoverFile(file);
+                  e.target.value = '';
+                }}
+              />
+            </label>
+            {form.cover_path && (
+              <button
+                type="button"
+                onClick={() => setForm({ ...form, cover_path: '' })}
+                className="text-sm text-gray-500 hover:underline"
+              >
+                Remove
+              </button>
+            )}
+          </div>
+          {uploadError && (
+            <p className="mt-1 text-sm text-red-600">Couldn’t upload — try again.</p>
+          )}
+        </div>
+
         {upsert.isError && (
           <p className="mt-2 text-sm text-red-600">Couldn’t save — try again.</p>
         )}
@@ -140,7 +215,15 @@ export function AdminGroups() {
       <ul className="divide-y divide-brand-100">
         {(data ?? []).map((g) => (
           <li key={g.id} className="flex items-start justify-between gap-4 py-3">
-            <div>
+            <div className="flex items-start gap-3">
+              {coverUrl(g.cover_path) && (
+                <img
+                  src={coverUrl(g.cover_path) ?? undefined}
+                  alt=""
+                  className="mt-0.5 h-12 w-20 shrink-0 rounded-lg object-cover"
+                />
+              )}
+              <div>
               <div className="font-medium">{g.name}</div>
               {g.description && (
                 <div className="text-sm text-gray-500">{g.description}</div>
@@ -157,6 +240,7 @@ export function AdminGroups() {
                   ))}
                 </div>
               )}
+              </div>
             </div>
             <div className="flex shrink-0 gap-3 text-sm">
               <button
@@ -166,6 +250,7 @@ export function AdminGroups() {
                     name: g.name,
                     description: g.description ?? '',
                     tags: (g.tags ?? []).join(', '),
+                    cover_path: g.cover_path ?? '',
                   })
                 }
                 className="text-brand-700 hover:underline"

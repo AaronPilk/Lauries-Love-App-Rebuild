@@ -12,9 +12,11 @@ import OtherValue from '../OtherValue/OtherValue';
 import { Text, View } from 'react-native';
 import { useUserDBProvider } from 'providers/UserDBProvider/UserDBProvider';
 import { getCurrency } from 'utils/getCurrency';
+import { usePaymentProvider } from 'providers/PaymentProvider/PaymentProvider';
 
 export default function DonateTabs() {
   const { userDB } = useUserDBProvider();
+  const { startStripeCheckout } = usePaymentProvider();
   const [currentValue, setCurrentValue] = React.useState<number>(0);
   const [otherValue, setOtherValue] = React.useState<number | undefined>();
   const { setValue, storedValue } = useStorage<DonateTabsValues>({
@@ -31,13 +33,27 @@ export default function DonateTabs() {
     return generateDonateTabsValues(symbol);
   }, [symbol]);
 
-  const goToCheckout = (inHonor?: boolean) => {
+  const goToCheckout = async (inHonor?: boolean) => {
     const amount = otherValue ?? currentValue;
+    const paymentType: 'ONE_TIME' | 'RECURRING' =
+      storedValue === 'amount' ? 'ONE_TIME' : 'RECURRING';
+
+    // Prefer hosted Stripe Checkout (Supabase Edge Function). If the function
+    // is not configured (503) or errors, fall through to the existing in-app
+    // card form — behavior is unchanged when Stripe isn't wired.
+    const opened = await startStripeCheckout({
+      amount,
+      currency: currencyName,
+      paymentType,
+      inHonor: Boolean(inHonor),
+    });
+    if (opened) return;
+
     navigation.navigate('Donate', {
       screen: PATHS_DONATE_TAB.donateTabCheckout,
       params: {
         amount,
-        paymentType: storedValue === 'amount' ? 'ONE_TIME' : 'RECURRING',
+        paymentType,
         inHonor,
       },
     });

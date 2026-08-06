@@ -257,6 +257,37 @@ export async function searchPosts(q: string) {
 }
 
 /**
+ * Visible posts carrying a given #hashtag (posts_by_hashtag RPC is SECURITY
+ * INVOKER, so post RLS applies). Re-fetches with the feed select so results
+ * render exactly like the main feed, preserving the RPC's recency order.
+ * Accepts the tag with or without a leading '#'.
+ */
+export async function getPostsByHashtag(tag: string) {
+  const term = (tag ?? '').trim().replace(/^#/, '');
+  if (!term) return [];
+  const { data: hits, error } = await supabase.rpc('posts_by_hashtag', {
+    tag: term,
+  });
+  if (error) throw error;
+  const ids = (hits ?? []).map((p: any) => p.id);
+  if (ids.length === 0) return [];
+
+  const { data, error: fetchErr } = await supabase
+    .from('posts')
+    .select(FEED_POST_SELECT)
+    .in('id', ids);
+  if (fetchErr) throw fetchErr;
+
+  const order = new Map<string, number>(
+    ids.map((id: string, i: number): [string, number] => [id, i]),
+  );
+  const sorted = (data ?? []).sort(
+    (a, b) => (order.get(a.id) ?? 0) - (order.get(b.id) ?? 0),
+  );
+  return mapPostRowsToChannels(sorted);
+}
+
+/**
  * Report a post/comment into the moderation queue (report_content RPC stamps
  * flagged_by='user', status='pending'). Returns the new queue row id.
  */
@@ -377,6 +408,27 @@ export async function getPostComments(postId: string) {
           : [],
     })),
   ];
+}
+
+/**
+ * Delete one of the caller's OWN comments. RLS (comments_delete) enforces
+ * author ownership (author_id = auth.uid()); verified in the initial schema
+ * (20260702145556) and re-asserted in 20260702170918.
+ *
+ * NOTE: comment reactions are polymorphic (entity_type='comment', no FK), so a
+ * single-comment delete leaves its like rows orphaned. The POST-delete path
+ * scrubs comment likes via cleanup_post_relations, but there is no per-comment
+ * cleanup trigger yet. FOLLOW-UP (needs a migration): add an AFTER DELETE
+ * trigger on comments that deletes reactions where entity_type='comment' and
+ * entity_id = old.id.
+ */
+export async function deleteComment(commentId: string) {
+  const { error } = await supabase
+    .from('comments')
+    .delete()
+    .eq('id', commentId);
+  if (error) throw error;
+  return true;
 }
 
 export async function sendComment(postId: string, body: string) {

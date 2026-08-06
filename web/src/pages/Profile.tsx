@@ -59,6 +59,57 @@ function avatarUrl(path: string | null | undefined): string | null {
   return supabase.storage.from('avatars').getPublicUrl(path).data.publicUrl ?? null;
 }
 
+// Admin-defined custom profile fields + the caller's own values. Only enabled
+// fields are returned to members (RLS: enabled or owner).
+type FieldType = 'text' | 'textarea' | 'number' | 'select' | 'boolean' | 'date';
+type CustomField = {
+  id: string;
+  field_key: string;
+  label: string;
+  field_type: FieldType;
+  options: string[];
+  position: number;
+};
+
+async function fetchCustomFields(): Promise<CustomField[]> {
+  const { data, error } = await supabase
+    .from('custom_profile_fields')
+    .select('id, field_key, label, field_type, options, position')
+    .eq('enabled', true)
+    .order('position');
+  if (error) throw error;
+  return (data ?? []).map((f) => ({
+    ...(f as CustomField),
+    options: Array.isArray((f as { options: unknown }).options)
+      ? ((f as { options: string[] }).options)
+      : [],
+  }));
+}
+
+async function fetchMyFieldValues(): Promise<Record<string, string>> {
+  const me = await currentUserId();
+  if (!me) return {};
+  const { data } = await supabase
+    .from('profile_field_values')
+    .select('field_id, value')
+    .eq('profile_id', me);
+  const map: Record<string, string> = {};
+  (data ?? []).forEach((r) => {
+    const row = r as { field_id: string; value: string | null };
+    if (row.value != null) map[row.field_id] = row.value;
+  });
+  return map;
+}
+
+function formatFieldValue(field: CustomField, value: string): string {
+  if (field.field_type === 'boolean') return value === 'true' ? 'Yes' : 'No';
+  if (field.field_type === 'date') {
+    const d = new Date(value);
+    return isNaN(d.getTime()) ? value : d.toLocaleDateString();
+  }
+  return value;
+}
+
 type EditForm = {
   display_name: string;
   description: string;
@@ -69,6 +120,14 @@ type EditForm = {
 export function Profile() {
   const qc = useQueryClient();
   const { data, isLoading } = useQuery({ queryKey: ['my-profile'], queryFn: fetchMyProfile });
+  const { data: fields } = useQuery({
+    queryKey: ['profile-custom-fields'],
+    queryFn: fetchCustomFields,
+  });
+  const { data: myValues } = useQuery({
+    queryKey: ['profile-field-values'],
+    queryFn: fetchMyFieldValues,
+  });
   const [editing, setEditing] = useState(false);
   const [form, setForm] = useState<EditForm>({
     display_name: '',
@@ -76,6 +135,7 @@ export function Profile() {
     email: '',
     phone: '',
   });
+  const [fieldValues, setFieldValues] = useState<Record<string, string>>({});
 
   useEffect(() => {
     if (data) {
@@ -88,10 +148,18 @@ export function Profile() {
     }
   }, [data]);
 
+  useEffect(() => {
+    if (myValues) setFieldValues(myValues);
+  }, [myValues]);
+
+  const setFieldValue = (id: string, value: string) =>
+    setFieldValues((prev) => ({ ...prev, [id]: value }));
+
   const save = useMutation({
-    mutationFn: async (f: EditForm) => {
+    mutationFn: async (payload: { form: EditForm; values: Record<string, string> }) => {
       const me = await currentUserId();
       if (!me) throw new Error('Not signed in');
+      const { form: f, values } = payload;
       const { error: pErr } = await supabase
         .from('profiles')
         .update({
@@ -111,12 +179,100 @@ export function Profile() {
           { onConflict: 'profile_id' },
         );
       if (privErr) throw privErr;
+      // Custom field values: upsert one row per enabled field (empty -> null).
+      const rows = (fields ?? []).map((field) => {
+        const raw = values[field.id];
+        const clean = raw != null && raw.toString().trim() !== '' ? raw : null;
+        return {
+          profile_id: me,
+          field_id: field.id,
+          value: clean,
+          updated_at: new Date().toISOString(),
+        };
+      });
+      if (rows.length) {
+        const { error: fvErr } = await supabase
+          .from('profile_field_values')
+          .upsert(rows, { onConflict: 'profile_id,field_id' });
+        if (fvErr) throw fvErr;
+      }
     },
     onSuccess: () => {
       setEditing(false);
       qc.invalidateQueries({ queryKey: ['my-profile'] });
+      qc.invalidateQueries({ queryKey: ['profile-field-values'] });
     },
   });
+
+  const inputClass =
+    'w-full rounded-lg border border-gray-300 px-3 py-2 outline-none focus:border-brand-500';
+
+  function renderFieldInput(field: CustomField) {
+    const val = fieldValues[field.id] ?? '';
+    switch (field.field_type) {
+      case 'textarea':
+        return (
+          <textarea
+            value={val}
+            rows={3}
+            onChange={(e) => setFieldValue(field.id, e.target.value)}
+            className={`${inputClass} resize-none`}
+          />
+        );
+      case 'number':
+        return (
+          <input
+            type="number"
+            value={val}
+            onChange={(e) => setFieldValue(field.id, e.target.value)}
+            className={inputClass}
+          />
+        );
+      case 'date':
+        return (
+          <input
+            type="date"
+            value={val}
+            onChange={(e) => setFieldValue(field.id, e.target.value)}
+            className={inputClass}
+          />
+        );
+      case 'select':
+        return (
+          <select
+            value={val}
+            onChange={(e) => setFieldValue(field.id, e.target.value)}
+            className={inputClass}
+          >
+            <option value="">—</option>
+            {field.options.map((o) => (
+              <option key={o} value={o}>
+                {o}
+              </option>
+            ))}
+          </select>
+        );
+      case 'boolean':
+        return (
+          <label className="flex items-center gap-2">
+            <input
+              type="checkbox"
+              checked={val === 'true'}
+              onChange={(e) => setFieldValue(field.id, e.target.checked ? 'true' : 'false')}
+            />
+            <span className="text-gray-600">Yes</span>
+          </label>
+        );
+      default:
+        return (
+          <input
+            value={val}
+            onChange={(e) => setFieldValue(field.id, e.target.value)}
+            className={inputClass}
+          />
+        );
+    }
+  }
 
   if (isLoading) return <p className="text-brand-700">Loading…</p>;
   if (!data) return <p className="text-gray-500">Not signed in.</p>;
@@ -164,12 +320,27 @@ export function Profile() {
               className="w-full rounded-lg border border-gray-300 px-3 py-2 outline-none focus:border-brand-500"
             />
           </label>
+
+          {(fields ?? []).length > 0 && (
+            <div className="mb-4 border-t pt-4">
+              <div className="mb-2 text-xs font-semibold uppercase tracking-wide text-gray-400">
+                More about you
+              </div>
+              {(fields ?? []).map((field) => (
+                <label key={field.id} className="mb-3 block text-sm">
+                  <span className="mb-1 block text-gray-500">{field.label}</span>
+                  {renderFieldInput(field)}
+                </label>
+              ))}
+            </div>
+          )}
+
           {save.isError && (
             <p className="mb-3 text-sm text-red-600">Couldn’t save — try again.</p>
           )}
           <div className="flex gap-2">
             <button
-              onClick={() => save.mutate(form)}
+              onClick={() => save.mutate({ form, values: fieldValues })}
               disabled={save.isPending}
               className="rounded-lg bg-brand-700 px-4 py-2 text-sm font-semibold text-white hover:bg-brand-500 disabled:opacity-50"
             >
@@ -230,6 +401,17 @@ export function Profile() {
               {data.phone}
             </div>
           )}
+          {(fields ?? []).map((field) => {
+            const v = fieldValues[field.id];
+            if (!v || v.trim() === '' || (field.field_type === 'boolean' && v !== 'true'))
+              return null;
+            return (
+              <div key={field.id}>
+                <span className="text-gray-400">{field.label}: </span>
+                {formatFieldValue(field, v)}
+              </div>
+            );
+          })}
         </div>
 
         <button

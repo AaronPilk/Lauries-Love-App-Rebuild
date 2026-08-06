@@ -16,6 +16,12 @@ import {
   PaymentInput,
   PaymentProfile,
 } from 'data/models';
+import { SUPABASE_ENABLED } from 'services/supabase/backend.config';
+import {
+  createStripeCheckoutSession,
+  openCheckoutUrl,
+  StripeCheckoutInput,
+} from 'services/supabase/supabase.payments';
 
 type PaymentContextType = {
   isLoading: boolean;
@@ -25,6 +31,13 @@ type PaymentContextType = {
   getPayment: (id: string) => Promise<Payment>;
   getPaymentProfiles: () => Promise<PaymentProfile[]>;
   cancelPaymentSubscription: (id: string) => Promise<void>;
+  /**
+   * Additive: try hosted Stripe Checkout via the Supabase Edge Function.
+   * Resolves `true` if a Checkout page was opened (caller should stop),
+   * `false` if the function is not configured / errored (caller falls back to
+   * the existing card flow). Never throws.
+   */
+  startStripeCheckout: (input: StripeCheckoutInput) => Promise<boolean>;
 };
 
 type PaymentProviderProps = {
@@ -159,6 +172,22 @@ const PaymentProvider: FunctionComponent<PaymentProviderProps> = ({
     }
   };
 
+  const startStripeCheckout = async (
+    input: StripeCheckoutInput,
+  ): Promise<boolean> => {
+    // Only attempt the edge function on the Supabase backend.
+    if (!SUPABASE_ENABLED) return false;
+    const res = await createStripeCheckoutSession(input);
+    if (res.status === 'ok') {
+      return openCheckoutUrl(res.url);
+    }
+    if (res.status === 'error' && __DEV__) {
+      // eslint-disable-next-line no-console
+      console.warn('[stripe] checkout unavailable, falling back', res.error);
+    }
+    return false;
+  };
+
   const value = useMemo(
     () => ({
       isLoading,
@@ -168,6 +197,7 @@ const PaymentProvider: FunctionComponent<PaymentProviderProps> = ({
       getPayment,
       getPaymentProfiles,
       cancelPaymentSubscription,
+      startStripeCheckout,
     }),
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [isLoading, api],

@@ -101,6 +101,13 @@ target 'LauriesLove' do
         if config.build_settings['IPHONEOS_DEPLOYMENT_TARGET'].to_f < 15.1
           config.build_settings['IPHONEOS_DEPLOYMENT_TARGET'] = '15.1'
         end
+        # Xcode 26 defaults "Explicitly Built Modules" ON for C/ObjC + Swift.
+        # It breaks the RN/Expo pods with "module file '...UIKit-XXXX.pcm'
+        # not found: module file not found" (explicit .pcm build can't resolve
+        # system module deps). Force it OFF so modules build implicitly like
+        # they did pre-Xcode-16. Re-applied on every `pod install`.
+        config.build_settings['CLANG_ENABLE_EXPLICIT_MODULES'] = 'NO'
+        config.build_settings['SWIFT_ENABLE_EXPLICIT_MODULES'] = 'NO'
       end
     end
     # --- end rebuild patch ---

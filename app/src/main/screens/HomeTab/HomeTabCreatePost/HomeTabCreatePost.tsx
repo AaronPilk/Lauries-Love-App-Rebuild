@@ -24,7 +24,7 @@ import { RootHomeTabParamList } from 'main/navigators/HomeTabStacks/HomeTabStack
 // providers
 import { useToastProvider } from 'providers/ToastProvider/ToastProvider';
 import { useUserDBProvider } from 'providers/UserDBProvider/UserDBProvider';
-import { useSendBirdPostsProvider } from 'providers/SendBirdPostsProvider/SendBirdPostsProvider';
+import { usePostsProvider } from 'providers/PostsProvider/PostsProvider';
 import { useGetUsersReq } from 'presentation/services/react-query/user.query';
 
 // backend v2
@@ -73,7 +73,7 @@ const HomeTabCreatePost: FunctionComponent<HomeTabCreatePostProps> = ({
   const inputRef = useRef<TextInput>(null);
   const [isLoading, setIsLoading] = useState(false);
   const { userDB } = useUserDBProvider();
-  const { getPosts } = useSendBirdPostsProvider();
+  const { getPosts } = usePostsProvider();
   const { data: usersData } = useGetUsersReq();
 
   const isActionButtonActive = useMemo(() => postText.length > 0, [postText]);

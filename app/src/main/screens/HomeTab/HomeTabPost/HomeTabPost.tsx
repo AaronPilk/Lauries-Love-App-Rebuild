@@ -33,11 +33,11 @@ import { RootHomeTabParamList } from 'main/navigators/HomeTabStacks/HomeTabStack
 import {
   BaseMessageSendBirdType,
   MetaDataUserSendBirdType,
-} from 'providers/SendbirdChatProvider/SendbirdChatProvider.types';
+} from 'providers/ChatProvider/ChatProvider.types';
 import { useKeyboardProvider } from 'providers/KeyboardProvider/KeyboardProvider';
 import { useGetUsersReq } from 'presentation/services/react-query/user.query';
 import { useToastProvider } from 'providers/ToastProvider/ToastProvider';
-import { useSendBirdPostsProvider } from 'providers/SendBirdPostsProvider/SendBirdPostsProvider';
+import { usePostsProvider } from 'providers/PostsProvider/PostsProvider';
 
 // components
 import BackgroundScreen from 'components/BackgroundScreen/BackgroundScreen';
@@ -98,7 +98,7 @@ const HomeTabPost: FunctionComponent<HomeTabPostProps> = ({ navigation }) => {
     getPosts,
     posts,
     sendNotification,
-  } = useSendBirdPostsProvider();
+  } = usePostsProvider();
   const { showToast } = useToastProvider();
   const [likes, setLikes] = useState(0);
   const [isLiked, setIsLiked] = useState(false);

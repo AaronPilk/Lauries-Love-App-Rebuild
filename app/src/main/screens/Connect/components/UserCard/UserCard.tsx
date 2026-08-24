@@ -19,7 +19,7 @@ import { IconMiddleDot } from 'assets/icons-auto/components';
 import { getFileStorageAmplify } from 'utils/amplify-storage';
 import { publicUrlFor } from 'services/supabase/supabase.storage';
 import { useToastProvider } from 'providers/ToastProvider/ToastProvider';
-import { useSendbirdChatProvider } from 'providers/SendbirdChatProvider/SendbirdChatProvider';
+import { useChatProvider } from 'providers/ChatProvider/ChatProvider';
 import { useCountry } from 'presentation/hooks';
 import { SUPABASE_ENABLED } from 'services/supabase/backend.config';
 import { findOrCreateDirectConversation } from 'services/supabase/supabase.chat';
@@ -44,7 +44,7 @@ export default React.memo(function UserCard({
 }: Props) {
   const navigation = useNavigation();
   const { showToast } = useToastProvider();
-  const { groupChannels, getChannels } = useSendbirdChatProvider();
+  const { groupChannels, getChannels } = useChatProvider();
 
   const { allCountries } = useCountry();
 

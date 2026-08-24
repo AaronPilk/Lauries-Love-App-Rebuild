@@ -9,7 +9,7 @@ import {
 } from 'react-native';
 
 // types
-import { UserSendBirdType } from 'providers/SendbirdChatProvider/SendbirdChatProvider.types';
+import { UserSendBirdType } from 'providers/ChatProvider/ChatProvider.types';
 
 // components
 import AvatarMessagesTab from '../AvatarMessagesTab/AvatarMessagesTab';

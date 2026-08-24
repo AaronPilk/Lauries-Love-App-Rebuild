@@ -13,7 +13,7 @@ import {
 import colors from 'styles/colors';
 import styles from './ListChannelsMessageTab.styles';
 import AvatarMessagesTab from '../AvatarMessagesTab/AvatarMessagesTab';
-import { useSendbirdChatProvider } from 'providers/SendbirdChatProvider/SendbirdChatProvider';
+import { useChatProvider } from 'providers/ChatProvider/ChatProvider';
 import {
   IconMessagesNotGroup,
   IconPlus,
@@ -81,7 +81,7 @@ const ListChannelsMessageTab: FunctionComponent<
   handleScrollDown,
   joinedUrls,
 }) => {
-  const { userChat } = useSendbirdChatProvider();
+  const { userChat } = useChatProvider();
 
   // Supabase profile id (userChat mirrors the profile). The old
   // sdk.currentUser fallback was the dead shim proxy — truthy, so it

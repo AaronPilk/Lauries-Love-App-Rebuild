@@ -17,7 +17,7 @@ import {
 
 // providers
 import { usePermissionsProvider } from 'providers/PermissionsProvider/PermissionsProvider';
-import { useSendbirdChatProvider } from 'providers/SendbirdChatProvider/SendbirdChatProvider';
+import { useChatProvider } from 'providers/ChatProvider/ChatProvider';
 import { useUserDBProvider } from 'providers/UserDBProvider/UserDBProvider';
 import { useApiProvider } from 'providers/ApiProvider/ApiProvider';
 import { PATHS_MESSAGES_TAB } from 'main/navigators/paths';
@@ -55,7 +55,7 @@ const PushNotificationProvider: FunctionComponent<
   const navigation = useNavigation();
   const { api } = useApiProvider();
   const { userDB, updateUserDB } = useUserDBProvider();
-  const { userChat } = useSendbirdChatProvider();
+  const { userChat } = useChatProvider();
   const { permissions, requestPermissionsNotificationFirebase } =
     usePermissionsProvider();
   const [token, setToken] = useState<string | null>(null);

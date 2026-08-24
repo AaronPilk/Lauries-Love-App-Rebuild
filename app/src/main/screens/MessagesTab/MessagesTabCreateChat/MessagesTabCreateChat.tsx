@@ -13,10 +13,10 @@ import { useIsFocused } from '@react-navigation/native';
 
 // types
 import { RootMessagesTabParamList } from 'main/navigators/MessagesTabStacks/MessagesTabStacks.types';
-import { UserSendBirdType } from 'providers/SendbirdChatProvider/SendbirdChatProvider.types';
+import { UserSendBirdType } from 'providers/ChatProvider/ChatProvider.types';
 
 // providers
-import { useSendbirdChatProvider } from 'providers/SendbirdChatProvider/SendbirdChatProvider';
+import { useChatProvider } from 'providers/ChatProvider/ChatProvider';
 
 // components
 import BackgroundScreen from 'components/BackgroundScreen/BackgroundScreen';
@@ -55,7 +55,7 @@ const MessagesTabCreateChat: FunctionComponent<MessagesTabCreateChatProps> = ({
 }) => {
   const isFocused = useIsFocused();
   const { getChannels, getFriends: getFriendsProvider } =
-    useSendbirdChatProvider();
+    useChatProvider();
   const [friends, setFriends] = useState<FriendWithStatus[]>([]);
   const [limit, setLimit] = useState(100);
   const [search, setSearch] = useState('');

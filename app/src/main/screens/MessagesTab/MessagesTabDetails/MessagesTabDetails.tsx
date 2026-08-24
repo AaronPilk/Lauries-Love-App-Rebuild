@@ -7,10 +7,10 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 // types
 import { RootMessagesTabParamList } from 'main/navigators/MessagesTabStacks/MessagesTabStacks.types';
 import { UserDBType } from 'providers/UserDBProvider/UserDBProvider.types';
-import { UserSendBirdType } from 'providers/SendbirdChatProvider/SendbirdChatProvider.types';
+import { UserSendBirdType } from 'providers/ChatProvider/ChatProvider.types';
 
 // providers
-import { useSendbirdChatProvider } from 'providers/SendbirdChatProvider/SendbirdChatProvider';
+import { useChatProvider } from 'providers/ChatProvider/ChatProvider';
 import { useUserDBProvider } from 'providers/UserDBProvider/UserDBProvider';
 
 // components
@@ -60,7 +60,7 @@ const MessagesTabDetails: FunctionComponent<MessagesTabDetailsProps> = ({
     getMember,
     groupChannels,
     userChat,
-  } = useSendbirdChatProvider();
+  } = useChatProvider();
   const { getOnlyUserDBById } = useUserDBProvider();
   const route =
     useRoute<RouteProp<RootMessagesTabParamList, 'messages-tab-details'>>();

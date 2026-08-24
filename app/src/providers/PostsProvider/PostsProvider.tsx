@@ -24,11 +24,11 @@ import {
   MOCK_POSTS,
 } from 'mocks/mock.sendbird';
 import { useUserDBProvider } from 'providers/UserDBProvider/UserDBProvider';
-import { useSendbirdChatProvider } from 'providers/SendbirdChatProvider/SendbirdChatProvider';
+import { useChatProvider } from 'providers/ChatProvider/ChatProvider';
 import {
   BaseMessageSendBirdType,
   GroupChannelSendBirdType,
-} from 'providers/SendbirdChatProvider/SendbirdChatProvider.types';
+} from 'providers/ChatProvider/ChatProvider.types';
 
 // Structural stand-in for the removed @sendbird/chat GroupChannel type.
 type GroupChannel = GroupChannelSendBirdType;
@@ -66,17 +66,17 @@ type SendBirdPostsContext = {
   }) => Promise<{ ok: boolean; msg: string }>;
 };
 
-type SendBirdPostsProviderProps = {
+type PostsProviderProps = {
   children: JSX.Element;
 };
 
 export const sendBirdPostsContext = createContext({} as SendBirdPostsContext);
 
-const SendBirdPostsProvider: FunctionComponent<SendBirdPostsProviderProps> = ({
+const PostsProvider: FunctionComponent<PostsProviderProps> = ({
   children,
 }) => {
   const { api } = useApiProvider();
-  const { userChat } = useSendbirdChatProvider();
+  const { userChat } = useChatProvider();
   const [posts, setPosts] = useState<GroupChannel[]>([]);
   const [comments, setComments] = useState<
     Record<string, BaseMessageSendBirdType[]>
@@ -274,6 +274,6 @@ const SendBirdPostsProvider: FunctionComponent<SendBirdPostsProviderProps> = ({
   );
 };
 
-export const useSendBirdPostsProvider = () => useContext(sendBirdPostsContext);
+export const usePostsProvider = () => useContext(sendBirdPostsContext);
 
-export default SendBirdPostsProvider;
+export default PostsProvider;

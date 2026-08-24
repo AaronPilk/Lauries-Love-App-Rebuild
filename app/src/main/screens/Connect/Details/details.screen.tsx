@@ -23,7 +23,7 @@ import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { User } from '../Map/map.screen';
 
 // providers
-import { useSendbirdChatProvider } from 'providers/SendbirdChatProvider/SendbirdChatProvider';
+import { useChatProvider } from 'providers/ChatProvider/ChatProvider';
 import { useToastProvider } from 'providers/ToastProvider/ToastProvider';
 
 // hooks
@@ -66,7 +66,7 @@ const DetailsScreen: FunctionComponent<DetailsScreenProps> = ({
   navigation: navigationProps,
 }) => {
   const navigation = useNavigation();
-  const { getChannels } = useSendbirdChatProvider();
+  const { getChannels } = useChatProvider();
   const { showToast } = useToastProvider();
   const route =
     useRoute<

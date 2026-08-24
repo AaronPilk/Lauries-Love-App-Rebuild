@@ -12,7 +12,7 @@ import { Menu } from 'react-native-paper';
 import { LinearGradient } from 'expo-linear-gradient';
 
 // providers
-import { UserSendBirdType } from 'providers/SendbirdChatProvider/SendbirdChatProvider.types';
+import { UserSendBirdType } from 'providers/ChatProvider/ChatProvider.types';
 
 // icons
 import {

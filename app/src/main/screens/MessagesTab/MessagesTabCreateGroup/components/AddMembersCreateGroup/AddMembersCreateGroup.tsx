@@ -13,7 +13,7 @@ import {
 import {
   GroupChannelSendBirdType,
   UserSendBirdType,
-} from 'providers/SendbirdChatProvider/SendbirdChatProvider.types';
+} from 'providers/ChatProvider/ChatProvider.types';
 
 // components
 import ListFriendsMessageTab from 'main/screens/MessagesTab/components/ListFriendsMessageTab/ListFriendsMessageTab';
@@ -26,7 +26,7 @@ import { IconClose } from 'assets/icons-auto/components';
 import styles from './AddMembersCreateGroup.styles';
 import colors from 'styles/colors';
 import { SUPABASE_ENABLED } from 'services/supabase/backend.config';
-import { useSendbirdChatProvider } from 'providers/SendbirdChatProvider/SendbirdChatProvider';
+import { useChatProvider } from 'providers/ChatProvider/ChatProvider';
 
 type AddMembersCreateGroupProps = {
   selectUsers: UserSendBirdType[];
@@ -41,7 +41,7 @@ const AddMembersCreateGroup: FunctionComponent<AddMembersCreateGroupProps> = ({
   selectUsers,
   setSelectUsers,
 }) => {
-  const { friends: providerFriends, groupChannels } = useSendbirdChatProvider();
+  const { friends: providerFriends, groupChannels } = useChatProvider();
   const [friends, setFriends] = useState<FriendWithStatus[]>([]);
   const [limit, setLimit] = useState(20);
   const [searchText, setSearchText] = useState('');

@@ -14,7 +14,7 @@ import { ImagePickerAsset } from 'expo-image-picker';
 import { RootMessagesTabParamList } from 'main/navigators/MessagesTabStacks/MessagesTabStacks.types';
 
 // providers
-import { useSendbirdChatProvider } from 'providers/SendbirdChatProvider/SendbirdChatProvider';
+import { useChatProvider } from 'providers/ChatProvider/ChatProvider';
 
 // components
 import BackgroundScreen from 'components/BackgroundScreen/BackgroundScreen';
@@ -34,7 +34,7 @@ import { PATHS_MESSAGES_TAB } from 'main/navigators/paths';
 
 // styles
 import styles from './MessagesTabCreateGroup.styles';
-import { UserSendBirdType } from 'providers/SendbirdChatProvider/SendbirdChatProvider.types';
+import { UserSendBirdType } from 'providers/ChatProvider/ChatProvider.types';
 
 const WIDTH = Dimensions.get('window').width;
 
@@ -45,7 +45,7 @@ type MessagesTabCreateGroupProps = {
 const MessagesTabCreateGroup: FunctionComponent<
   MessagesTabCreateGroupProps
 > = ({ navigation }) => {
-  const { getChannels } = useSendbirdChatProvider();
+  const { getChannels } = useChatProvider();
   const [selectedTab, setSelectedTab] = useState(0);
   const [newGroup, setNewGroup] = useState(DEFAULT_NEW_GROUP);
   const [isShowImageModal, setIsShowImageModal] = useState(false);

@@ -6,12 +6,12 @@ import { ActivityIndicator } from 'react-native-paper';
 
 // types
 import { RootMessagesTabParamList } from 'main/navigators/MessagesTabStacks/MessagesTabStacks.types';
-import { UserSendBirdType } from 'providers/SendbirdChatProvider/SendbirdChatProvider.types';
+import { UserSendBirdType } from 'providers/ChatProvider/ChatProvider.types';
 import { UserDBType } from 'providers/UserDBProvider/UserDBProvider.types';
 
 // providers
 import { useUserDBProvider } from 'providers/UserDBProvider/UserDBProvider';
-import { useSendbirdChatProvider } from 'providers/SendbirdChatProvider/SendbirdChatProvider';
+import { useChatProvider } from 'providers/ChatProvider/ChatProvider';
 
 // hooks
 import useFriendsUserDB from 'providers/UserDBProvider/useFriendsUserDB';
@@ -33,7 +33,7 @@ import {
 
 // constants
 import { PATHS_MESSAGES_TAB } from 'main/navigators/paths';
-import { DEFAULT_ERROR_NOT_FOUND_USER_SENDBIRD } from 'providers/SendbirdChatProvider/SendbirdChatProvider.constants';
+import { DEFAULT_ERROR_NOT_FOUND_USER_SENDBIRD } from 'providers/ChatProvider/ChatProvider.constants';
 
 // supabase (Backend V2) chat
 import { SUPABASE_ENABLED } from 'services/supabase/backend.config';
@@ -55,7 +55,7 @@ type MessagesTabProfileProps = {
 const MessagesTabProfile: FunctionComponent<MessagesTabProfileProps> = ({
   navigation,
 }) => {
-  const { getChannels } = useSendbirdChatProvider();
+  const { getChannels } = useChatProvider();
   const { getOnlyUserDBById } = useUserDBProvider();
   const route =
     useRoute<RouteProp<RootMessagesTabParamList, 'messages-tab-profile'>>();

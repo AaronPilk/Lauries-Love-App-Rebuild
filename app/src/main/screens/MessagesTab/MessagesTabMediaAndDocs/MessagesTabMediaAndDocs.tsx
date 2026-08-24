@@ -23,7 +23,7 @@ import * as VideoThumbnails from 'expo-video-thumbnails';
 import { RootMessagesTabParamList } from 'main/navigators/MessagesTabStacks/MessagesTabStacks.types';
 
 // providers
-import { BaseMessageSendBirdType } from 'providers/SendbirdChatProvider/SendbirdChatProvider.types';
+import { BaseMessageSendBirdType } from 'providers/ChatProvider/ChatProvider.types';
 
 // supabase (Backend V2) chat
 import { SUPABASE_ENABLED } from 'services/supabase/backend.config';

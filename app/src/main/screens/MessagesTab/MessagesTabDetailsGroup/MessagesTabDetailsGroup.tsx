@@ -14,7 +14,7 @@ import { RouteProp, useRoute } from '@react-navigation/native';
 import { RootMessagesTabParamList } from 'main/navigators/MessagesTabStacks/MessagesTabStacks.types';
 
 // providers
-import { GroupChannelSendBirdType } from 'providers/SendbirdChatProvider/SendbirdChatProvider.types';
+import { GroupChannelSendBirdType } from 'providers/ChatProvider/ChatProvider.types';
 
 // components
 import BackgroundScreen from 'components/BackgroundScreen/BackgroundScreen';
@@ -42,7 +42,7 @@ import { PATHS_MESSAGES_TAB } from 'main/navigators/paths';
 // styles
 import colors from 'styles/colors';
 import styles from './MessagesTabDetailsGroup.styles';
-import { useSendbirdChatProvider } from 'providers/SendbirdChatProvider/SendbirdChatProvider';
+import { useChatProvider } from 'providers/ChatProvider/ChatProvider';
 
 type MessagesTabDetailsGroupProps = {
   navigation: NativeStackNavigationProp<RootMessagesTabParamList>;
@@ -55,7 +55,7 @@ const MessagesTabDetailsGroup: FunctionComponent<
     useRoute<
       RouteProp<RootMessagesTabParamList, 'messages-tab-details-group'>
     >();
-  const { getChannels, groupChannels } = useSendbirdChatProvider();
+  const { getChannels, groupChannels } = useChatProvider();
   const [channel, setChannel] = useState<GroupChannelSendBirdType | null>(null);
 
   const fetchChannel = async () => {

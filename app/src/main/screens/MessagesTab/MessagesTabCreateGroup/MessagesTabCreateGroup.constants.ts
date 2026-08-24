@@ -1,4 +1,4 @@
-import { UserSendBirdType } from 'providers/SendbirdChatProvider/SendbirdChatProvider.types';
+import { UserSendBirdType } from 'providers/ChatProvider/ChatProvider.types';
 
 export const DEFAULT_NEW_GROUP: {
   members: UserSendBirdType[];

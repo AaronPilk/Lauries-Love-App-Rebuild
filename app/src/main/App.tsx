@@ -19,9 +19,9 @@ import PaymentProvider from 'providers/PaymentProvider/PaymentProvider';
 import DBProvider from 'providers/DBProvider/DBProvider';
 import KeyboardProvider from 'providers/KeyboardProvider/KeyboardProvider';
 import PermissionsProvider from 'providers/PermissionsProvider/PermissionsProvider';
-import SendbirdChatProvider from 'providers/SendbirdChatProvider/SendbirdChatProvider';
+import ChatProvider from 'providers/ChatProvider/ChatProvider';
 import PushNotificationProvider from 'providers/PushNotificationProvider/PushNotificationProvider';
-import SendBirdPostsProvider from 'providers/SendBirdPostsProvider/SendBirdPostsProvider';
+import PostsProvider from 'providers/PostsProvider/PostsProvider';
 import VersionsProvider from 'providers/VersionsProvider/VersionsProvider';
 import { IntercomProvider } from 'providers/IntercomProvider/IntercomProvider';
 
@@ -126,8 +126,8 @@ export default function App() {
                           isOnboarding={isOnboarding}
                         >
                           <PosthogProvider>
-                            <SendbirdChatProvider>
-                              <SendBirdPostsProvider>
+                            <ChatProvider>
+                              <PostsProvider>
                                 <PaymentProvider>
                                   <PermissionsProvider>
                                     <PushNotificationProvider>
@@ -140,8 +140,8 @@ export default function App() {
                                     </PushNotificationProvider>
                                   </PermissionsProvider>
                                 </PaymentProvider>
-                              </SendBirdPostsProvider>
-                            </SendbirdChatProvider>
+                              </PostsProvider>
+                            </ChatProvider>
                           </PosthogProvider>
                         </UserDBProvider>
                       </DBProvider>

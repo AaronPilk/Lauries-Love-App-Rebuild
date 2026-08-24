@@ -29,9 +29,9 @@ import BackgroundScreen from 'components/BackgroundScreen/BackgroundScreen';
 import ThreeButtonsHomeTab from '../components/ThreeButtonsHomeTab/ThreeButtonsHomeTab';
 import { RootHomeTabParamList } from 'main/navigators/HomeTabStacks/HomeTabStacks.types';
 import TaraStoryPostHomeTab from '../components/TaraStoryPostHomeTab/TaraStoryPostHomeTab';
-import { useSendbirdChatProvider } from 'providers/SendbirdChatProvider/SendbirdChatProvider';
-import { useSendBirdPostsProvider } from 'providers/SendBirdPostsProvider/SendBirdPostsProvider';
-import { GroupChannelSendBirdType } from 'providers/SendbirdChatProvider/SendbirdChatProvider.types';
+import { useChatProvider } from 'providers/ChatProvider/ChatProvider';
+import { usePostsProvider } from 'providers/PostsProvider/PostsProvider';
+import { GroupChannelSendBirdType } from 'providers/ChatProvider/ChatProvider.types';
 import NotificationButtonHomeTab from '../components/NotificationButtonHomeTab/NotificationButtonHomeTab';
 import {
   IconClock,
@@ -56,12 +56,12 @@ type HomeTabMainProps = {
 const HomeTabMain: FunctionComponent<HomeTabMainProps> = ({ navigation }) => {
   const isFocused = useIsFocused();
   const route = useRoute();
-  const { friends, groupChannels } = useSendbirdChatProvider();
-  const { userChat } = useSendbirdChatProvider();
+  const { friends, groupChannels } = useChatProvider();
+  const { userChat } = useChatProvider();
   const { checkGeoLocationCity } = useUserDBProvider();
   const { openIntercom, unreadCount } = useIntercom();
   const { loadingStorage, loadingServer, posts, getPosts, comments } =
-    useSendBirdPostsProvider();
+    usePostsProvider();
   const [selectType, setSelectType] = useState<'posts' | 'friends' | 'groups'>(
     'posts',
   );

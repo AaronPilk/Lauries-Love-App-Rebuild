@@ -4,21 +4,21 @@ import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { z } from 'zod';
 
 // types
-import { UserSendBirdType } from 'providers/SendbirdChatProvider/SendbirdChatProvider.types';
+import { UserSendBirdType } from 'providers/ChatProvider/ChatProvider.types';
 import { UserDBType } from './UserDBProvider.types';
 
 // providers
 import { useApiProvider } from 'providers/ApiProvider/ApiProvider';
 import { useUserDBProvider } from './UserDBProvider';
-import { useSendBirdPostsProvider } from 'providers/SendBirdPostsProvider/SendBirdPostsProvider';
-import { useSendbirdChatProvider } from 'providers/SendbirdChatProvider/SendbirdChatProvider';
+import { usePostsProvider } from 'providers/PostsProvider/PostsProvider';
+import { useChatProvider } from 'providers/ChatProvider/ChatProvider';
 
 // utils
 import { SUPABASE_ENABLED } from 'services/supabase/backend.config';
 import { publicUrlFor } from 'services/supabase/supabase.storage';
 
 // constants
-import { DEFAULT_ERROR_NOT_FOUND_USER_SENDBIRD } from 'providers/SendbirdChatProvider/SendbirdChatProvider.constants';
+import { DEFAULT_ERROR_NOT_FOUND_USER_SENDBIRD } from 'providers/ChatProvider/ChatProvider.constants';
 
 type FriendsUserDBProps = {
   friendId: string;
@@ -33,8 +33,8 @@ const useFriendsUserDB = ({
 }: FriendsUserDBProps) => {
   const { api } = useApiProvider();
   const { userDB, getOnlyUserDBById } = useUserDBProvider();
-  const { getFriends } = useSendbirdChatProvider();
-  const { sendNotification } = useSendBirdPostsProvider();
+  const { getFriends } = useChatProvider();
+  const { sendNotification } = usePostsProvider();
   const [selectUserSendbird, setSelectUserSendbird] =
     useState<UserSendBirdType | null>(null);
   const [selectUserDB, setSelectUserDB] = useState<UserDBType | null>(null);

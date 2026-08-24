@@ -6,14 +6,14 @@ import { Notification } from './notifications.screen';
 
 // providers
 import { useApiProvider } from 'providers/ApiProvider/ApiProvider';
-import { useSendbirdChatProvider } from 'providers/SendbirdChatProvider/SendbirdChatProvider';
+import { useChatProvider } from 'providers/ChatProvider/ChatProvider';
 import { useToastProvider } from 'providers/ToastProvider/ToastProvider';
 import { customShowError } from 'utils/other';
 
 const useNotificationsScreen = () => {
   const { api } = useApiProvider();
   const { showToast } = useToastProvider();
-  const { getFriends, getChannels } = useSendbirdChatProvider();
+  const { getFriends, getChannels } = useChatProvider();
   const [notificationSenders, setNotificationSenders] = useState<
     Notification[]
   >([]);

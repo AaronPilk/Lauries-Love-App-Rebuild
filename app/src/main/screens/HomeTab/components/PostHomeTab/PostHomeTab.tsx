@@ -14,9 +14,9 @@ import styles from './PostHomeTab.styles';
 import defaultAvatar from 'assets/images/avatar-empty.png';
 import { useToastProvider } from 'providers/ToastProvider/ToastProvider';
 import { useGetUsersReq } from 'presentation/services/react-query/user.query';
-import { useSendBirdPostsProvider } from 'providers/SendBirdPostsProvider/SendBirdPostsProvider';
+import { usePostsProvider } from 'providers/PostsProvider/PostsProvider';
 import AvatarMessagesTab from 'main/screens/MessagesTab/components/AvatarMessagesTab/AvatarMessagesTab';
-import { GroupChannelSendBirdType } from 'providers/SendbirdChatProvider/SendbirdChatProvider.types';
+import { GroupChannelSendBirdType } from 'providers/ChatProvider/ChatProvider.types';
 import { useUserDBProvider } from 'providers/UserDBProvider/UserDBProvider';
 import { toLocalizedDateString } from 'utils/formatDate';
 
@@ -46,7 +46,7 @@ const PostHomeTab: FunctionComponent<PostHomeTabProps> = ({
   const navigation = useNavigation();
   const { showToast } = useToastProvider();
   const { data: usersData } = useGetUsersReq();
-  const { sendNotification, comments: comment } = useSendBirdPostsProvider();
+  const { sendNotification, comments: comment } = usePostsProvider();
 
   const [likes, setLikes] = useState(0);
   const [isLiked, setIsLiked] = useState(false);

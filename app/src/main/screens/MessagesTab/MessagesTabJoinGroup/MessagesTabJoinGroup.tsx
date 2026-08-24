@@ -16,9 +16,9 @@ import HeaderTabScreen from 'components/HeaderTabScreen/HeaderTabScreen';
 import { useIntercom } from 'providers/IntercomProvider/IntercomProvider';
 import BackgroundScreen from 'components/BackgroundScreen/BackgroundScreen';
 import ListChannelsMessageTab from '../components/ListChannelsMessageTab/ListChannelsMessageTab';
-import { useSendBirdPostsProvider } from 'providers/SendBirdPostsProvider/SendBirdPostsProvider';
-import { useSendbirdChatProvider } from 'providers/SendbirdChatProvider/SendbirdChatProvider';
-import { GroupChannelSendBirdType } from 'providers/SendbirdChatProvider/SendbirdChatProvider.types';
+import { usePostsProvider } from 'providers/PostsProvider/PostsProvider';
+import { useChatProvider } from 'providers/ChatProvider/ChatProvider';
+import { GroupChannelSendBirdType } from 'providers/ChatProvider/ChatProvider.types';
 import { RootMessagesTabParamList } from 'main/navigators/MessagesTabStacks/MessagesTabStacks.types';
 
 // backend v2
@@ -45,8 +45,8 @@ const MessagesTabJoinGroup: FunctionComponent<MessagesTabJoinGroupProps> = ({
   const [loading, setLoading] = useState(true);
   // Urls joined during THIS visit — rows light up as 'Joined' in place.
   const [justJoined, setJustJoined] = useState<string[]>([]);
-  const { getFilteringUserInfo } = useSendBirdPostsProvider();
-  const { groupChannels, getChannels } = useSendbirdChatProvider();
+  const { getFilteringUserInfo } = usePostsProvider();
+  const { groupChannels, getChannels } = useChatProvider();
 
   const getChannelsHandler = async () => {
     if (SUPABASE_ENABLED) {

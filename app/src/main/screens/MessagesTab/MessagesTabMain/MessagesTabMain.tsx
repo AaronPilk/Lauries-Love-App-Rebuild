@@ -23,11 +23,11 @@ import { RootMessagesTabParamList } from 'main/navigators/MessagesTabStacks/Mess
 import {
   GroupChannelSendBirdType,
   MemberSendBirdType,
-} from 'providers/SendbirdChatProvider/SendbirdChatProvider.types';
+} from 'providers/ChatProvider/ChatProvider.types';
 import { BaseMessage } from 'services/legacy-chat.shim';
 
 // providers
-import { useSendbirdChatProvider, useChatMessages } from 'providers/SendbirdChatProvider/SendbirdChatProvider';
+import { useChatProvider, useChatMessages } from 'providers/ChatProvider/ChatProvider';
 
 // components
 import BackgroundScreen from 'components/BackgroundScreen/BackgroundScreen';
@@ -193,7 +193,7 @@ const MessagesTabMain: FunctionComponent<MessagesTabMainProps> = ({
 }) => {
   const isFocused = useIsFocused();
   const { userChat, groupChannels, limit, setLimit, getChannels } =
-    useSendbirdChatProvider();
+    useChatProvider();
   const { messages } = useChatMessages();
   const { userDB } = useUserDBProvider();
   const [search, setSearch] = useState('');

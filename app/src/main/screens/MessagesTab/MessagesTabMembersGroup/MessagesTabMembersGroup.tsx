@@ -12,11 +12,11 @@ import { RouteProp, useRoute } from '@react-navigation/native';
 import {
   GroupChannelSendBirdType,
   UserSendBirdType,
-} from 'providers/SendbirdChatProvider/SendbirdChatProvider.types';
+} from 'providers/ChatProvider/ChatProvider.types';
 import { RootMessagesTabParamList } from 'main/navigators/MessagesTabStacks/MessagesTabStacks.types';
 
 // providers
-import { useSendbirdChatProvider } from 'providers/SendbirdChatProvider/SendbirdChatProvider';
+import { useChatProvider } from 'providers/ChatProvider/ChatProvider';
 
 // backend v2
 import { SUPABASE_ENABLED } from 'services/supabase/backend.config';
@@ -41,7 +41,7 @@ const MessagesTabMembersGroup: FunctionComponent<
     useRoute<
       RouteProp<RootMessagesTabParamList, 'messages-tab-members-group'>
     >();
-  const { friends: providerFriends, userChat } = useSendbirdChatProvider();
+  const { friends: providerFriends, userChat } = useChatProvider();
   const [channel, setChannel] = useState<GroupChannelSendBirdType | null>(null);
   const [friends, setFriends] = useState<UserSendBirdType[]>([]);
   const [limit, setLimit] = useState(20);

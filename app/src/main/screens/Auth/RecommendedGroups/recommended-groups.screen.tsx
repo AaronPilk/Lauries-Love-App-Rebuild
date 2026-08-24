@@ -16,7 +16,7 @@ import { useIntercom } from 'providers/IntercomProvider/IntercomProvider';
 // providers
 import { useUserDBProvider } from 'providers/UserDBProvider/UserDBProvider';
 import useAuth from '../useAuth';
-import { useSendBirdPostsProvider } from 'providers/SendBirdPostsProvider/SendBirdPostsProvider';
+import { usePostsProvider } from 'providers/PostsProvider/PostsProvider';
 
 // components
 import Button from 'components/Button/Button';
@@ -42,7 +42,7 @@ export default function RecommendedGroupsScreen() {
   const {
     db: { diagnosisType },
   } = useDBProvider();
-  const { getFilteringUserInfo } = useSendBirdPostsProvider();
+  const { getFilteringUserInfo } = usePostsProvider();
   const [channels, setChannels] = useState<GroupChannel[]>([]);
   const [selected, setSelected] = useState<Record<string | number, boolean>>(
     {},

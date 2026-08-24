@@ -11,7 +11,7 @@ import { DocumentPickerAsset } from 'expo-document-picker';
 import { ImagePickerAsset } from 'expo-image-picker';
 
 // types
-import { BaseMessageSendBirdType } from 'providers/SendbirdChatProvider/SendbirdChatProvider.types';
+import { BaseMessageSendBirdType } from 'providers/ChatProvider/ChatProvider.types';
 
 // styles
 import styles from './PhotoMediaMessagesTab.styles';

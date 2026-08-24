@@ -29,11 +29,11 @@ import {
   BaseMessageSendBirdType,
   GroupChannelSendBirdType,
   UserSendBirdType,
-} from 'providers/SendbirdChatProvider/SendbirdChatProvider.types';
+} from 'providers/ChatProvider/ChatProvider.types';
 
 // providers
 import { useKeyboardProvider } from 'providers/KeyboardProvider/KeyboardProvider';
-import { useSendbirdChatProvider, useChatMessages } from 'providers/SendbirdChatProvider/SendbirdChatProvider';
+import { useChatProvider, useChatMessages } from 'providers/ChatProvider/ChatProvider';
 import { usePushNotificationProvider } from 'providers/PushNotificationProvider/PushNotificationProvider';
 
 // components
@@ -95,7 +95,7 @@ const MessagesTabChatGroup: FunctionComponent<MessagesTabChatGroupProps> = ({
     loadOlderMessages,
     appendMessage,
     getChannels,
-  } = useSendbirdChatProvider();
+  } = useChatProvider();
   const { messages } = useChatMessages();
   const loadingOlderRef = useRef(false);
   const reachedStartRef = useRef(false);

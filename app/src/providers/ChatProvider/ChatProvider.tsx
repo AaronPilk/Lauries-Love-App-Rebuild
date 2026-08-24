@@ -36,7 +36,7 @@ import {
   GroupChannelSendBirdType,
   MemberSendBirdType,
   UserSendBirdType,
-} from './SendbirdChatProvider.types';
+} from './ChatProvider.types';
 
 // Structural stand-in for the removed @sendbird/chat BaseMessage type.
 type BaseMessage = BaseMessageSendBirdType;
@@ -60,7 +60,7 @@ type SendbirdChatContext = {
   getFriends: () => Promise<UserSendBirdType[]>;
 };
 
-type SendbirdChatProviderProps = {
+type ChatProviderProps = {
   children: React.ReactNode;
 };
 
@@ -77,7 +77,7 @@ export const chatMessagesContext = createContext<{
   messages: Record<string, BaseMessageSendBirdType[]>;
 }>({ messages: {} });
 
-const SendbirdChatProvider: FunctionComponent<SendbirdChatProviderProps> = ({
+const ChatProvider: FunctionComponent<ChatProviderProps> = ({
   children,
 }) => {
   const { api } = useApiProvider();
@@ -669,12 +669,12 @@ const SendbirdChatProvider: FunctionComponent<SendbirdChatProviderProps> = ({
   );
 };
 
-export const useSendbirdChatProvider = () => useContext(sendbirdChatContext);
+export const useChatProvider = () => useContext(sendbirdChatContext);
 /** Message data only — subscribe here (not the main provider) to avoid
  *  re-rendering on every chat message. */
 export const useChatMessages = () => useContext(chatMessagesContext);
 
 // Sendbird UIKit container removed — the provider now renders directly.
 export default ({ children }: { children: React.ReactNode }) => (
-  <SendbirdChatProvider>{children}</SendbirdChatProvider>
+  <ChatProvider>{children}</ChatProvider>
 );

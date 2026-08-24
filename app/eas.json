@@ -7,6 +7,9 @@
       "node": "22.11.0",
       "channel": "production",
       "environment": "production",
+      "env": {
+        "SENTRY_DISABLE_AUTO_UPLOAD": "true"
+      },
       "android": {
         "resourceClass": "large"
       }
@@ -14,6 +17,9 @@
     "staging": {
       "node": "22.11.0",
       "environment": "development",
+      "env": {
+        "SENTRY_DISABLE_AUTO_UPLOAD": "true"
+      },
       "distribution": "internal",
       "android": {
         "resourceClass": "large",

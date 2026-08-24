@@ -8,11 +8,14 @@
 **/.env.*
 !**/.env.example
 api/firebase.json
-**/GoogleService-Info.plist
-**/google-services.json
 **/*.p8
 **/*.pem
 **/*.keystore
+
+# NOTE: google-services.json and GoogleService-Info.plist are Firebase CLIENT
+# config files. They ship inside the distributed app binary and are NOT secrets
+# (per Firebase docs). They are intentionally committed because the EAS
+# bare-workflow Gradle/Xcode build requires them present in the repo.
 
 # Builds
 **/dist/

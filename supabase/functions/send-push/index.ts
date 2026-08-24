@@ -1,18 +1,22 @@
 // send-push
 // Body: { userIds?: string[], tokens?: string[], title, body, data? }
-// Sends push notifications via Expo (default). If a token looks like a raw FCM
-// token (not an Expo token) and FCM_SERVER_KEY is set, it is sent via FCM.
+// Sends push notifications via Expo (for Expo tokens) and via FCM HTTP v1 (for
+// native FCM tokens — the app's actual token type).
 //
 // Push tokens are read from `profiles_private.push_token` WHERE push_active,
 // using the service-role client (that table is owner-only under RLS).
 //
 // Required secrets: SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY
-// Optional secrets: FCM_SERVER_KEY (enables raw-FCM-token delivery)
+// Optional secrets: FCM_SERVICE_ACCOUNT (the Firebase service-account JSON, as a
+//   string) — enables native-FCM-token delivery via the FCM HTTP v1 API. The
+//   app registers native FCM tokens (@react-native-firebase/messaging), so this
+//   is the active delivery path. (The legacy FCM_SERVER_KEY API was retired by
+//   Google in 2024 and is no longer used.)
 import { handlePreflight, json, notConfigured } from '../_shared/cors.ts';
 import { adminClient, callerClient, env, getUser, missingEnv } from '../_shared/supabaseAdmin.ts';
+import { getFcmAccessToken, sendFcmV1, type ServiceAccount } from '../_shared/fcm.ts';
 
 const EXPO_PUSH_URL = 'https://exp.host/--/api/v2/push/send';
-const FCM_SEND_URL = 'https://fcm.googleapis.com/fcm/send';
 
 function isExpoToken(token: string): boolean {
   return token.startsWith('ExponentPushToken[') || token.startsWith('ExpoPushToken[');
@@ -133,35 +137,33 @@ Deno.serve(async (req) => {
       });
     }
 
-    // --- FCM fan-out (only if a server key is configured) ---
-    const fcmKey = env('FCM_SERVER_KEY');
+    // --- FCM fan-out via HTTP v1 (needs the service-account JSON) ---
+    const fcmSaRaw = env('FCM_SERVICE_ACCOUNT');
     if (fcmTokens.length) {
-      if (!fcmKey) {
+      if (!fcmSaRaw) {
         results.push({
           channel: 'fcm',
           ok: false,
-          detail: 'FCM_SERVER_KEY not configured; skipped raw FCM tokens',
+          detail: 'FCM_SERVICE_ACCOUNT not configured; skipped FCM tokens',
         });
       } else {
-        // FCM legacy HTTP accepts up to 1000 registration_ids per request.
-        for (const batch of chunk(fcmTokens, 1000)) {
-          const resp = await fetch(FCM_SEND_URL, {
-            method: 'POST',
-            headers: {
-              'Authorization': `key=${fcmKey}`,
-              'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-              registration_ids: batch,
-              notification: { title, body: message },
-              data: dataPayload,
-            }),
-          });
-          results.push({
-            channel: 'fcm',
-            ok: resp.ok,
-            detail: await resp.json().catch(() => null),
-          });
+        try {
+          const sa = JSON.parse(fcmSaRaw) as ServiceAccount;
+          const accessToken = await getFcmAccessToken(sa);
+          // v1 sends one message per token — do it per device.
+          for (const token of fcmTokens) {
+            const r = await sendFcmV1(
+              accessToken,
+              sa.project_id,
+              token,
+              title,
+              message,
+              dataPayload,
+            );
+            results.push({ channel: 'fcm', ok: r.ok, detail: r.detail });
+          }
+        } catch (e) {
+          results.push({ channel: 'fcm', ok: false, detail: (e as Error).message });
         }
       }
     }

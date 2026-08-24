@@ -4,6 +4,7 @@
   },
   "build": {
     "production": {
+      "node": "22.11.0",
       "channel": "production",
       "environment": "production",
       "android": {
@@ -11,6 +12,7 @@
       }
     },
     "staging": {
+      "node": "22.11.0",
       "environment": "development",
       "distribution": "internal",
       "android": {

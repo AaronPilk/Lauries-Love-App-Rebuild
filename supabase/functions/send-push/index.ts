@@ -9,7 +9,7 @@
 // Required secrets: SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY
 // Optional secrets: FCM_SERVER_KEY (enables raw-FCM-token delivery)
 import { handlePreflight, json, notConfigured } from '../_shared/cors.ts';
-import { adminClient, env, getUser, missingEnv } from '../_shared/supabaseAdmin.ts';
+import { adminClient, callerClient, env, getUser, missingEnv } from '../_shared/supabaseAdmin.ts';
 
 const EXPO_PUSH_URL = 'https://exp.host/--/api/v2/push/send';
 const FCM_SEND_URL = 'https://fcm.googleapis.com/fcm/send';
@@ -56,15 +56,31 @@ Deno.serve(async (req) => {
 
     const admin = adminClient();
 
-    // Staff gate: non-staff callers are clamped to self-only (no raw tokens).
+    // Recipient gate. Staff may target anyone. A normal caller may only push to
+    // people they have a real relationship with — the SAME rule as in-app
+    // notifications (can_notify: friend, shared conversation, shared group, or
+    // author of content they can see). This keeps message/like/mention push
+    // working while blocking push spam to strangers. Raw client tokens are
+    // staff-only (a normal caller can't push to an arbitrary device token).
     const { data: staffRow } = await admin
       .from('support_staff')
       .select('profile_id')
       .eq('profile_id', caller.id)
       .maybeSingle();
-    if (!staffRow) {
-      userIds = [caller.id];
+    const isStaff = !!staffRow;
+
+    if (!isStaff) {
       explicitTokens = [];
+      if (userIds.length) {
+        const asCaller = callerClient(req);
+        const allowed: string[] = [];
+        for (const rid of userIds) {
+          if (rid === caller.id) { allowed.push(rid); continue; }
+          const { data: ok } = await asCaller.rpc('can_notify', { p_recipient: rid });
+          if (ok === true) allowed.push(rid);
+        }
+        userIds = allowed;
+      }
     }
 
     const tokenSet = new Set<string>(explicitTokens.filter(Boolean));

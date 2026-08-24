@@ -162,15 +162,6 @@
       ],
       "expo-video"
     ],
-    "extra": {
-      "eas": {
-        "projectId": "YOUR_EAS_PROJECT_ID"
-      }
-    },
-    "owner": "your-expo-account",
-    "runtimeVersion": "1.0.0",
-    "updates": {
-      "url": "https://u.expo.dev/YOUR_EAS_PROJECT_ID"
-    }
+    "runtimeVersion": "1.0.0"
   }
 }

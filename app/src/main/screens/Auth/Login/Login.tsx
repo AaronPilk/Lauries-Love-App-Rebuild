@@ -31,7 +31,7 @@ import {
   DEFAULT_DATA_LOGIN,
   DEFAULT_ERROR_MESSAGES_LOGIN,
 } from './Login.constants';
-import { REGEX_EMAIL, REGEX_MAIN_PASSWORD } from 'constants/regexp';
+import { REGEX_EMAIL } from 'constants/regexp';
 
 // styles
 import styles from './Login.styles';
@@ -59,9 +59,11 @@ const LoginScreen: FunctionComponent = () => {
         email: REGEX_EMAIL.test(data.email)
           ? null
           : 'Invalid email address e.g. yourname@example.com',
-        password: REGEX_MAIN_PASSWORD.test(data.password)
-          ? null
-          : 'Incorrect password, make sure it contains at least 6 characters, including 1 uppercase letter, 1 lowercase letter, 1 number and 1 special character',
+        // Don't re-enforce signup complexity rules at LOGIN — let Supabase be
+        // the authority. Re-checking here blocked valid/legacy passwords client
+        // side with a misleading error before the server was ever called
+        // (fix 2026-08-23).
+        password: data.password ? null : 'Please enter your password',
       };
       if (newErrorMessages.email || newErrorMessages.password) {
         setErrorMessages(newErrorMessages);
@@ -153,7 +155,7 @@ const LoginScreen: FunctionComponent = () => {
                 </View>
                 <View style={styles.submitContainer}>
                   <Button
-                    disabled={!isNext || isLoading || isAuth}
+                    disabled={!isNext || isLoading}
                     title="Log in"
                     onPress={onLogin}
                   />

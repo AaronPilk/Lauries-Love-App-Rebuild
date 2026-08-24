@@ -46,8 +46,10 @@ const ApplicationNavigator: FunctionComponent<ApplicationNavigatorProps> = ({
       userDB.age &&
       userDB.gender &&
       userDB.city &&
-      userDB.country &&
-      userDB.zipCode,
+      userDB.country,
+    // NOTE: zipCode intentionally NOT required — it lives in profiles_private
+    // and is null for most accounts, which was bouncing successfully
+    // authenticated users back to onboarding/login (fix 2026-08-23).
     [isNotRegistration, userDB],
   );
 

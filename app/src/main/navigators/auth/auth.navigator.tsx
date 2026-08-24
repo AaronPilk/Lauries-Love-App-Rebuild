@@ -31,10 +31,12 @@ const AuthenticationNavigator = () => {
 
   const initialRouteName = useMemo(() => {
     if (!userDB) return 'login';
-    if (!userDB.city || !userDB.country || !userDB.zipCode)
-      return 'YourAddress';
-    if (!userDB.diagnosisTypes) return 'CancerType';
+    // Resume in the SAME order as the forward flow: address → role → diagnosis
+    // → age → gender. zipCode is optional (profiles_private, usually null) and
+    // must not force a resume into onboarding (fix 2026-08-23).
+    if (!userDB.city || !userDB.country) return 'YourAddress';
     if (!userDB.role) return 'UserType';
+    if (!userDB.diagnosisTypes) return 'CancerType';
     if (!userDB.age) return 'YourAge';
     if (!userDB.gender) return 'YourGender';
     return 'login';

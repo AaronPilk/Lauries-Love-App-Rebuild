@@ -7,7 +7,7 @@
 // Optional secrets: SENDGRID_FROM_EMAIL (default no-reply@lau:ies... see below),
 //                   SENDGRID_FROM_NAME, APP_URL (used in reset/welcome links)
 import { handlePreflight, json, notConfigured } from '../_shared/cors.ts';
-import { env, missingEnv } from '../_shared/supabaseAdmin.ts';
+import { env, getUser, missingEnv } from '../_shared/supabaseAdmin.ts';
 
 type Template = 'welcome' | 'password_reset' | 'generic';
 
@@ -70,14 +70,22 @@ Deno.serve(async (req) => {
   const missing = missingEnv(['SENDGRID_API_KEY']);
   if (missing.length) return notConfigured(missing);
 
+  // SECURITY (2026-08-23): require an authenticated caller and ONLY ever send
+  // to the caller's own verified email. Previously any anonymous request could
+  // send arbitrary HTML from no-reply@laurieslove.org to any address — an open
+  // relay / phishing vector. Server-side broadcasts (welcome blasts, admin
+  // mail) must run with the service role from a trusted context, not this
+  // client-callable path.
+  const caller = await getUser(req);
+  if (!caller?.email) return json({ error: 'unauthorized' }, 401);
+
   try {
     const body = await req.json().catch(() => ({}));
-    const toRaw = body.to;
     const template: Template = body.template ?? 'generic';
     const data: Record<string, unknown> = body.data ?? body ?? {};
 
-    const recipients: string[] = Array.isArray(toRaw) ? toRaw : toRaw ? [toRaw] : [];
-    if (!recipients.length) return json({ error: '`to` is required' }, 400);
+    // Recipient is ALWAYS the caller — the client-supplied `to` is ignored.
+    const recipients: string[] = [caller.email];
 
     const fromEmail = env('SENDGRID_FROM_EMAIL') ?? 'no-reply@laurieslove.org';
     const fromName = env('SENDGRID_FROM_NAME') ?? "Laurie's Love";

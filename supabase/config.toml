@@ -1,0 +1,39 @@
+# Supabase project config.
+#
+# project_id is the DEFAULT link target for the CLI. Deploy to a specific
+# environment with an explicit ref instead of relying on this, e.g.:
+#   supabase functions deploy stripe-webhook --project-ref iwbfsbriippzmdyrsmsu   # production
+#   supabase functions deploy stripe-webhook --project-ref hcvyknwbixnlwqozmkas   # staging
+project_id = "iwbfsbriippzmdyrsmsu"
+
+# ------------------------------------------------------------------
+# Edge Functions — per-function JWT verification.
+#
+# IMPORTANT: platform `verify_jwt = true` only checks that SOME valid JWT is
+# present (the public anon key satisfies it) — it is NOT real user auth. Each
+# function below that needs a real user calls getUser() in code (added
+# 2026-08-23). These flags are the outer gate; the in-code getUser() is the
+# real one.
+# ------------------------------------------------------------------
+
+# Stripe posts webhooks with NO Supabase JWT — it signs with its own secret,
+# which the function verifies. This MUST be false or every webhook 401s and
+# payments stop reconciling.
+[functions.stripe-webhook]
+verify_jwt = false
+
+# Called by the app with the user's JWT; also enforce getUser() in code.
+[functions.stripe-create-checkout-session]
+verify_jwt = true
+
+[functions.delete-account]
+verify_jwt = true
+
+[functions.send-email]
+verify_jwt = true
+
+[functions.send-push]
+verify_jwt = true
+
+[functions.moderate-content]
+verify_jwt = true

@@ -96,6 +96,10 @@ export default function PostNotification({
               {notification.description === 'NEW_LIKE' && 'liked your post.'}
               {notification.description === 'NEW_MESSAGE' &&
                 'commented on your post.'}
+              {notification.description === 'NEW_MENTION' &&
+                'mentioned you in a post.'}
+              {notification.description === 'WELCOME' &&
+                (notification.content || 'Welcome to the community.')}
               {/* {notification.description === 'NEW_MESSAGE' &&
               notification.content &&
               notification.content.length > 40

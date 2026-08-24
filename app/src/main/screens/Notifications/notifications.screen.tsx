@@ -193,6 +193,8 @@ export default function NotificationsScreen() {
     switch (notification.description) {
       case 'NEW_LIKE':
       case 'NEW_MESSAGE':
+      case 'NEW_MENTION':
+      case 'WELCOME':
         return (
           <PostNotification
             notification={notification}
@@ -246,7 +248,9 @@ export default function NotificationsScreen() {
     if (section === 'posts') {
       return (
         notification.description === 'NEW_MESSAGE' ||
-        notification.description === 'NEW_LIKE'
+        notification.description === 'NEW_LIKE' ||
+        notification.description === 'NEW_MENTION' ||
+        notification.description === 'WELCOME'
       );
     }
     if (section === 'requests') {

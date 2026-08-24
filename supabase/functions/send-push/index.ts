@@ -9,7 +9,7 @@
 // Required secrets: SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY
 // Optional secrets: FCM_SERVER_KEY (enables raw-FCM-token delivery)
 import { handlePreflight, json, notConfigured } from '../_shared/cors.ts';
-import { adminClient, env, missingEnv } from '../_shared/supabaseAdmin.ts';
+import { adminClient, env, getUser, missingEnv } from '../_shared/supabaseAdmin.ts';
 
 const EXPO_PUSH_URL = 'https://exp.host/--/api/v2/push/send';
 const FCM_SEND_URL = 'https://fcm.googleapis.com/fcm/send';
@@ -33,19 +33,40 @@ Deno.serve(async (req) => {
   const missing = missingEnv(['SUPABASE_URL', 'SUPABASE_SERVICE_ROLE_KEY']);
   if (missing.length) return notConfigured(missing);
 
+  // SECURITY (2026-08-23): require an authenticated caller. Previously anyone
+  // could push arbitrary content to any user and cause the service role to read
+  // push tokens (PII) for arbitrary profile ids. Only support STAFF may target
+  // other users or supply raw tokens; everyone else can only push to
+  // themselves. True multi-user fan-out (e.g. new-message alerts) must be
+  // driven server-side (DB trigger / internal service-role call), not here.
+  const caller = await getUser(req);
+  if (!caller) return json({ error: 'unauthorized' }, 401);
+
   try {
     const body = await req.json().catch(() => ({}));
     const title: string = body.title ?? '';
     const message: string = body.body ?? '';
     const dataPayload = body.data ?? {};
-    const explicitTokens: string[] = Array.isArray(body.tokens) ? body.tokens : [];
-    const userIds: string[] = Array.isArray(body.userIds) ? body.userIds : [];
+    let explicitTokens: string[] = Array.isArray(body.tokens) ? body.tokens : [];
+    let userIds: string[] = Array.isArray(body.userIds) ? body.userIds : [];
 
     if (!title && !message) {
       return json({ error: 'title or body is required' }, 400);
     }
 
     const admin = adminClient();
+
+    // Staff gate: non-staff callers are clamped to self-only (no raw tokens).
+    const { data: staffRow } = await admin
+      .from('support_staff')
+      .select('profile_id')
+      .eq('profile_id', caller.id)
+      .maybeSingle();
+    if (!staffRow) {
+      userIds = [caller.id];
+      explicitTokens = [];
+    }
+
     const tokenSet = new Set<string>(explicitTokens.filter(Boolean));
 
     // Resolve tokens for the requested users from the owner-only PII table.

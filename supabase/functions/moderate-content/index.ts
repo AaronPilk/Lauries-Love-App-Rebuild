@@ -10,7 +10,7 @@
 // Required secrets: OPENAI_API_KEY, SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY
 // Optional secrets: OPENAI_MODERATION_MODEL (default 'omni-moderation-latest')
 import { handlePreflight, json, notConfigured } from '../_shared/cors.ts';
-import { adminClient, env, missingEnv } from '../_shared/supabaseAdmin.ts';
+import { adminClient, env, getUser, missingEnv } from '../_shared/supabaseAdmin.ts';
 
 Deno.serve(async (req) => {
   const preflight = handlePreflight(req);
@@ -25,6 +25,13 @@ Deno.serve(async (req) => {
   ]);
   if (missing.length) return notConfigured(missing);
 
+  // SECURITY (2026-08-23): require an authenticated caller. Previously anyone
+  // could hit this unauthenticated and burn the OpenAI key (cost DoS) + spam
+  // the moderation queue. Below we also require the caller to be the content's
+  // author (or staff) before spending an OpenAI call.
+  const caller = await getUser(req);
+  if (!caller) return json({ error: 'unauthorized' }, 401);
+
   try {
     const body = await req.json().catch(() => ({}));
     const entityType: string = body.entity_type;
@@ -37,6 +44,26 @@ Deno.serve(async (req) => {
     if (!entityId) return json({ error: 'entity_id is required' }, 400);
     if (!text.trim()) {
       return json({ flagged: false, categories: {}, note: 'empty text' });
+    }
+
+    const admin = adminClient();
+
+    // Authorize BEFORE calling OpenAI: only the author of the content (or a
+    // staff member) may moderate it.
+    const srcTable = entityType === 'post' ? 'posts' : 'comments';
+    const { data: srcRow } = await admin
+      .from(srcTable)
+      .select('author_id')
+      .eq('id', entityId)
+      .maybeSingle();
+    if (!srcRow) return json({ error: 'entity not found' }, 404);
+    if (srcRow.author_id !== caller.id) {
+      const { data: staffRow } = await admin
+        .from('support_staff')
+        .select('profile_id')
+        .eq('profile_id', caller.id)
+        .maybeSingle();
+      if (!staffRow) return json({ error: 'forbidden' }, 403);
     }
 
     const model = env('OPENAI_MODERATION_MODEL') ?? 'omni-moderation-latest';
@@ -69,8 +96,6 @@ Deno.serve(async (req) => {
 
     // Only flagged content enters the human-review queue.
     if (flagged) {
-      const admin = adminClient();
-
       // Resolve org + author to satisfy moderation_queue's shape.
       const { data: org } = await admin
         .from('organizations')

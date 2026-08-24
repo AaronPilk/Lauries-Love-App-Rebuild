@@ -162,6 +162,12 @@
       ],
       "expo-video"
     ],
-    "runtimeVersion": "1.0.0"
+    "runtimeVersion": "1.0.0",
+    "extra": {
+      "eas": {
+        "projectId": "0a4266dd-1475-48c3-ad2d-a94b03fcddbc"
+      }
+    },
+    "owner": "lauries-love"
   }
 }

@@ -1,17 +1,41 @@
-// Sentry removed from the app (it was disabled anyway — no DSN wired — and its
-// native pod broke the iOS build under Xcode 26: "Unable to resolve module
-// dependency '_SentryPrivate'"). This no-op shim keeps every existing
-// captureException()/init() call site compiling with zero behavior change.
-// To re-add real error monitoring later: reinstall @sentry/react-native (a
-// version compatible with the current Xcode), re-add the expo plugin, and point
-// these imports back at the real @sentry/react-native. Or use PostHog for monitoring
-// per the SOW.
+// Sentry integration seam.
+//
+// This module is the SINGLE import point for Sentry across the app (every call
+// site imports from 'services/sentry.shim'), so the SDK can be swapped without
+// touching call sites. It now delegates to the REAL @sentry/react-native, but
+// stays inert until a DSN is configured:
+//   * init() only calls Sentry.init when EXPO_PUBLIC_SENTRY_DSN is set, so a
+//     keyless build never touches the native SDK.
+//   * captureException/captureMessage are safe to call before init (they no-op
+//     until the SDK is initialized).
+//
+// ⚠️ NATIVE STEP: after pulling this, run `yarn && npx pod-install` (or
+// `pod install`) and rebuild — @sentry/react-native ships a native module.
+// Set EXPO_PUBLIC_SENTRY_DSN in app/.env + EAS to turn reporting on.
+import * as Sentry from '@sentry/react-native';
 
-export const captureException = (_error?: unknown): void => {};
-export const captureMessage = (_msg?: string): void => {};
-export const init = (_settings?: unknown): void => {};
-export const wrap = <T>(component: T): T => component;
-export const mobileReplayIntegration = (_opts?: unknown): Record<string, never> => ({});
+export const captureException = (error?: unknown): void => {
+  Sentry.captureException(error);
+};
+
+export const captureMessage = (msg?: string): void => {
+  if (typeof msg === 'string') Sentry.captureMessage(msg);
+};
+
+// Only initialize when a DSN is present — an empty/missing DSN leaves the SDK
+// uninitialized (no native calls, no reporting) instead of erroring.
+export const init = (settings?: { dsn?: string } & Record<string, unknown>): void => {
+  if (!settings?.dsn) return;
+  Sentry.init(settings as Sentry.ReactNativeOptions);
+};
+
+// Error-boundary wrapper for the root component (safe even before init).
+export const wrap = <T>(component: T): T =>
+  Sentry.wrap(component as never) as unknown as T;
+
+export const mobileReplayIntegration = (
+  opts?: Record<string, unknown>,
+): unknown => Sentry.mobileReplayIntegration(opts as never);
 
 export default {
   captureException,

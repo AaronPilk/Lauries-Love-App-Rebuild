@@ -94,6 +94,7 @@
       "./plugins/add-androidx-settings.js",
       "./plugins/fix-react-native-pdf.js",
       "@react-native-firebase/app",
+      "@sentry/react-native/expo",
       "expo-image-picker",
       [
         "expo-build-properties",

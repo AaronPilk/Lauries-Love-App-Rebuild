@@ -13,7 +13,12 @@
     "staging": {
       "channel": "staging",
       "environment": "development",
+      "distribution": "internal",
       "android": {
+        "resourceClass": "large",
+        "buildType": "apk"
+      },
+      "ios": {
         "resourceClass": "large"
       }
     }

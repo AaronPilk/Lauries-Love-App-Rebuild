@@ -1,3 +1,4 @@
+import { Link } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase, currentUserId } from '../lib/supabase';
 import { useFeatureFlags } from '../lib/featureFlags';
@@ -69,7 +70,9 @@ export function Groups() {
           <div key={g.id} className="rounded-2xl border border-brand-100 bg-white p-4">
             <div className="flex items-start justify-between gap-2">
               <div>
-                <div className="font-semibold">{g.name}</div>
+                <Link to={`/groups/${g.id}`} className="font-semibold hover:text-brand-700 hover:underline">
+                  {g.name}
+                </Link>
                 <div className="text-xs text-gray-400">{g.memberCount} members</div>
               </div>
               <button

@@ -36,6 +36,9 @@ export function Layout() {
           <Link to="/notifications" className="hover:underline">
             Notifications
           </Link>
+          <Link to="/support" className="hover:underline">
+            Support
+          </Link>
           <Link to="/profile" className="hover:underline">
             Profile
           </Link>

@@ -70,6 +70,9 @@ export function Feed() {
   const [body, setBody] = useState('');
   const [commentFor, setCommentFor] = useState<string | null>(null);
   const [commentBody, setCommentBody] = useState('');
+  const [reportFor, setReportFor] = useState<string | null>(null);
+  const [reportReason, setReportReason] = useState('');
+  const [reportedIds, setReportedIds] = useState<Set<string>>(new Set());
 
   const { data, isLoading, error } = useQuery({
     queryKey: ['feed'],
@@ -131,6 +134,25 @@ export function Feed() {
       setCommentBody('');
       setCommentFor(null);
       qc.invalidateQueries({ queryKey: ['feed'] });
+    },
+  });
+
+  // Report a post -> moderation_queue via the report_content RPC (SECURITY
+  // DEFINER; resolves org + author server-side). Gives the community a safety
+  // valve the web app was missing.
+  const report = useMutation({
+    mutationFn: async (v: { postId: string; reason: string }) => {
+      const { error } = await supabase.rpc('report_content', {
+        p_entity_type: 'post',
+        p_entity_id: v.postId,
+        p_reason: v.reason.trim() || 'Reported from web',
+      });
+      if (error) throw error;
+    },
+    onSuccess: (_data, v) => {
+      setReportReason('');
+      setReportFor(null);
+      setReportedIds((prev) => new Set(prev).add(v.postId));
     },
   });
 
@@ -229,6 +251,16 @@ export function Feed() {
               >
                 💬 {p.comments?.[0]?.count ?? 0}
               </button>
+              {reportedIds.has(p.id) ? (
+                <span className="ml-auto text-xs text-gray-400">Reported ✓</span>
+              ) : (
+                <button
+                  onClick={() => setReportFor((cur) => (cur === p.id ? null : p.id))}
+                  className="ml-auto text-xs text-gray-400 hover:text-red-600"
+                >
+                  Report
+                </button>
+              )}
             </footer>
 
             {commentFor === p.id && (
@@ -247,6 +279,24 @@ export function Feed() {
                   className="rounded-lg bg-brand-700 px-3 py-2 text-sm font-semibold text-white hover:bg-brand-500 disabled:opacity-50"
                 >
                   Send
+                </button>
+              </div>
+            )}
+
+            {reportFor === p.id && (
+              <div className="mt-3 flex gap-2">
+                <input
+                  value={reportReason}
+                  onChange={(e) => setReportReason(e.target.value)}
+                  placeholder="Reason (optional)…"
+                  className="flex-1 rounded-lg border border-gray-200 px-3 py-2 text-sm outline-none focus:border-red-400"
+                />
+                <button
+                  onClick={() => report.mutate({ postId: p.id, reason: reportReason })}
+                  disabled={report.isPending}
+                  className="rounded-lg bg-red-600 px-3 py-2 text-sm font-semibold text-white hover:bg-red-500 disabled:opacity-50"
+                >
+                  {report.isPending ? 'Reporting…' : 'Report'}
                 </button>
               </div>
             )}

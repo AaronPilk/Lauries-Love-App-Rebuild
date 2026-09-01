@@ -19,6 +19,11 @@ type AuthState = {
   isStaff: boolean;
   isAdmin: boolean;
   signIn: (email: string, password: string) => Promise<void>;
+  signUp: (
+    email: string,
+    password: string,
+    displayName: string,
+  ) => Promise<{ needsConfirmation: boolean }>;
   signOut: () => Promise<void>;
 };
 
@@ -73,6 +78,25 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         password,
       });
       if (error) throw error;
+    },
+    // Self-serve member signup. The handle_new_user auth trigger creates the
+    // profile rows; we then set the chosen display name. If the project
+    // requires email confirmation, data.session is null and the caller shows a
+    // "check your email" message instead of logging straight in.
+    async signUp(email, password, displayName) {
+      const { data, error } = await supabase.auth.signUp({
+        email,
+        password,
+        options: { data: { display_name: displayName, first_name: displayName } },
+      });
+      if (error) throw error;
+      if (data.session?.user?.id) {
+        await supabase
+          .from('profiles')
+          .update({ display_name: displayName })
+          .eq('id', data.session.user.id);
+      }
+      return { needsConfirmation: !data.session };
     },
     async signOut() {
       await supabase.auth.signOut();

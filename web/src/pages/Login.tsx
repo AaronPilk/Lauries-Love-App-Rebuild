@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../lib/auth';
 
 export function Login() {
@@ -59,6 +59,12 @@ export function Login() {
         >
           {busy ? 'Signing in…' : 'Sign in'}
         </button>
+        <p className="mt-4 text-center text-sm text-gray-500">
+          New here?{' '}
+          <Link to="/signup" className="font-medium text-brand-700 hover:underline">
+            Create an account
+          </Link>
+        </p>
       </form>
     </div>
   );

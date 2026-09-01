@@ -3,6 +3,7 @@ import { useAuth } from './lib/auth';
 import { Layout } from './components/Layout';
 import { ProtectedRoute } from './components/ProtectedRoute';
 import { Login } from './pages/Login';
+import { Signup } from './pages/Signup';
 import { Feed } from './pages/Feed';
 import { Groups } from './pages/Groups';
 import { Messages } from './pages/Messages';
@@ -37,6 +38,7 @@ export default function App() {
   return (
     <Routes>
       <Route path="/login" element={<Login />} />
+      <Route path="/signup" element={<Signup />} />
 
       {/* Member web app */}
       <Route

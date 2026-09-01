@@ -1,4 +1,5 @@
 import { useCallback, useState } from 'react';
+import { Link } from 'react-router-dom';
 import {
   MapContainer,
   TileLayer,
@@ -76,7 +77,15 @@ export function MapPage() {
                 radius={8}
                 pathOptions={{ color: '#a5257e', fillColor: '#d84a9a', fillOpacity: 0.8 }}
               >
-                <Popup>{m.display_name || m.first_name || 'Member'}</Popup>
+                <Popup>
+                  <Link
+                    to={`/users/${m.id}`}
+                    className="font-semibold text-brand-700 hover:underline"
+                  >
+                    {m.display_name || m.first_name || 'Member'}
+                  </Link>
+                  <div className="text-xs text-gray-400">View profile · Message</div>
+                </Popup>
               </CircleMarker>
             ))}
           </MarkerClusterGroup>

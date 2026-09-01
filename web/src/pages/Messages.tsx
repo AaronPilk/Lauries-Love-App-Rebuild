@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase, currentUserId } from '../lib/supabase';
 import { useFeatureFlags } from '../lib/featureFlags';
@@ -16,6 +17,11 @@ type Message = {
   body: string | null;
   sender_id: string;
   created_at: string;
+};
+type MemberHit = {
+  id: string;
+  display_name: string | null;
+  first_name: string | null;
 };
 
 async function fetchConversations(): Promise<Conversation[]> {
@@ -49,17 +55,56 @@ function convTitle(c: Conversation, meId: string | null) {
 export function Messages() {
   const { isEnabled } = useFeatureFlags();
   const qc = useQueryClient();
+  const [searchParams, setSearchParams] = useSearchParams();
   const [meId, setMeId] = useState<string | null>(null);
   const [active, setActive] = useState<string | null>(null);
   const [text, setText] = useState('');
   const [msgs, setMsgs] = useState<Message[]>([]);
   const endRef = useRef<HTMLDivElement>(null);
 
+  // New-conversation composer state.
+  const [composing, setComposing] = useState(false);
+  const [search, setSearch] = useState('');
+  const [hits, setHits] = useState<MemberHit[]>([]);
+  const [starting, setStarting] = useState(false);
+
   useEffect(() => {
     currentUserId().then(setMeId);
   }, []);
 
   const convos = useQuery({ queryKey: ['conversations'], queryFn: fetchConversations });
+
+  // Deep link: /messages?c=<id> (e.g. from a member's Message button) opens it.
+  useEffect(() => {
+    const c = searchParams.get('c');
+    if (c) setActive(c);
+  }, [searchParams]);
+
+  // Member search for starting a new DM (debounced).
+  useEffect(() => {
+    if (!composing) return;
+    const q = search.trim();
+    if (q.length < 2) {
+      setHits([]);
+      return;
+    }
+    let cancelled = false;
+    const t = setTimeout(async () => {
+      const me = await currentUserId();
+      const { data } = await supabase
+        .from('profiles')
+        .select('id, display_name, first_name')
+        .or(`display_name.ilike.%${q}%,first_name.ilike.%${q}%`)
+        .neq('id', me ?? '')
+        .eq('active', true)
+        .limit(8);
+      if (!cancelled) setHits((data ?? []) as MemberHit[]);
+    }, 250);
+    return () => {
+      cancelled = true;
+      clearTimeout(t);
+    };
+  }, [search, composing]);
 
   // Load messages + subscribe to realtime for the open conversation.
   useEffect(() => {
@@ -101,13 +146,65 @@ export function Messages() {
     qc.invalidateQueries({ queryKey: ['conversations'] });
   }
 
+  async function startWith(profileId: string) {
+    setStarting(true);
+    const { data: convId, error } = await supabase.rpc(
+      'find_or_create_direct_conversation',
+      { other_profile: profileId },
+    );
+    setStarting(false);
+    if (error || !convId) return;
+    setComposing(false);
+    setSearch('');
+    setHits([]);
+    setActive(convId as string);
+    setSearchParams({ c: convId as string });
+    qc.invalidateQueries({ queryKey: ['conversations'] });
+  }
+
   if (!isEnabled('messaging'))
     return <p className="text-gray-500">Messaging is turned off.</p>;
 
   return (
     <div className="flex h-[70vh] gap-4">
       <aside className="w-64 shrink-0 overflow-y-auto rounded-2xl border border-brand-100 bg-white">
-        <div className="border-b p-3 font-semibold text-brand-700">Messages</div>
+        <div className="flex items-center justify-between border-b p-3 font-semibold text-brand-700">
+          <span>Messages</span>
+          <button
+            onClick={() => setComposing((v) => !v)}
+            className="rounded-full bg-brand-700 px-2 py-0.5 text-xs font-medium text-white"
+          >
+            {composing ? 'Cancel' : '+ New'}
+          </button>
+        </div>
+
+        {composing && (
+          <div className="border-b p-3">
+            <input
+              autoFocus
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="Search members…"
+              className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm outline-none focus:border-brand-500"
+            />
+            <div className="mt-2 space-y-1">
+              {search.trim().length >= 2 && hits.length === 0 && (
+                <p className="text-xs text-gray-400">No members found.</p>
+              )}
+              {hits.map((h) => (
+                <button
+                  key={h.id}
+                  disabled={starting}
+                  onClick={() => startWith(h.id)}
+                  className="block w-full rounded px-2 py-1 text-left text-sm hover:bg-brand-50 disabled:opacity-50"
+                >
+                  {h.display_name || h.first_name || 'Member'}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+
         {(convos.data ?? []).map((c) => (
           <button
             key={c.id}
@@ -127,7 +224,7 @@ export function Messages() {
       <section className="flex flex-1 flex-col rounded-2xl border border-brand-100 bg-white">
         {!active ? (
           <div className="grid flex-1 place-items-center text-gray-400">
-            Select a conversation
+            Select a conversation or start a new one
           </div>
         ) : (
           <>

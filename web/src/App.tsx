@@ -8,6 +8,7 @@ import { Groups } from './pages/Groups';
 import { Messages } from './pages/Messages';
 import { Profile } from './pages/Profile';
 import { MapPage } from './pages/MapPage';
+import { UserProfile } from './pages/UserProfile';
 import { Donate } from './pages/Donate';
 import { Notifications } from './pages/Notifications';
 import { Sponsorships } from './pages/Sponsorships';
@@ -48,6 +49,7 @@ export default function App() {
         <Route path="messages" element={<Messages />} />
         <Route path="profile" element={<Profile />} />
         <Route path="map" element={<MapPage />} />
+        <Route path="users/:id" element={<UserProfile />} />
         <Route path="donate" element={<Donate />} />
         <Route path="notifications" element={<Notifications />} />
         <Route path="sponsors" element={<Sponsorships />} />

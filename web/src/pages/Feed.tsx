@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { Link } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase, currentUserId } from '../lib/supabase';
 import { useFeatureFlags } from '../lib/featureFlags';
@@ -10,6 +11,7 @@ type FeedPost = {
   like_count: number;
   visibility: string;
   author: {
+    id: string;
     first_name: string | null;
     display_name: string | null;
     avatar_path: string | null;
@@ -30,7 +32,7 @@ async function fetchFeed(): Promise<FeedData> {
   const { data, error } = await supabase
     .from('posts')
     .select(
-      'id, body, created_at, like_count, visibility, author:profiles!posts_author_id_fkey(first_name, display_name, avatar_path), comments(count)',
+      'id, body, created_at, like_count, visibility, author:profiles!posts_author_id_fkey(id, first_name, display_name, avatar_path), comments(count)',
     )
     .order('created_at', { ascending: false })
     .limit(30);
@@ -190,7 +192,16 @@ export function Feed() {
                 </div>
               )}
               <div>
-                <div className="text-sm font-semibold">{name}</div>
+                {p.author?.id ? (
+                  <Link
+                    to={`/users/${p.author.id}`}
+                    className="text-sm font-semibold hover:text-brand-700 hover:underline"
+                  >
+                    {name}
+                  </Link>
+                ) : (
+                  <div className="text-sm font-semibold">{name}</div>
+                )}
                 <div className="text-xs text-gray-400">
                   {new Date(p.created_at).toLocaleDateString()}
                   {p.visibility === 'group' && ' · group'}

@@ -22,10 +22,10 @@ type Branding = {
 
 const DEFAULT_BRANDING: Branding = {
   appName: 'Laurie’s Love',
-  tagline: 'Support cancer patients and their families',
-  primaryColor: '#6d1b5f', // matches brand-700 (current header)
-  secondaryColor: '#a5257e', // matches brand-500
-  logoUrl: null,
+  tagline: 'So no warrior ever walks alone.',
+  primaryColor: '#0F474C', // Deepwater — the brand's lead colour (header/primary)
+  secondaryColor: '#1789A8', // Lagoon — interface & links
+  logoUrl: '/logo.png',
   supportEmail: null,
 };
 

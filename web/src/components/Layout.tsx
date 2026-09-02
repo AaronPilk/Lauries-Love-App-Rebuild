@@ -8,12 +8,15 @@ export function Layout() {
   return (
     <div className="min-h-screen">
       <header
-        className="sticky top-0 z-10 flex items-center justify-between bg-brand-700 px-6 py-3 text-white"
-        style={{ backgroundColor: 'var(--brand-primary, #6d1b5f)' }}
+        className="sticky top-0 z-10 flex items-center justify-between px-6 py-3 text-seamist"
+        style={{
+          backgroundColor: 'var(--brand-primary, #0F474C)',
+          borderBottom: '2px solid #C6A45E',
+        }}
       >
-        <Link to="/" className="flex items-center gap-2 text-lg font-bold">
+        <Link to="/" className="flex items-center gap-2 font-serif text-lg font-semibold">
           {logoUrl && (
-            <img src={logoUrl} alt="" className="h-8 w-8 rounded object-cover" />
+            <img src={logoUrl} alt="" className="h-9 w-9 object-contain" />
           )}
           {appName}
         </Link>

@@ -27,41 +27,45 @@ export function Login() {
   }
 
   return (
-    <div className="grid min-h-screen place-items-center bg-brand-50 px-4">
+    <div className="grid min-h-screen place-items-center bg-seamist px-4">
       <form
         onSubmit={onSubmit}
-        className="w-full max-w-sm rounded-2xl bg-white p-8 shadow-lg"
+        className="w-full max-w-sm rounded-2xl bg-white p-8 shadow-lg ring-1 ring-deepwater/5"
       >
-        <h1 className="mb-1 text-2xl font-bold text-brand-700">Laurie’s Love</h1>
-        <p className="mb-6 text-sm text-gray-500">
-          Sign in to your community account.
-        </p>
-        <label className="mb-1 block text-sm font-medium">Email</label>
+        <div className="mb-5 flex flex-col items-center text-center">
+          <div className="mb-3 grid h-16 w-16 place-items-center rounded-full bg-deepwater">
+            <img src="/logo.png" alt="Laurie’s Love" className="h-12 w-12 object-contain" />
+          </div>
+          <h1 className="font-serif text-2xl font-semibold text-deepwater">Laurie’s Love</h1>
+          <hr className="gilt-rule my-3 w-24" />
+          <p className="text-sm text-deepwater/60">So no warrior ever walks alone.</p>
+        </div>
+        <label className="mb-1 block text-sm font-medium text-deepwater">Email</label>
         <input
           type="email"
           value={email}
           onChange={(e) => setEmail(e.target.value)}
           required
-          className="mb-4 w-full rounded-lg border border-gray-300 px-3 py-2 outline-none focus:border-brand-500"
+          className="mb-4 w-full rounded-lg border border-deepwater/15 px-3 py-2 outline-none focus:border-lagoon focus:ring-1 focus:ring-lagoon"
         />
-        <label className="mb-1 block text-sm font-medium">Password</label>
+        <label className="mb-1 block text-sm font-medium text-deepwater">Password</label>
         <input
           type="password"
           value={password}
           onChange={(e) => setPassword(e.target.value)}
           required
-          className="mb-4 w-full rounded-lg border border-gray-300 px-3 py-2 outline-none focus:border-brand-500"
+          className="mb-4 w-full rounded-lg border border-deepwater/15 px-3 py-2 outline-none focus:border-lagoon focus:ring-1 focus:ring-lagoon"
         />
         {error && <p className="mb-3 text-sm text-red-600">{error}</p>}
         <button
           disabled={busy}
-          className="w-full rounded-lg bg-brand-700 py-2 font-semibold text-white hover:bg-brand-500 disabled:opacity-60"
+          className="w-full rounded-lg bg-deepwater py-2.5 font-semibold text-seamist transition-colors hover:bg-lagoon disabled:opacity-60"
         >
           {busy ? 'Signing in…' : 'Sign in'}
         </button>
-        <p className="mt-4 text-center text-sm text-gray-500">
+        <p className="mt-4 text-center text-sm text-deepwater/50">
           New here?{' '}
-          <Link to="/signup" className="font-medium text-brand-700 hover:underline">
+          <Link to="/signup" className="font-medium text-lagoon hover:underline">
             Create an account
           </Link>
         </p>

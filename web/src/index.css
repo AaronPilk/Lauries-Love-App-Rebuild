@@ -4,11 +4,41 @@
 
 :root {
   color-scheme: light;
+  --brand-primary: #0f474c; /* Deepwater */
+  --brand-secondary: #1789a8; /* Lagoon */
+  --gilt: #c6a45e; /* warm metal — line only */
 }
 body {
   margin: 0;
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica,
-    Arial, sans-serif;
-  background: #faf6fb;
-  color: #2a2333;
+  font-family: 'Figtree', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI',
+    Roboto, Helvetica, Arial, sans-serif;
+  background: #eaf2f2; /* Sea Mist */
+  color: #0f474c; /* Deepwater ink */
+}
+h1,
+h2,
+h3,
+h4,
+h5 {
+  font-family: 'Fraunces', Georgia, 'Times New Roman', serif;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}
+/* Gilt hairline — gold appears as a LINE, never a fill. One moment per view. */
+.gilt-rule {
+  height: 1px;
+  border: 0;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    #a8873f 10%,
+    #c6a45e 35%,
+    #eadca6 50%,
+    #c6a45e 65%,
+    #a8873f 90%,
+    transparent
+  );
+}
+.gilt-line {
+  border-color: #c6a45e;
 }

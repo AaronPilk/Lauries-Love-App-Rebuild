@@ -2,6 +2,15 @@ const colors = {
   white: '#FFFFFF',
   transparent: 'transparent',
 
+  // Laurie's Love — "Plume, refined" brand palette (Skyway Media, Aug 2026).
+  deepwater: '#0F474C', // primary ground — owns most surfaces
+  harbor: '#082729', // deepest fields
+  lagoon: '#1789A8', // interface & links
+  magenta: '#911766', // single accent stroke, never two
+  gilt: '#C6A45E', // warm metal — line only, never a fill
+  seaMist: '#EAF2F2', // light / breathing room
+  ink: '#051A1D',
+
   cararra: '#EEEDE7',
   cararra50: '#EEEDE780',
   quaternary20070: '#EEEDE7B2',
@@ -26,13 +35,15 @@ const colors = {
   black: '#000000',
   black14: '#00000014',
 
+  // Primary is now Deepwater teal (was magenta). Magenta drops to a single
+  // accent — see `magenta` / `disco` above.
   primary: {
-    100: '#F4E8F1',
-    200: '#DEBAD1',
-    300: '#C88AB2',
-    400: '#B25D95',
-    500: '#911766',
-    600: '#3D112D',
+    100: '#E3EFF0',
+    200: '#B9D7DB',
+    300: '#6FA9B2',
+    400: '#1789A8', // Lagoon — interface & links
+    500: '#0F474C', // Deepwater — the lead colour
+    600: '#082729', // Harbor — deepest fields
   },
 
   secondary: {
